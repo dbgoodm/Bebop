@@ -5,6 +5,7 @@ import { invoke as __TAURI_INVOKE } from "@tauri-apps/api/core";
 /** Commands */
 export const commands = {
 	getDesktopState: () => typedError<DesktopState, AppError_Serialize>(__TAURI_INVOKE("get_desktop_state")),
+	scanLibrary: (root: string) => typedError<LibraryScan, AppError_Serialize>(__TAURI_INVOKE("scan_library", { root })),
 };
 
 /* Types */
@@ -27,6 +28,12 @@ export type AudioExtension = "flac" | "wav" | "mp3" | "ogg";
 export type DesktopState = {
 	libraryRoot: string | null,
 	playback: PlaybackState,
+};
+
+export type LibraryScan = {
+	root: string,
+	tracks: TrackSummary[],
+	warnings: string[],
 };
 
 export type PlaybackState = {

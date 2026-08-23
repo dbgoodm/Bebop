@@ -157,7 +157,7 @@
       "file_type": "code",
       "norm_label": "libraryviewprops",
       "source_file": "apps/frontend/src/components/organisms/LibraryView.tsx",
-      "source_location": "L10"
+      "source_location": "L8"
     },
     {
       "id": "apps_frontend_src_components_organisms_trackstableview_trackstableviewprops",
@@ -212,19 +212,6 @@
       "source_location": "L229"
     },
     {
-      "id": "apps_frontend_src_types_librarysubtab",
-      "label": "LibrarySubTab",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 0,
-      "community_name": "TrackItem",
-      "file_type": "code",
-      "norm_label": "librarysubtab",
-      "source_file": "apps/frontend/src/types.ts",
-      "source_location": "L114"
-    },
-    {
       "id": "apps_frontend_src_types_trackitem",
       "label": "TrackItem",
       "_callable": true,
@@ -264,19 +251,6 @@
       "source_location": "L4"
     },
     {
-      "id": "apps_frontend_src_components_organisms_nowplayingbar_nowplayingbarprops",
-      "label": "NowPlayingBarProps",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 1,
-      "community_name": "FullscreenNowPlaying.tsx",
-      "file_type": "code",
-      "norm_label": "nowplayingbarprops",
-      "source_file": "apps/frontend/src/components/organisms/NowPlayingBar.tsx",
-      "source_location": "L20"
-    },
-    {
       "id": "apps_frontend_src_components_organisms_waveformscrubber_waveformscrubberprops",
       "label": "WaveformScrubberProps",
       "_callable": true,
@@ -303,17 +277,56 @@
       "source_location": "L1"
     },
     {
+      "id": "apps_frontend_src_components_templates_appshell_appshellprops",
+      "label": "AppShellProps",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 21,
+      "community_name": "libraryService.ts",
+      "file_type": "code",
+      "norm_label": "appshellprops",
+      "source_file": "apps/frontend/src/components/templates/AppShell.tsx",
+      "source_location": "L3"
+    },
+    {
+      "id": "apps_frontend_src_services_libraryservice_libraryscanphase",
+      "label": "LibraryScanPhase",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 21,
+      "community_name": "libraryService.ts",
+      "file_type": "code",
+      "norm_label": "libraryscanphase",
+      "source_file": "apps/frontend/src/services/libraryService.ts",
+      "source_location": "L11"
+    },
+    {
+      "id": "apps_frontend_src_services_libraryservice_libraryscansnapshot",
+      "label": "LibraryScanSnapshot",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 21,
+      "community_name": "libraryService.ts",
+      "file_type": "code",
+      "norm_label": "libraryscansnapshot",
+      "source_file": "apps/frontend/src/services/libraryService.ts",
+      "source_location": "L14"
+    },
+    {
       "id": "apps_frontend_src_services_tauri_bindings_apperror",
       "label": "AppError",
       "_callable": true,
       "_callable_class": true,
       "_origin": "ast",
       "community": 21,
-      "community_name": "tauri-bindings.ts",
+      "community_name": "libraryService.ts",
       "file_type": "code",
       "norm_label": "apperror",
       "source_file": "apps/frontend/src/services/tauri-bindings.ts",
-      "source_location": "L11"
+      "source_location": "L12"
     },
     {
       "id": "apps_frontend_src_services_tauri_bindings_apperror_deserialize",
@@ -322,11 +335,11 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 21,
-      "community_name": "tauri-bindings.ts",
+      "community_name": "libraryService.ts",
       "file_type": "code",
       "norm_label": "apperror_deserialize",
       "source_file": "apps/frontend/src/services/tauri-bindings.ts",
-      "source_location": "L13"
+      "source_location": "L14"
     },
     {
       "id": "apps_frontend_src_services_tauri_bindings_apperror_serialize",
@@ -335,11 +348,11 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 21,
-      "community_name": "tauri-bindings.ts",
+      "community_name": "libraryService.ts",
       "file_type": "code",
       "norm_label": "apperror_serialize",
       "source_file": "apps/frontend/src/services/tauri-bindings.ts",
-      "source_location": "L19"
+      "source_location": "L20"
     },
     {
       "id": "apps_frontend_src_services_tauri_bindings_audioextension",
@@ -348,11 +361,11 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 21,
-      "community_name": "tauri-bindings.ts",
+      "community_name": "libraryService.ts",
       "file_type": "code",
       "norm_label": "audioextension",
       "source_file": "apps/frontend/src/services/tauri-bindings.ts",
-      "source_location": "L25"
+      "source_location": "L26"
     },
     {
       "id": "apps_frontend_src_services_tauri_bindings_desktopstate",
@@ -361,11 +374,24 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 21,
-      "community_name": "tauri-bindings.ts",
+      "community_name": "libraryService.ts",
       "file_type": "code",
       "norm_label": "desktopstate",
       "source_file": "apps/frontend/src/services/tauri-bindings.ts",
-      "source_location": "L27"
+      "source_location": "L28"
+    },
+    {
+      "id": "apps_frontend_src_services_tauri_bindings_libraryscan",
+      "label": "LibraryScan",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 21,
+      "community_name": "libraryService.ts",
+      "file_type": "code",
+      "norm_label": "libraryscan",
+      "source_file": "apps/frontend/src/services/tauri-bindings.ts",
+      "source_location": "L33"
     },
     {
       "id": "apps_frontend_src_services_tauri_bindings_playbackstate",
@@ -374,11 +400,11 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 21,
-      "community_name": "tauri-bindings.ts",
+      "community_name": "libraryService.ts",
       "file_type": "code",
       "norm_label": "playbackstate",
       "source_file": "apps/frontend/src/services/tauri-bindings.ts",
-      "source_location": "L32"
+      "source_location": "L39"
     },
     {
       "id": "apps_frontend_src_services_tauri_bindings_playbackstatus",
@@ -387,11 +413,11 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 21,
-      "community_name": "tauri-bindings.ts",
+      "community_name": "libraryService.ts",
       "file_type": "code",
       "norm_label": "playbackstatus",
       "source_file": "apps/frontend/src/services/tauri-bindings.ts",
-      "source_location": "L42"
+      "source_location": "L49"
     },
     {
       "id": "apps_frontend_src_services_tauri_bindings_scanprogress",
@@ -400,11 +426,11 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 21,
-      "community_name": "tauri-bindings.ts",
+      "community_name": "libraryService.ts",
       "file_type": "code",
       "norm_label": "scanprogress",
       "source_file": "apps/frontend/src/services/tauri-bindings.ts",
-      "source_location": "L44"
+      "source_location": "L51"
     },
     {
       "id": "apps_frontend_src_services_tauri_bindings_tracksummary",
@@ -413,11 +439,11 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 21,
-      "community_name": "tauri-bindings.ts",
+      "community_name": "libraryService.ts",
       "file_type": "code",
       "norm_label": "tracksummary",
       "source_file": "apps/frontend/src/services/tauri-bindings.ts",
-      "source_location": "L50"
+      "source_location": "L57"
     },
     {
       "id": "apps_frontend_src_components_atoms_emptystate_emptystateprops",
@@ -425,8 +451,8 @@
       "_callable": true,
       "_callable_class": true,
       "_origin": "ast",
-      "community": 4,
-      "community_name": "MusicPlayerPage.tsx",
+      "community": 34,
+      "community_name": "EmptyState.tsx",
       "file_type": "code",
       "norm_label": "emptystateprops",
       "source_file": "apps/frontend/src/components/atoms/EmptyState.tsx",
@@ -459,6 +485,19 @@
       "source_location": "L19"
     },
     {
+      "id": "apps_frontend_src_components_organisms_nowplayingbar_nowplayingbarprops",
+      "label": "NowPlayingBarProps",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 4,
+      "community_name": "MusicPlayerPage.tsx",
+      "file_type": "code",
+      "norm_label": "nowplayingbarprops",
+      "source_file": "apps/frontend/src/components/organisms/NowPlayingBar.tsx",
+      "source_location": "L20"
+    },
+    {
       "id": "apps_frontend_src_components_organisms_nowplayingqueuemodal_nowplayingqueuemodalprops",
       "label": "NowPlayingQueueModalProps",
       "_callable": true,
@@ -470,19 +509,6 @@
       "norm_label": "nowplayingqueuemodalprops",
       "source_file": "apps/frontend/src/components/organisms/NowPlayingQueueModal.tsx",
       "source_location": "L17"
-    },
-    {
-      "id": "apps_frontend_src_components_templates_appshell_appshellprops",
-      "label": "AppShellProps",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 4,
-      "community_name": "MusicPlayerPage.tsx",
-      "file_type": "code",
-      "norm_label": "appshellprops",
-      "source_file": "apps/frontend/src/components/templates/AppShell.tsx",
-      "source_location": "L3"
     },
     {
       "id": "apps_frontend_src_services_antraengineservice_antraenginecontexttype",
@@ -602,6 +628,19 @@
       "source_location": "L135"
     },
     {
+      "id": "apps_frontend_src_types_audioformat",
+      "label": "AudioFormat",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 4,
+      "community_name": "MusicPlayerPage.tsx",
+      "file_type": "code",
+      "norm_label": "audioformat",
+      "source_file": "apps/frontend/src/types.ts",
+      "source_location": "L65"
+    },
+    {
       "id": "apps_frontend_src_types_continuelisteningitem",
       "label": "ContinueListeningItem",
       "_callable": true,
@@ -641,6 +680,19 @@
       "source_location": "L43"
     },
     {
+      "id": "apps_frontend_src_types_librarysubtab",
+      "label": "LibrarySubTab",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 4,
+      "community_name": "MusicPlayerPage.tsx",
+      "file_type": "code",
+      "norm_label": "librarysubtab",
+      "source_file": "apps/frontend/src/types.ts",
+      "source_location": "L114"
+    },
+    {
       "id": "apps_frontend_src_types_listeningstatsdata",
       "label": "ListeningStatsData",
       "_callable": true,
@@ -678,6 +730,32 @@
       "norm_label": "navtab",
       "source_file": "apps/frontend/src/types.ts",
       "source_location": "L1"
+    },
+    {
+      "id": "apps_frontend_src_types_recentlyaddeditem",
+      "label": "RecentlyAddedItem",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 4,
+      "community_name": "MusicPlayerPage.tsx",
+      "file_type": "code",
+      "norm_label": "recentlyaddeditem",
+      "source_file": "apps/frontend/src/types.ts",
+      "source_location": "L68"
+    },
+    {
+      "id": "apps_frontend_src_types_recentlyaddedrailprops",
+      "label": "RecentlyAddedRailProps",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 4,
+      "community_name": "MusicPlayerPage.tsx",
+      "file_type": "code",
+      "norm_label": "recentlyaddedrailprops",
+      "source_file": "apps/frontend/src/types.ts",
+      "source_location": "L82"
     },
     {
       "id": "apps_frontend_src_types_rediscoveritem",
@@ -730,45 +808,6 @@
       "norm_label": "topnavrailprops",
       "source_file": "apps/frontend/src/types.ts",
       "source_location": "L3"
-    },
-    {
-      "id": "apps_frontend_src_types_audioformat",
-      "label": "AudioFormat",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 5,
-      "community_name": "library.ts",
-      "file_type": "code",
-      "norm_label": "audioformat",
-      "source_file": "apps/frontend/src/types.ts",
-      "source_location": "L65"
-    },
-    {
-      "id": "apps_frontend_src_types_recentlyaddeditem",
-      "label": "RecentlyAddedItem",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 5,
-      "community_name": "library.ts",
-      "file_type": "code",
-      "norm_label": "recentlyaddeditem",
-      "source_file": "apps/frontend/src/types.ts",
-      "source_location": "L68"
-    },
-    {
-      "id": "apps_frontend_src_types_recentlyaddedrailprops",
-      "label": "RecentlyAddedRailProps",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 5,
-      "community_name": "library.ts",
-      "file_type": "code",
-      "norm_label": "recentlyaddedrailprops",
-      "source_file": "apps/frontend/src/types.ts",
-      "source_location": "L82"
     },
     {
       "id": "apps_frontend_src_services_realaudioengine_realaudioengine",
@@ -844,18 +883,6 @@
       "source_location": "L85"
     },
     {
-      "id": "apps_frontend_src_components_organisms_libraryview_libraryview",
-      "label": "LibraryView()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 0,
-      "community_name": "TrackItem",
-      "file_type": "code",
-      "norm_label": "libraryview()",
-      "source_file": "apps/frontend/src/components/organisms/LibraryView.tsx",
-      "source_location": "L35"
-    },
-    {
       "id": "apps_frontend_src_components_organisms_trackstableview_trackstableview",
       "label": "TracksTableView()",
       "_callable": true,
@@ -890,30 +917,6 @@
       "norm_label": "monstercatvisualizer()",
       "source_file": "apps/frontend/src/components/organisms/MonstercatVisualizer.tsx",
       "source_location": "L29"
-    },
-    {
-      "id": "apps_frontend_src_components_organisms_nowplayingbar_generatecompactwaveform",
-      "label": "generateCompactWaveform()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 1,
-      "community_name": "FullscreenNowPlaying.tsx",
-      "file_type": "code",
-      "norm_label": "generatecompactwaveform()",
-      "source_file": "apps/frontend/src/components/organisms/NowPlayingBar.tsx",
-      "source_location": "L37"
-    },
-    {
-      "id": "apps_frontend_src_components_organisms_nowplayingbar_nowplayingbar",
-      "label": "NowPlayingBar()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 1,
-      "community_name": "FullscreenNowPlaying.tsx",
-      "file_type": "code",
-      "norm_label": "nowplayingbar()",
-      "source_file": "apps/frontend/src/components/organisms/NowPlayingBar.tsx",
-      "source_location": "L68"
     },
     {
       "id": "apps_frontend_src_components_organisms_waveformscrubber_generatesoundcloudwaveform",
@@ -964,16 +967,172 @@
       "source_location": "L101"
     },
     {
+      "id": "apps_frontend_src_components_organisms_libraryview_libraryview",
+      "label": "LibraryView()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 21,
+      "community_name": "libraryService.ts",
+      "file_type": "code",
+      "norm_label": "libraryview()",
+      "source_file": "apps/frontend/src/components/organisms/LibraryView.tsx",
+      "source_location": "L22"
+    },
+    {
+      "id": "apps_frontend_src_components_templates_appshell_appshell",
+      "label": "AppShell()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 21,
+      "community_name": "libraryService.ts",
+      "file_type": "code",
+      "norm_label": "appshell()",
+      "source_file": "apps/frontend/src/components/templates/AppShell.tsx",
+      "source_location": "L9"
+    },
+    {
+      "id": "apps_frontend_src_hooks_uselibraryscan_uselibraryscan",
+      "label": "useLibraryScan()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 21,
+      "community_name": "libraryService.ts",
+      "file_type": "code",
+      "norm_label": "uselibraryscan()",
+      "source_file": "apps/frontend/src/hooks/useLibraryScan.ts",
+      "source_location": "L12"
+    },
+    {
+      "id": "apps_frontend_src_pages_desktoplibrarypage_desktoplibrarypage",
+      "label": "DesktopLibraryPage()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 21,
+      "community_name": "libraryService.ts",
+      "file_type": "code",
+      "norm_label": "desktoplibrarypage()",
+      "source_file": "apps/frontend/src/pages/DesktopLibraryPage.tsx",
+      "source_location": "L7"
+    },
+    {
+      "id": "apps_frontend_src_services_libraryservice_chooselibraryfolder",
+      "label": "chooseLibraryFolder()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 21,
+      "community_name": "libraryService.ts",
+      "file_type": "code",
+      "norm_label": "chooselibraryfolder()",
+      "source_file": "apps/frontend/src/services/libraryService.ts",
+      "source_location": "L32"
+    },
+    {
+      "id": "apps_frontend_src_services_libraryservice_errorsnapshot",
+      "label": "errorSnapshot()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 21,
+      "community_name": "libraryService.ts",
+      "file_type": "code",
+      "norm_label": "errorsnapshot()",
+      "source_file": "apps/frontend/src/services/libraryService.ts",
+      "source_location": "L101"
+    },
+    {
+      "id": "apps_frontend_src_services_libraryservice_formatbitrate",
+      "label": "formatBitrate()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 21,
+      "community_name": "libraryService.ts",
+      "file_type": "code",
+      "norm_label": "formatbitrate()",
+      "source_file": "apps/frontend/src/services/libraryService.ts",
+      "source_location": "L60"
+    },
+    {
+      "id": "apps_frontend_src_services_libraryservice_formatduration",
+      "label": "formatDuration()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 21,
+      "community_name": "libraryService.ts",
+      "file_type": "code",
+      "norm_label": "formatduration()",
+      "source_file": "apps/frontend/src/services/libraryService.ts",
+      "source_location": "L49"
+    },
+    {
+      "id": "apps_frontend_src_services_libraryservice_formatsamplerate",
+      "label": "formatSampleRate()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 21,
+      "community_name": "libraryService.ts",
+      "file_type": "code",
+      "norm_label": "formatsamplerate()",
+      "source_file": "apps/frontend/src/services/libraryService.ts",
+      "source_location": "L55"
+    },
+    {
+      "id": "apps_frontend_src_services_libraryservice_scanlibrary",
+      "label": "scanLibrary()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 21,
+      "community_name": "libraryService.ts",
+      "file_type": "code",
+      "norm_label": "scanlibrary()",
+      "source_file": "apps/frontend/src/services/libraryService.ts",
+      "source_location": "L41"
+    },
+    {
+      "id": "apps_frontend_src_services_libraryservice_tolibrarysnapshot",
+      "label": "toLibrarySnapshot()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 21,
+      "community_name": "libraryService.ts",
+      "file_type": "code",
+      "norm_label": "tolibrarysnapshot()",
+      "source_file": "apps/frontend/src/services/libraryService.ts",
+      "source_location": "L86"
+    },
+    {
+      "id": "apps_frontend_src_services_libraryservice_totrackitem",
+      "label": "toTrackItem()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 21,
+      "community_name": "libraryService.ts",
+      "file_type": "code",
+      "norm_label": "totrackitem()",
+      "source_file": "apps/frontend/src/services/libraryService.ts",
+      "source_location": "L66"
+    },
+    {
       "id": "apps_frontend_src_services_tauri_bindings_typederror",
       "label": "typedError()",
       "_callable": true,
       "_origin": "ast",
       "community": 21,
-      "community_name": "tauri-bindings.ts",
+      "community_name": "libraryService.ts",
       "file_type": "code",
       "norm_label": "typederror()",
       "source_file": "apps/frontend/src/services/tauri-bindings.ts",
-      "source_location": "L63"
+      "source_location": "L70"
+    },
+    {
+      "id": "apps_frontend_src_components_atoms_emptystate_emptystate",
+      "label": "EmptyState()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 34,
+      "community_name": "EmptyState.tsx",
+      "file_type": "code",
+      "norm_label": "emptystate()",
+      "source_file": "apps/frontend/src/components/atoms/EmptyState.tsx",
+      "source_location": "L9"
     },
     {
       "id": "apps_frontend_src_app_app",
@@ -986,18 +1145,6 @@
       "norm_label": "app()",
       "source_file": "apps/frontend/src/App.tsx",
       "source_location": "L3"
-    },
-    {
-      "id": "apps_frontend_src_components_atoms_emptystate_emptystate",
-      "label": "EmptyState()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 4,
-      "community_name": "MusicPlayerPage.tsx",
-      "file_type": "code",
-      "norm_label": "emptystate()",
-      "source_file": "apps/frontend/src/components/atoms/EmptyState.tsx",
-      "source_location": "L9"
     },
     {
       "id": "apps_frontend_src_components_molecules_continuelisteningrail_continuelisteningrail",
@@ -1022,6 +1169,18 @@
       "norm_label": "listeningstats()",
       "source_file": "apps/frontend/src/components/molecules/ListeningStats.tsx",
       "source_location": "L47"
+    },
+    {
+      "id": "apps_frontend_src_components_molecules_recentlyaddedrail_recentlyaddedrail",
+      "label": "RecentlyAddedRail()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 4,
+      "community_name": "MusicPlayerPage.tsx",
+      "file_type": "code",
+      "norm_label": "recentlyaddedrail()",
+      "source_file": "apps/frontend/src/components/molecules/RecentlyAddedRail.tsx",
+      "source_location": "L7"
     },
     {
       "id": "apps_frontend_src_components_molecules_rediscoverrail_rediscoverrail",
@@ -1096,6 +1255,30 @@
       "source_location": "L14"
     },
     {
+      "id": "apps_frontend_src_components_organisms_nowplayingbar_generatecompactwaveform",
+      "label": "generateCompactWaveform()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 4,
+      "community_name": "MusicPlayerPage.tsx",
+      "file_type": "code",
+      "norm_label": "generatecompactwaveform()",
+      "source_file": "apps/frontend/src/components/organisms/NowPlayingBar.tsx",
+      "source_location": "L37"
+    },
+    {
+      "id": "apps_frontend_src_components_organisms_nowplayingbar_nowplayingbar",
+      "label": "NowPlayingBar()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 4,
+      "community_name": "MusicPlayerPage.tsx",
+      "file_type": "code",
+      "norm_label": "nowplayingbar()",
+      "source_file": "apps/frontend/src/components/organisms/NowPlayingBar.tsx",
+      "source_location": "L68"
+    },
+    {
       "id": "apps_frontend_src_components_organisms_nowplayingqueuemodal_nowplayingqueuemodal",
       "label": "NowPlayingQueueModal()",
       "_callable": true,
@@ -1132,18 +1315,6 @@
       "source_location": "L18"
     },
     {
-      "id": "apps_frontend_src_components_templates_appshell_appshell",
-      "label": "AppShell()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 4,
-      "community_name": "MusicPlayerPage.tsx",
-      "file_type": "code",
-      "norm_label": "appshell()",
-      "source_file": "apps/frontend/src/components/templates/AppShell.tsx",
-      "source_location": "L9"
-    },
-    {
       "id": "apps_frontend_src_hooks_usedemomode_usedemomode",
       "label": "useDemoMode()",
       "_callable": true,
@@ -1165,19 +1336,7 @@
       "file_type": "code",
       "norm_label": "demomusicplayer()",
       "source_file": "apps/frontend/src/pages/MusicPlayerPage.tsx",
-      "source_location": "L63"
-    },
-    {
-      "id": "apps_frontend_src_pages_musicplayerpage_emptylibrarypage",
-      "label": "EmptyLibraryPage()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 4,
-      "community_name": "MusicPlayerPage.tsx",
-      "file_type": "code",
-      "norm_label": "emptylibrarypage()",
-      "source_file": "apps/frontend/src/pages/MusicPlayerPage.tsx",
-      "source_location": "L50"
+      "source_location": "L49"
     },
     {
       "id": "apps_frontend_src_pages_musicplayerpage_musicplayerpage",
@@ -1189,7 +1348,7 @@
       "file_type": "code",
       "norm_label": "musicplayerpage()",
       "source_file": "apps/frontend/src/pages/MusicPlayerPage.tsx",
-      "source_location": "L38"
+      "source_location": "L37"
     },
     {
       "id": "apps_frontend_src_services_antraengineservice_antraengineprovider",
@@ -1238,18 +1397,6 @@
       "norm_label": "usetheme()",
       "source_file": "apps/frontend/src/services/themeService.tsx",
       "source_location": "L1082"
-    },
-    {
-      "id": "apps_frontend_src_components_molecules_recentlyaddedrail_recentlyaddedrail",
-      "label": "RecentlyAddedRail()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 5,
-      "community_name": "library.ts",
-      "file_type": "code",
-      "norm_label": "recentlyaddedrail()",
-      "source_file": "apps/frontend/src/components/molecules/RecentlyAddedRail.tsx",
-      "source_location": "L7"
     },
     {
       "id": "apps_frontend_src_services_realaudioengine_realaudioengine_constructor",
@@ -1542,17 +1689,6 @@
       "source_location": "L1"
     },
     {
-      "id": "apps_frontend_src_components_organisms_libraryview_default_columns",
-      "label": "DEFAULT_COLUMNS",
-      "_origin": "ast",
-      "community": 0,
-      "community_name": "TrackItem",
-      "file_type": "code",
-      "norm_label": "default_columns",
-      "source_file": "apps/frontend/src/components/organisms/LibraryView.tsx",
-      "source_location": "L20"
-    },
-    {
       "id": "apps_frontend_src_components_organisms_trackstableview",
       "label": "TracksTableView.tsx",
       "_origin": "ast",
@@ -1630,6 +1766,17 @@
       "source_location": "L1264"
     },
     {
+      "id": "apps_frontend_src_demo_catalog_local_tracks",
+      "label": "LOCAL_TRACKS",
+      "_origin": "ast",
+      "community": 0,
+      "community_name": "TrackItem",
+      "file_type": "code",
+      "norm_label": "local_tracks",
+      "source_file": "apps/frontend/src/demo/catalog.ts",
+      "source_location": "L1263"
+    },
+    {
       "id": "apps_frontend_src_components_organisms_fullscreennowplaying",
       "label": "FullscreenNowPlaying.tsx",
       "_origin": "ast",
@@ -1649,17 +1796,6 @@
       "file_type": "code",
       "norm_label": "monstercatvisualizer.tsx",
       "source_file": "apps/frontend/src/components/organisms/MonstercatVisualizer.tsx",
-      "source_location": "L1"
-    },
-    {
-      "id": "apps_frontend_src_components_organisms_nowplayingbar",
-      "label": "NowPlayingBar.tsx",
-      "_origin": "ast",
-      "community": 1,
-      "community_name": "FullscreenNowPlaying.tsx",
-      "file_type": "code",
-      "norm_label": "nowplayingbar.tsx",
-      "source_file": "apps/frontend/src/components/organisms/NowPlayingBar.tsx",
       "source_location": "L1"
     },
     {
@@ -1903,6 +2039,17 @@
       "source_location": "L79"
     },
     {
+      "id": "apphandle",
+      "label": "AppHandle",
+      "_origin": "ast",
+      "community": 17,
+      "community_name": "lib.rs",
+      "file_type": "code",
+      "norm_label": "apphandle",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
       "id": "btreemap",
       "label": "BTreeMap",
       "_origin": "ast",
@@ -1936,6 +2083,39 @@
       "source_location": ""
     },
     {
+      "id": "direntry",
+      "label": "DirEntry",
+      "_origin": "ast",
+      "community": 17,
+      "community_name": "lib.rs",
+      "file_type": "code",
+      "norm_label": "direntry",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "error",
+      "label": "Error",
+      "_origin": "ast",
+      "community": 17,
+      "community_name": "lib.rs",
+      "file_type": "code",
+      "norm_label": "error",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "f",
+      "label": "F",
+      "_origin": "ast",
+      "community": 17,
+      "community_name": "lib.rs",
+      "file_type": "code",
+      "norm_label": "f",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
       "id": "mutex",
       "label": "Mutex",
       "_origin": "ast",
@@ -1954,6 +2134,17 @@
       "community_name": "lib.rs",
       "file_type": "code",
       "norm_label": "option",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "path",
+      "label": "Path",
+      "_origin": "ast",
+      "community": 17,
+      "community_name": "lib.rs",
+      "file_type": "code",
+      "norm_label": "path",
       "source_file": "",
       "source_location": ""
     },
@@ -2021,7 +2212,18 @@
       "file_type": "code",
       "norm_label": "apperror",
       "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L16"
+      "source_location": "L24"
+    },
+    {
+      "id": "src_tauri_src_lib_apperror_invalid_library_root",
+      "label": ".invalid_library_root()",
+      "_origin": "ast",
+      "community": 17,
+      "community_name": "lib.rs",
+      "file_type": "code",
+      "norm_label": ".invalid_library_root()",
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L40"
     },
     {
       "id": "src_tauri_src_lib_apperror_state_unavailable",
@@ -2032,7 +2234,7 @@
       "file_type": "code",
       "norm_label": ".state_unavailable()",
       "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L24"
+      "source_location": "L32"
     },
     {
       "id": "src_tauri_src_lib_appstate",
@@ -2043,7 +2245,7 @@
       "file_type": "code",
       "norm_label": "appstate",
       "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L116"
+      "source_location": "L155"
     },
     {
       "id": "src_tauri_src_lib_audioextension",
@@ -2054,18 +2256,51 @@
       "file_type": "code",
       "norm_label": "audioextension",
       "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L35"
+      "source_location": "L54"
     },
     {
-      "id": "src_tauri_src_lib_desktop_state_starts_without_a_library_or_active_track",
-      "label": "desktop_state_starts_without_a_library_or_active_track()",
+      "id": "src_tauri_src_lib_audioextension_from_path",
+      "label": ".from_path()",
       "_origin": "ast",
       "community": 17,
       "community_name": "lib.rs",
       "file_type": "code",
-      "norm_label": "desktop_state_starts_without_a_library_or_active_track()",
+      "norm_label": ".from_path()",
       "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L185"
+      "source_location": "L62"
+    },
+    {
+      "id": "src_tauri_src_lib_audiometadata",
+      "label": "AudioMetadata",
+      "_origin": "ast",
+      "community": 17,
+      "community_name": "lib.rs",
+      "file_type": "code",
+      "norm_label": "audiometadata",
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L161"
+    },
+    {
+      "id": "src_tauri_src_lib_canonical_track_path",
+      "label": "canonical_track_path()",
+      "_origin": "ast",
+      "community": 17,
+      "community_name": "lib.rs",
+      "file_type": "code",
+      "norm_label": "canonical_track_path()",
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L225"
+    },
+    {
+      "id": "src_tauri_src_lib_canonical_track_paths_cannot_escape_the_active_library",
+      "label": "canonical_track_paths_cannot_escape_the_active_library()",
+      "_origin": "ast",
+      "community": 17,
+      "community_name": "lib.rs",
+      "file_type": "code",
+      "norm_label": "canonical_track_paths_cannot_escape_the_active_library()",
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L458"
     },
     {
       "id": "src_tauri_src_lib_desktopstate",
@@ -2076,7 +2311,18 @@
       "file_type": "code",
       "norm_label": "desktopstate",
       "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L103"
+      "source_location": "L142"
+    },
+    {
+      "id": "src_tauri_src_lib_display_title",
+      "label": "display_title()",
+      "_origin": "ast",
+      "community": 17,
+      "community_name": "lib.rs",
+      "file_type": "code",
+      "norm_label": "display_title()",
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L181"
     },
     {
       "id": "src_tauri_src_lib_export_typescript_bindings",
@@ -2087,7 +2333,7 @@
       "file_type": "code",
       "norm_label": "export_typescript_bindings()",
       "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L154"
+      "source_location": "L385"
     },
     {
       "id": "src_tauri_src_lib_exports_typescript_ipc_contracts",
@@ -2098,7 +2344,7 @@
       "file_type": "code",
       "norm_label": "exports_typescript_ipc_contracts()",
       "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L195"
+      "source_location": "L476"
     },
     {
       "id": "src_tauri_src_lib_get_desktop_state",
@@ -2109,7 +2355,7 @@
       "file_type": "code",
       "norm_label": "get_desktop_state()",
       "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L123"
+      "source_location": "L354"
     },
     {
       "id": "src_tauri_src_lib_ipc_bindings",
@@ -2120,7 +2366,29 @@
       "file_type": "code",
       "norm_label": "ipc_bindings()",
       "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L143"
+      "source_location": "L373"
+    },
+    {
+      "id": "src_tauri_src_lib_is_hidden",
+      "label": "is_hidden()",
+      "_origin": "ast",
+      "community": 17,
+      "community_name": "lib.rs",
+      "file_type": "code",
+      "norm_label": "is_hidden()",
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L168"
+    },
+    {
+      "id": "src_tauri_src_lib_libraryscan",
+      "label": "LibraryScan",
+      "_origin": "ast",
+      "community": 17,
+      "community_name": "lib.rs",
+      "file_type": "code",
+      "norm_label": "libraryscan",
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L89"
     },
     {
       "id": "src_tauri_src_lib_playbackengine",
@@ -2131,7 +2399,7 @@
       "file_type": "code",
       "norm_label": "playbackengine",
       "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L109"
+      "source_location": "L148"
     },
     {
       "id": "src_tauri_src_lib_playbackstate",
@@ -2142,7 +2410,7 @@
       "file_type": "code",
       "norm_label": "playbackstate",
       "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L69"
+      "source_location": "L108"
     },
     {
       "id": "src_tauri_src_lib_playbackstate_default",
@@ -2153,7 +2421,7 @@
       "file_type": "code",
       "norm_label": ".default()",
       "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L80"
+      "source_location": "L119"
     },
     {
       "id": "src_tauri_src_lib_playbackstatus",
@@ -2164,7 +2432,18 @@
       "file_type": "code",
       "norm_label": "playbackstatus",
       "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L58"
+      "source_location": "L97"
+    },
+    {
+      "id": "src_tauri_src_lib_probe_audio_metadata",
+      "label": "probe_audio_metadata()",
+      "_origin": "ast",
+      "community": 17,
+      "community_name": "lib.rs",
+      "file_type": "code",
+      "norm_label": "probe_audio_metadata()",
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L189"
     },
     {
       "id": "src_tauri_src_lib_run",
@@ -2175,7 +2454,40 @@
       "file_type": "code",
       "norm_label": "run()",
       "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L164"
+      "source_location": "L395"
+    },
+    {
+      "id": "src_tauri_src_lib_scan_library",
+      "label": "scan_library()",
+      "_origin": "ast",
+      "community": 17,
+      "community_name": "lib.rs",
+      "file_type": "code",
+      "norm_label": "scan_library()",
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L336"
+    },
+    {
+      "id": "src_tauri_src_lib_scan_library_at",
+      "label": "scan_library_at()",
+      "_origin": "ast",
+      "community": 17,
+      "community_name": "lib.rs",
+      "file_type": "code",
+      "norm_label": "scan_library_at()",
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L243"
+    },
+    {
+      "id": "src_tauri_src_lib_scan_recognizes_supported_files_and_ignores_hidden_or_other_files",
+      "label": "scan_recognizes_supported_files_and_ignores_hidden_or_other_files()",
+      "_origin": "ast",
+      "community": 17,
+      "community_name": "lib.rs",
+      "file_type": "code",
+      "norm_label": "scan_recognizes_supported_files_and_ignores_hidden_or_other_files()",
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L428"
     },
     {
       "id": "src_tauri_src_lib_scanprogress",
@@ -2186,7 +2498,29 @@
       "file_type": "code",
       "norm_label": "scanprogress",
       "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L95"
+      "source_location": "L134"
+    },
+    {
+      "id": "src_tauri_src_lib_temporary_directory",
+      "label": "temporary_directory()",
+      "_origin": "ast",
+      "community": 17,
+      "community_name": "lib.rs",
+      "file_type": "code",
+      "norm_label": "temporary_directory()",
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L417"
+    },
+    {
+      "id": "src_tauri_src_lib_track_id",
+      "label": "track_id()",
+      "_origin": "ast",
+      "community": 17,
+      "community_name": "lib.rs",
+      "file_type": "code",
+      "norm_label": "track_id()",
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L175"
     },
     {
       "id": "src_tauri_src_lib_tracksummary",
@@ -2197,7 +2531,7 @@
       "file_type": "code",
       "norm_label": "tracksummary",
       "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L44"
+      "source_location": "L75"
     },
     {
       "id": "state",
@@ -2218,6 +2552,17 @@
       "community_name": "lib.rs",
       "file_type": "code",
       "norm_label": "string",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "vec",
+      "label": "Vec",
+      "_origin": "ast",
+      "community": 17,
+      "community_name": "lib.rs",
+      "file_type": "code",
+      "norm_label": "vec",
       "source_file": "",
       "source_location": ""
     },
@@ -2637,7 +2982,7 @@
       "file_type": "code",
       "norm_label": "devdependencies",
       "source_file": "apps/frontend/package.json",
-      "source_location": "L28"
+      "source_location": "L29"
     },
     {
       "id": "apps_frontend_package_devdependencies_autoprefixer",
@@ -2648,7 +2993,7 @@
       "file_type": "code",
       "norm_label": "autoprefixer",
       "source_file": "apps/frontend/package.json",
-      "source_location": "L35"
+      "source_location": "L36"
     },
     {
       "id": "apps_frontend_package_devdependencies_esbuild",
@@ -2659,7 +3004,7 @@
       "file_type": "code",
       "norm_label": "esbuild",
       "source_file": "apps/frontend/package.json",
-      "source_location": "L36"
+      "source_location": "L37"
     },
     {
       "id": "apps_frontend_package_devdependencies_eslint",
@@ -2670,7 +3015,7 @@
       "file_type": "code",
       "norm_label": "eslint",
       "source_file": "apps/frontend/package.json",
-      "source_location": "L37"
+      "source_location": "L38"
     },
     {
       "id": "apps_frontend_package_devdependencies_eslint_js",
@@ -2681,7 +3026,7 @@
       "file_type": "code",
       "norm_label": "@eslint/js",
       "source_file": "apps/frontend/package.json",
-      "source_location": "L29"
+      "source_location": "L30"
     },
     {
       "id": "apps_frontend_package_devdependencies_eslint_plugin_react_hooks",
@@ -2692,7 +3037,7 @@
       "file_type": "code",
       "norm_label": "eslint-plugin-react-hooks",
       "source_file": "apps/frontend/package.json",
-      "source_location": "L38"
+      "source_location": "L39"
     },
     {
       "id": "apps_frontend_package_devdependencies_eslint_plugin_react_refresh",
@@ -2703,7 +3048,7 @@
       "file_type": "code",
       "norm_label": "eslint-plugin-react-refresh",
       "source_file": "apps/frontend/package.json",
-      "source_location": "L39"
+      "source_location": "L40"
     },
     {
       "id": "apps_frontend_package_devdependencies_globals",
@@ -2714,7 +3059,7 @@
       "file_type": "code",
       "norm_label": "globals",
       "source_file": "apps/frontend/package.json",
-      "source_location": "L40"
+      "source_location": "L41"
     },
     {
       "id": "apps_frontend_package_devdependencies_jsdom",
@@ -2725,7 +3070,7 @@
       "file_type": "code",
       "norm_label": "jsdom",
       "source_file": "apps/frontend/package.json",
-      "source_location": "L41"
+      "source_location": "L42"
     },
     {
       "id": "apps_frontend_package_devdependencies_prettier",
@@ -2736,7 +3081,7 @@
       "file_type": "code",
       "norm_label": "prettier",
       "source_file": "apps/frontend/package.json",
-      "source_location": "L42"
+      "source_location": "L43"
     },
     {
       "id": "apps_frontend_package_devdependencies_tailwindcss",
@@ -2747,7 +3092,7 @@
       "file_type": "code",
       "norm_label": "tailwindcss",
       "source_file": "apps/frontend/package.json",
-      "source_location": "L43"
+      "source_location": "L44"
     },
     {
       "id": "apps_frontend_package_devdependencies_tauri_apps_cli",
@@ -2758,7 +3103,7 @@
       "file_type": "code",
       "norm_label": "@tauri-apps/cli",
       "source_file": "apps/frontend/package.json",
-      "source_location": "L30"
+      "source_location": "L31"
     },
     {
       "id": "apps_frontend_package_devdependencies_testing_library_jest_dom",
@@ -2769,7 +3114,7 @@
       "file_type": "code",
       "norm_label": "@testing-library/jest-dom",
       "source_file": "apps/frontend/package.json",
-      "source_location": "L31"
+      "source_location": "L32"
     },
     {
       "id": "apps_frontend_package_devdependencies_testing_library_react",
@@ -2780,7 +3125,7 @@
       "file_type": "code",
       "norm_label": "@testing-library/react",
       "source_file": "apps/frontend/package.json",
-      "source_location": "L32"
+      "source_location": "L33"
     },
     {
       "id": "apps_frontend_package_devdependencies_testing_library_user_event",
@@ -2791,7 +3136,7 @@
       "file_type": "code",
       "norm_label": "@testing-library/user-event",
       "source_file": "apps/frontend/package.json",
-      "source_location": "L33"
+      "source_location": "L34"
     },
     {
       "id": "apps_frontend_package_devdependencies_tsx",
@@ -2802,7 +3147,7 @@
       "file_type": "code",
       "norm_label": "tsx",
       "source_file": "apps/frontend/package.json",
-      "source_location": "L44"
+      "source_location": "L45"
     },
     {
       "id": "apps_frontend_package_devdependencies_types_node",
@@ -2813,7 +3158,7 @@
       "file_type": "code",
       "norm_label": "@types/node",
       "source_file": "apps/frontend/package.json",
-      "source_location": "L34"
+      "source_location": "L35"
     },
     {
       "id": "apps_frontend_package_devdependencies_typescript",
@@ -2824,7 +3169,7 @@
       "file_type": "code",
       "norm_label": "typescript",
       "source_file": "apps/frontend/package.json",
-      "source_location": "L45"
+      "source_location": "L46"
     },
     {
       "id": "apps_frontend_package_devdependencies_typescript_eslint",
@@ -2835,7 +3180,7 @@
       "file_type": "code",
       "norm_label": "typescript-eslint",
       "source_file": "apps/frontend/package.json",
-      "source_location": "L46"
+      "source_location": "L47"
     },
     {
       "id": "apps_frontend_package_devdependencies_vitest",
@@ -2846,7 +3191,7 @@
       "file_type": "code",
       "norm_label": "vitest",
       "source_file": "apps/frontend/package.json",
-      "source_location": "L48"
+      "source_location": "L49"
     },
     {
       "id": "autoprefixer",
@@ -2857,7 +3202,7 @@
       "file_type": "concept",
       "norm_label": "autoprefixer",
       "source_file": "apps/frontend/package.json",
-      "source_location": "L35"
+      "source_location": "L36"
     },
     {
       "id": "esbuild",
@@ -2868,7 +3213,7 @@
       "file_type": "concept",
       "norm_label": "esbuild",
       "source_file": "apps/frontend/package.json",
-      "source_location": "L36"
+      "source_location": "L37"
     },
     {
       "id": "eslint",
@@ -2879,7 +3224,7 @@
       "file_type": "concept",
       "norm_label": "eslint",
       "source_file": "apps/frontend/package.json",
-      "source_location": "L37"
+      "source_location": "L38"
     },
     {
       "id": "eslint_js",
@@ -2890,7 +3235,7 @@
       "file_type": "concept",
       "norm_label": "@eslint/js",
       "source_file": "apps/frontend/package.json",
-      "source_location": "L29"
+      "source_location": "L30"
     },
     {
       "id": "eslint_plugin_react_hooks",
@@ -2901,7 +3246,7 @@
       "file_type": "concept",
       "norm_label": "eslint-plugin-react-hooks",
       "source_file": "apps/frontend/package.json",
-      "source_location": "L38"
+      "source_location": "L39"
     },
     {
       "id": "eslint_plugin_react_refresh",
@@ -2912,7 +3257,7 @@
       "file_type": "concept",
       "norm_label": "eslint-plugin-react-refresh",
       "source_file": "apps/frontend/package.json",
-      "source_location": "L39"
+      "source_location": "L40"
     },
     {
       "id": "globals",
@@ -2923,7 +3268,7 @@
       "file_type": "concept",
       "norm_label": "globals",
       "source_file": "apps/frontend/package.json",
-      "source_location": "L40"
+      "source_location": "L41"
     },
     {
       "id": "jsdom",
@@ -2934,7 +3279,7 @@
       "file_type": "concept",
       "norm_label": "jsdom",
       "source_file": "apps/frontend/package.json",
-      "source_location": "L41"
+      "source_location": "L42"
     },
     {
       "id": "prettier",
@@ -2945,7 +3290,7 @@
       "file_type": "concept",
       "norm_label": "prettier",
       "source_file": "apps/frontend/package.json",
-      "source_location": "L42"
+      "source_location": "L43"
     },
     {
       "id": "tailwindcss",
@@ -2956,7 +3301,7 @@
       "file_type": "concept",
       "norm_label": "tailwindcss",
       "source_file": "apps/frontend/package.json",
-      "source_location": "L43"
+      "source_location": "L44"
     },
     {
       "id": "tauri_apps_cli",
@@ -2967,7 +3312,7 @@
       "file_type": "concept",
       "norm_label": "@tauri-apps/cli",
       "source_file": "apps/frontend/package.json",
-      "source_location": "L30"
+      "source_location": "L31"
     },
     {
       "id": "testing_library_jest_dom",
@@ -2978,7 +3323,7 @@
       "file_type": "concept",
       "norm_label": "@testing-library/jest-dom",
       "source_file": "apps/frontend/package.json",
-      "source_location": "L31"
+      "source_location": "L32"
     },
     {
       "id": "testing_library_react",
@@ -2989,7 +3334,7 @@
       "file_type": "concept",
       "norm_label": "@testing-library/react",
       "source_file": "apps/frontend/package.json",
-      "source_location": "L32"
+      "source_location": "L33"
     },
     {
       "id": "testing_library_user_event",
@@ -3000,7 +3345,7 @@
       "file_type": "concept",
       "norm_label": "@testing-library/user-event",
       "source_file": "apps/frontend/package.json",
-      "source_location": "L33"
+      "source_location": "L34"
     },
     {
       "id": "tsx",
@@ -3011,7 +3356,7 @@
       "file_type": "concept",
       "norm_label": "tsx",
       "source_file": "apps/frontend/package.json",
-      "source_location": "L44"
+      "source_location": "L45"
     },
     {
       "id": "types_node",
@@ -3022,7 +3367,7 @@
       "file_type": "concept",
       "norm_label": "@types/node",
       "source_file": "apps/frontend/package.json",
-      "source_location": "L34"
+      "source_location": "L35"
     },
     {
       "id": "typescript",
@@ -3033,7 +3378,7 @@
       "file_type": "concept",
       "norm_label": "typescript",
       "source_file": "apps/frontend/package.json",
-      "source_location": "L45"
+      "source_location": "L46"
     },
     {
       "id": "typescript_eslint",
@@ -3044,7 +3389,7 @@
       "file_type": "concept",
       "norm_label": "typescript-eslint",
       "source_file": "apps/frontend/package.json",
-      "source_location": "L46"
+      "source_location": "L47"
     },
     {
       "id": "vitest",
@@ -3055,7 +3400,7 @@
       "file_type": "concept",
       "norm_label": "vitest",
       "source_file": "apps/frontend/package.json",
-      "source_location": "L48"
+      "source_location": "L49"
     },
     {
       "id": "src_tauri_capabilities_main",
@@ -3223,11 +3568,88 @@
       "source_location": "L6"
     },
     {
+      "id": "apps_frontend_src_components_templates_appshell",
+      "label": "AppShell.tsx",
+      "_origin": "ast",
+      "community": 21,
+      "community_name": "libraryService.ts",
+      "file_type": "code",
+      "norm_label": "appshell.tsx",
+      "source_file": "apps/frontend/src/components/templates/AppShell.tsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "apps_frontend_src_hooks_uselibraryscan",
+      "label": "useLibraryScan.ts",
+      "_origin": "ast",
+      "community": 21,
+      "community_name": "libraryService.ts",
+      "file_type": "code",
+      "norm_label": "uselibraryscan.ts",
+      "source_file": "apps/frontend/src/hooks/useLibraryScan.ts",
+      "source_location": "L1"
+    },
+    {
+      "id": "apps_frontend_src_pages_desktoplibrarypage",
+      "label": "DesktopLibraryPage.tsx",
+      "_origin": "ast",
+      "community": 21,
+      "community_name": "libraryService.ts",
+      "file_type": "code",
+      "norm_label": "desktoplibrarypage.tsx",
+      "source_file": "apps/frontend/src/pages/DesktopLibraryPage.tsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "apps_frontend_src_services_libraryservice",
+      "label": "libraryService.ts",
+      "_origin": "ast",
+      "community": 21,
+      "community_name": "libraryService.ts",
+      "file_type": "code",
+      "norm_label": "libraryservice.ts",
+      "source_file": "apps/frontend/src/services/libraryService.ts",
+      "source_location": "L1"
+    },
+    {
+      "id": "apps_frontend_src_services_libraryservice_initiallibraryscan",
+      "label": "initialLibraryScan",
+      "_origin": "ast",
+      "community": 21,
+      "community_name": "libraryService.ts",
+      "file_type": "code",
+      "norm_label": "initiallibraryscan",
+      "source_file": "apps/frontend/src/services/libraryService.ts",
+      "source_location": "L23"
+    },
+    {
+      "id": "apps_frontend_src_services_libraryservice_test",
+      "label": "libraryService.test.ts",
+      "_origin": "ast",
+      "community": 21,
+      "community_name": "libraryService.ts",
+      "file_type": "code",
+      "norm_label": "libraryservice.test.ts",
+      "source_file": "apps/frontend/src/services/libraryService.test.ts",
+      "source_location": "L1"
+    },
+    {
+      "id": "apps_frontend_src_services_libraryservice_test_scannedtrack",
+      "label": "scannedTrack",
+      "_origin": "ast",
+      "community": 21,
+      "community_name": "libraryService.ts",
+      "file_type": "code",
+      "norm_label": "scannedtrack",
+      "source_file": "apps/frontend/src/services/libraryService.test.ts",
+      "source_location": "L4"
+    },
+    {
       "id": "apps_frontend_src_services_tauri_bindings",
       "label": "tauri-bindings.ts",
       "_origin": "ast",
       "community": 21,
-      "community_name": "tauri-bindings.ts",
+      "community_name": "libraryService.ts",
       "file_type": "code",
       "norm_label": "tauri-bindings.ts",
       "source_file": "apps/frontend/src/services/tauri-bindings.ts",
@@ -3238,7 +3660,7 @@
       "label": "commands",
       "_origin": "ast",
       "community": 21,
-      "community_name": "tauri-bindings.ts",
+      "community_name": "libraryService.ts",
       "file_type": "code",
       "norm_label": "commands",
       "source_file": "apps/frontend/src/services/tauri-bindings.ts",
@@ -3967,6 +4389,17 @@
       "source_location": "L1"
     },
     {
+      "id": "apps_frontend_src_components_atoms_emptystate",
+      "label": "EmptyState.tsx",
+      "_origin": "ast",
+      "community": 34,
+      "community_name": "EmptyState.tsx",
+      "file_type": "code",
+      "norm_label": "emptystate.tsx",
+      "source_file": "apps/frontend/src/components/atoms/EmptyState.tsx",
+      "source_location": "L1"
+    },
+    {
       "id": "apps_frontend_src_app",
       "label": "App.tsx",
       "_origin": "ast",
@@ -3975,17 +4408,6 @@
       "file_type": "code",
       "norm_label": "app.tsx",
       "source_file": "apps/frontend/src/App.tsx",
-      "source_location": "L1"
-    },
-    {
-      "id": "apps_frontend_src_components_atoms_emptystate",
-      "label": "EmptyState.tsx",
-      "_origin": "ast",
-      "community": 4,
-      "community_name": "MusicPlayerPage.tsx",
-      "file_type": "code",
-      "norm_label": "emptystate.tsx",
-      "source_file": "apps/frontend/src/components/atoms/EmptyState.tsx",
       "source_location": "L1"
     },
     {
@@ -4031,6 +4453,17 @@
       "norm_label": "default_stats",
       "source_file": "apps/frontend/src/components/molecules/ListeningStats.tsx",
       "source_location": "L21"
+    },
+    {
+      "id": "apps_frontend_src_components_molecules_recentlyaddedrail",
+      "label": "RecentlyAddedRail.tsx",
+      "_origin": "ast",
+      "community": 4,
+      "community_name": "MusicPlayerPage.tsx",
+      "file_type": "code",
+      "norm_label": "recentlyaddedrail.tsx",
+      "source_file": "apps/frontend/src/components/molecules/RecentlyAddedRail.tsx",
+      "source_location": "L1"
     },
     {
       "id": "apps_frontend_src_components_molecules_rediscoverrail",
@@ -4088,6 +4521,17 @@
       "source_location": "L1"
     },
     {
+      "id": "apps_frontend_src_components_organisms_nowplayingbar",
+      "label": "NowPlayingBar.tsx",
+      "_origin": "ast",
+      "community": 4,
+      "community_name": "MusicPlayerPage.tsx",
+      "file_type": "code",
+      "norm_label": "nowplayingbar.tsx",
+      "source_file": "apps/frontend/src/components/organisms/NowPlayingBar.tsx",
+      "source_location": "L1"
+    },
+    {
       "id": "apps_frontend_src_components_organisms_nowplayingqueuemodal",
       "label": "NowPlayingQueueModal.tsx",
       "_origin": "ast",
@@ -4118,17 +4562,6 @@
       "file_type": "code",
       "norm_label": "themeselectormodal.tsx",
       "source_file": "apps/frontend/src/components/organisms/ThemeSelectorModal.tsx",
-      "source_location": "L1"
-    },
-    {
-      "id": "apps_frontend_src_components_templates_appshell",
-      "label": "AppShell.tsx",
-      "_origin": "ast",
-      "community": 4,
-      "community_name": "MusicPlayerPage.tsx",
-      "file_type": "code",
-      "norm_label": "appshell.tsx",
-      "source_file": "apps/frontend/src/components/templates/AppShell.tsx",
       "source_location": "L1"
     },
     {
@@ -4218,28 +4651,6 @@
       "norm_label": "types.ts",
       "source_file": "apps/frontend/src/types.ts",
       "source_location": "L1"
-    },
-    {
-      "id": "apps_frontend_src_components_molecules_recentlyaddedrail",
-      "label": "RecentlyAddedRail.tsx",
-      "_origin": "ast",
-      "community": 5,
-      "community_name": "library.ts",
-      "file_type": "code",
-      "norm_label": "recentlyaddedrail.tsx",
-      "source_file": "apps/frontend/src/components/molecules/RecentlyAddedRail.tsx",
-      "source_location": "L1"
-    },
-    {
-      "id": "apps_frontend_src_demo_catalog_local_tracks",
-      "label": "LOCAL_TRACKS",
-      "_origin": "ast",
-      "community": 5,
-      "community_name": "library.ts",
-      "file_type": "code",
-      "norm_label": "local_tracks",
-      "source_file": "apps/frontend/src/demo/catalog.ts",
-      "source_location": "L1263"
     },
     {
       "id": "apps_frontend_src_demo_library",
@@ -4758,7 +5169,7 @@
       "file_type": "code",
       "norm_label": "lucide-react",
       "source_file": "apps/frontend/package.json",
-      "source_location": "L22"
+      "source_location": "L23"
     },
     {
       "id": "apps_frontend_package_dependencies_motion",
@@ -4769,7 +5180,7 @@
       "file_type": "code",
       "norm_label": "motion",
       "source_file": "apps/frontend/package.json",
-      "source_location": "L23"
+      "source_location": "L24"
     },
     {
       "id": "apps_frontend_package_dependencies_react",
@@ -4780,7 +5191,7 @@
       "file_type": "code",
       "norm_label": "react",
       "source_file": "apps/frontend/package.json",
-      "source_location": "L24"
+      "source_location": "L25"
     },
     {
       "id": "apps_frontend_package_dependencies_react_dom",
@@ -4791,7 +5202,7 @@
       "file_type": "code",
       "norm_label": "react-dom",
       "source_file": "apps/frontend/package.json",
-      "source_location": "L25"
+      "source_location": "L26"
     },
     {
       "id": "apps_frontend_package_dependencies_tailwindcss_vite",
@@ -4816,6 +5227,17 @@
       "source_location": "L20"
     },
     {
+      "id": "apps_frontend_package_dependencies_tauri_apps_plugin_dialog",
+      "label": "@tauri-apps/plugin-dialog",
+      "_origin": "ast",
+      "community": 9,
+      "community_name": "scripts",
+      "file_type": "code",
+      "norm_label": "@tauri-apps/plugin-dialog",
+      "source_file": "apps/frontend/package.json",
+      "source_location": "L21"
+    },
+    {
       "id": "apps_frontend_package_dependencies_vite",
       "label": "vite",
       "_origin": "ast",
@@ -4824,7 +5246,7 @@
       "file_type": "code",
       "norm_label": "vite",
       "source_file": "apps/frontend/package.json",
-      "source_location": "L26"
+      "source_location": "L27"
     },
     {
       "id": "apps_frontend_package_dependencies_vitejs_plugin_react",
@@ -4835,7 +5257,7 @@
       "file_type": "code",
       "norm_label": "@vitejs/plugin-react",
       "source_file": "apps/frontend/package.json",
-      "source_location": "L21"
+      "source_location": "L22"
     },
     {
       "id": "apps_frontend_package_devdependencies_vite",
@@ -4846,7 +5268,7 @@
       "file_type": "code",
       "norm_label": "vite",
       "source_file": "apps/frontend/package.json",
-      "source_location": "L47"
+      "source_location": "L48"
     },
     {
       "id": "apps_frontend_package_name",
@@ -5022,7 +5444,7 @@
       "file_type": "concept",
       "norm_label": "lucide-react",
       "source_file": "apps/frontend/package.json",
-      "source_location": "L22"
+      "source_location": "L23"
     },
     {
       "id": "motion",
@@ -5033,7 +5455,7 @@
       "file_type": "concept",
       "norm_label": "motion",
       "source_file": "apps/frontend/package.json",
-      "source_location": "L23"
+      "source_location": "L24"
     },
     {
       "id": "react",
@@ -5044,7 +5466,7 @@
       "file_type": "concept",
       "norm_label": "react",
       "source_file": "apps/frontend/package.json",
-      "source_location": "L24"
+      "source_location": "L25"
     },
     {
       "id": "react_dom",
@@ -5055,7 +5477,7 @@
       "file_type": "concept",
       "norm_label": "react-dom",
       "source_file": "apps/frontend/package.json",
-      "source_location": "L25"
+      "source_location": "L26"
     },
     {
       "id": "tailwindcss_vite",
@@ -5080,6 +5502,17 @@
       "source_location": "L20"
     },
     {
+      "id": "tauri_apps_plugin_dialog",
+      "label": "@tauri-apps/plugin-dialog",
+      "_origin": "ast",
+      "community": 9,
+      "community_name": "scripts",
+      "file_type": "concept",
+      "norm_label": "@tauri-apps/plugin-dialog",
+      "source_file": "apps/frontend/package.json",
+      "source_location": "L21"
+    },
+    {
       "id": "vite",
       "label": "vite",
       "_origin": "ast",
@@ -5088,7 +5521,7 @@
       "file_type": "concept",
       "norm_label": "vite",
       "source_file": "apps/frontend/package.json",
-      "source_location": "L26"
+      "source_location": "L27"
     },
     {
       "id": "vitejs_plugin_react",
@@ -5099,7 +5532,7 @@
       "file_type": "concept",
       "norm_label": "@vitejs/plugin-react",
       "source_file": "apps/frontend/package.json",
-      "source_location": "L21"
+      "source_location": "L22"
     }
   ],
   "links": [
@@ -5344,6 +5777,78 @@
       "weight": 1.0
     },
     {
+      "source": "apps_frontend_src_hooks_uselibraryscan_uselibraryscan",
+      "target": "apps_frontend_src_services_libraryservice_chooselibraryfolder",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "apps/frontend/src/hooks/useLibraryScan.ts",
+      "source_location": "L27",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_frontend_src_hooks_uselibraryscan_uselibraryscan",
+      "target": "apps_frontend_src_services_libraryservice_scanlibrary",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "apps/frontend/src/hooks/useLibraryScan.ts",
+      "source_location": "L30",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_frontend_src_hooks_uselibraryscan_uselibraryscan",
+      "target": "apps_frontend_src_services_libraryservice_tolibrarysnapshot",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "apps/frontend/src/hooks/useLibraryScan.ts",
+      "source_location": "L31",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_frontend_src_hooks_uselibraryscan_uselibraryscan",
+      "target": "apps_frontend_src_services_libraryservice_errorsnapshot",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "apps/frontend/src/hooks/useLibraryScan.ts",
+      "source_location": "L33",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_frontend_src_pages_desktoplibrarypage_desktoplibrarypage",
+      "target": "apps_frontend_src_services_themeservice_usetheme",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "apps/frontend/src/pages/DesktopLibraryPage.tsx",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_frontend_src_pages_desktoplibrarypage_desktoplibrarypage",
+      "target": "apps_frontend_src_hooks_uselibraryscan_uselibraryscan",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "apps/frontend/src/pages/DesktopLibraryPage.tsx",
+      "source_location": "L9",
+      "weight": 1.0
+    },
+    {
       "source": "apps_frontend_src_pages_musicplayerpage_demomusicplayer",
       "target": "apps_frontend_src_services_themeservice_usetheme",
       "relation": "calls",
@@ -5352,19 +5857,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "apps/frontend/src/pages/MusicPlayerPage.tsx",
-      "source_location": "L64",
-      "weight": 1.0
-    },
-    {
-      "source": "apps_frontend_src_pages_musicplayerpage_emptylibrarypage",
-      "target": "apps_frontend_src_services_themeservice_usetheme",
-      "relation": "calls",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "context": "call",
-      "source_file": "apps/frontend/src/pages/MusicPlayerPage.tsx",
-      "source_location": "L51",
+      "source_location": "L50",
       "weight": 1.0
     },
     {
@@ -5376,7 +5869,43 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "apps/frontend/src/pages/MusicPlayerPage.tsx",
-      "source_location": "L39",
+      "source_location": "L38",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_frontend_src_services_libraryservice_totrackitem",
+      "target": "apps_frontend_src_services_libraryservice_formatsamplerate",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "apps/frontend/src/services/libraryService.ts",
+      "source_location": "L74",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_frontend_src_services_libraryservice_totrackitem",
+      "target": "apps_frontend_src_services_libraryservice_formatbitrate",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "apps/frontend/src/services/libraryService.ts",
+      "source_location": "L76",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_frontend_src_services_libraryservice_totrackitem",
+      "target": "apps_frontend_src_services_libraryservice_formatduration",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "apps/frontend/src/services/libraryService.ts",
+      "source_location": "L80",
       "weight": 1.0
     },
     {
@@ -5476,15 +6005,15 @@
       "weight": 1.0
     },
     {
-      "source": "src_tauri_src_lib_desktop_state_starts_without_a_library_or_active_track",
-      "target": "src_tauri_src_lib_playbackstate_default",
+      "source": "src_tauri_src_lib_canonical_track_paths_cannot_escape_the_active_library",
+      "target": "src_tauri_src_lib_temporary_directory",
       "relation": "calls",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L186",
+      "source_location": "L459",
       "weight": 1.0
     },
     {
@@ -5496,7 +6025,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L157",
+      "source_location": "L388",
       "weight": 1.0
     },
     {
@@ -5508,7 +6037,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L196",
+      "source_location": "L477",
       "weight": 1.0
     },
     {
@@ -5520,7 +6049,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L197",
+      "source_location": "L478",
       "weight": 1.0
     },
     {
@@ -5532,7 +6061,19 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L127",
+      "source_location": "L358",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_lib_probe_audio_metadata",
+      "target": "src_tauri_src_lib_playbackstate_default",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L191",
       "weight": 1.0
     },
     {
@@ -5544,7 +6085,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L166",
+      "source_location": "L397",
       "weight": 1.0
     },
     {
@@ -5556,7 +6097,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L169",
+      "source_location": "L399",
       "weight": 1.0
     },
     {
@@ -5568,7 +6109,139 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L171",
+      "source_location": "L400",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_lib_scan_library",
+      "target": "src_tauri_src_lib_scan_library_at",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L341",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_lib_scan_library",
+      "target": "src_tauri_src_lib_apperror_state_unavailable",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L347",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_lib_scan_library_at",
+      "target": "src_tauri_src_lib_apperror_invalid_library_root",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L249",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_lib_scan_library_at",
+      "target": "src_tauri_src_lib_is_hidden",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L267",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_lib_scan_library_at",
+      "target": "src_tauri_src_lib_audioextension_from_path",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L281",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_lib_scan_library_at",
+      "target": "src_tauri_src_lib_canonical_track_path",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L289",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_lib_scan_library_at",
+      "target": "src_tauri_src_lib_probe_audio_metadata",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L303",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_lib_scan_library_at",
+      "target": "src_tauri_src_lib_track_id",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L305",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_lib_scan_library_at",
+      "target": "src_tauri_src_lib_display_title",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L307",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_lib_scan_recognizes_supported_files_and_ignores_hidden_or_other_files",
+      "target": "src_tauri_src_lib_temporary_directory",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L429",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_lib_scan_recognizes_supported_files_and_ignores_hidden_or_other_files",
+      "target": "src_tauri_src_lib_scan_library_at",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L442",
       "weight": 1.0
     },
     {
@@ -5741,14 +6414,14 @@
     },
     {
       "source": "apps_frontend_src_components_organisms_libraryview_libraryviewprops",
-      "target": "apps_frontend_src_types_trackitem",
+      "target": "apps_frontend_src_types_artistitem",
       "relation": "references",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "context": "field",
       "source_file": "apps/frontend/src/components/organisms/LibraryView.tsx",
-      "source_location": "L13",
+      "source_location": "L10",
       "weight": 1.0
     },
     {
@@ -5760,19 +6433,19 @@
       "confidence_score": 1.0,
       "context": "field",
       "source_file": "apps/frontend/src/components/organisms/LibraryView.tsx",
-      "source_location": "L14",
+      "source_location": "L11",
       "weight": 1.0
     },
     {
       "source": "apps_frontend_src_components_organisms_libraryview_libraryviewprops",
-      "target": "apps_frontend_src_types_artistitem",
+      "target": "apps_frontend_src_types_trackitem",
       "relation": "references",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "context": "field",
       "source_file": "apps/frontend/src/components/organisms/LibraryView.tsx",
-      "source_location": "L15",
+      "source_location": "L9",
       "weight": 1.0
     },
     {
@@ -5860,6 +6533,42 @@
       "weight": 1.0
     },
     {
+      "source": "apps_frontend_src_services_libraryservice_libraryscansnapshot",
+      "target": "apps_frontend_src_types_trackitem",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "field",
+      "source_file": "apps/frontend/src/services/libraryService.ts",
+      "source_location": "L17",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_frontend_src_services_libraryservice_libraryscansnapshot",
+      "target": "apps_frontend_src_services_tauri_bindings_scanprogress",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "field",
+      "source_file": "apps/frontend/src/services/libraryService.ts",
+      "source_location": "L19",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_frontend_src_services_libraryservice_libraryscansnapshot",
+      "target": "apps_frontend_src_services_tauri_bindings_apperror",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "field",
+      "source_file": "apps/frontend/src/services/libraryService.ts",
+      "source_location": "L20",
+      "weight": 1.0
+    },
+    {
       "source": "apps_frontend_src_services_realaudioengine_realaudioengine",
       "target": "apps_frontend_src_types_trackitem",
       "relation": "references",
@@ -5880,7 +6589,7 @@
       "confidence_score": 1.0,
       "context": "field",
       "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L20",
+      "source_location": "L28",
       "weight": 1.0
     },
     {
@@ -5892,7 +6601,7 @@
       "confidence_score": 1.0,
       "context": "field",
       "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L117",
+      "source_location": "L156",
       "weight": 1.0
     },
     {
@@ -5904,7 +6613,19 @@
       "confidence_score": 1.0,
       "context": "field",
       "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L118",
+      "source_location": "L157",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_lib_audiometadata",
+      "target": "option",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "field",
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L165",
       "weight": 1.0
     },
     {
@@ -5916,7 +6637,7 @@
       "confidence_score": 1.0,
       "context": "field",
       "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L104",
+      "source_location": "L143",
       "weight": 1.0
     },
     {
@@ -5928,7 +6649,19 @@
       "confidence_score": 1.0,
       "context": "field",
       "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L105",
+      "source_location": "L144",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_lib_libraryscan",
+      "target": "vec",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "field",
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L92",
       "weight": 1.0
     },
     {
@@ -5940,7 +6673,7 @@
       "confidence_score": 1.0,
       "context": "field",
       "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L110",
+      "source_location": "L149",
       "weight": 1.0
     },
     {
@@ -5952,7 +6685,7 @@
       "confidence_score": 1.0,
       "context": "field",
       "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L71",
+      "source_location": "L110",
       "weight": 1.0
     },
     {
@@ -5964,7 +6697,7 @@
       "confidence_score": 1.0,
       "context": "field",
       "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L72",
+      "source_location": "L111",
       "weight": 1.0
     },
     {
@@ -5976,7 +6709,7 @@
       "confidence_score": 1.0,
       "context": "field",
       "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L98",
+      "source_location": "L137",
       "weight": 1.0
     },
     {
@@ -5988,7 +6721,7 @@
       "confidence_score": 1.0,
       "context": "field",
       "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L47",
+      "source_location": "L78",
       "weight": 1.0
     },
     {
@@ -6000,7 +6733,7 @@
       "confidence_score": 1.0,
       "context": "field",
       "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L48",
+      "source_location": "L79",
       "weight": 1.0
     },
     {
@@ -6012,7 +6745,7 @@
       "confidence_score": 1.0,
       "context": "field",
       "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L53",
+      "source_location": "L84",
       "weight": 1.0
     },
     {
@@ -6048,7 +6781,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L20",
+      "source_location": "L28",
       "weight": 1.0
     },
     {
@@ -6060,7 +6793,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L20",
+      "source_location": "L28",
       "weight": 1.0
     },
     {
@@ -6072,7 +6805,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L117",
+      "source_location": "L156",
       "weight": 1.0
     },
     {
@@ -6084,7 +6817,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L117",
+      "source_location": "L156",
       "weight": 1.0
     },
     {
@@ -6096,7 +6829,43 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L118",
+      "source_location": "L157",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_lib_audioextension_from_path",
+      "target": "self",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "generic_arg",
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L62",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_lib_canonical_track_path",
+      "target": "pathbuf",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "generic_arg",
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L225",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_lib_canonical_track_path",
+      "target": "src_tauri_src_lib_apperror",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "generic_arg",
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L225",
       "weight": 1.0
     },
     {
@@ -6108,7 +6877,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L104",
+      "source_location": "L143",
       "weight": 1.0
     },
     {
@@ -6120,7 +6889,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L154",
+      "source_location": "L385",
       "weight": 1.0
     },
     {
@@ -6132,7 +6901,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L123",
+      "source_location": "L354",
       "weight": 1.0
     },
     {
@@ -6144,7 +6913,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L123",
+      "source_location": "L354",
       "weight": 1.0
     },
     {
@@ -6156,7 +6925,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L123",
+      "source_location": "L354",
       "weight": 1.0
     },
     {
@@ -6168,7 +6937,31 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L143",
+      "source_location": "L373",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_lib_libraryscan",
+      "target": "src_tauri_src_lib_tracksummary",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "generic_arg",
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L91",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_lib_libraryscan",
+      "target": "string",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "generic_arg",
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L92",
       "weight": 1.0
     },
     {
@@ -6180,7 +6973,67 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L71",
+      "source_location": "L110",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_lib_scan_library",
+      "target": "src_tauri_src_lib_apperror",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "generic_arg",
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L336",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_lib_scan_library",
+      "target": "src_tauri_src_lib_appstate",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "generic_arg",
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L336",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_lib_scan_library",
+      "target": "src_tauri_src_lib_libraryscan",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "generic_arg",
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L336",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_lib_scan_library_at",
+      "target": "src_tauri_src_lib_apperror",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "generic_arg",
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L243",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_lib_scan_library_at",
+      "target": "src_tauri_src_lib_libraryscan",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "generic_arg",
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L243",
       "weight": 1.0
     },
     {
@@ -6192,7 +7045,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L98",
+      "source_location": "L137",
       "weight": 1.0
     },
     {
@@ -6348,7 +7201,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "apps/frontend/package.json",
-      "source_location": "L22",
+      "source_location": "L23",
       "weight": 1.0
     },
     {
@@ -6360,7 +7213,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "apps/frontend/package.json",
-      "source_location": "L23",
+      "source_location": "L24",
       "weight": 1.0
     },
     {
@@ -6372,7 +7225,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "apps/frontend/package.json",
-      "source_location": "L24",
+      "source_location": "L25",
       "weight": 1.0
     },
     {
@@ -6384,7 +7237,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "apps/frontend/package.json",
-      "source_location": "L25",
+      "source_location": "L26",
       "weight": 1.0
     },
     {
@@ -6412,6 +7265,18 @@
       "weight": 1.0
     },
     {
+      "source": "apps_frontend_package_dependencies_tauri_apps_plugin_dialog",
+      "target": "tauri_apps_plugin_dialog",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "apps/frontend/package.json",
+      "source_location": "L21",
+      "weight": 1.0
+    },
+    {
       "source": "apps_frontend_package_dependencies_vite",
       "target": "vite",
       "relation": "imports",
@@ -6420,7 +7285,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "apps/frontend/package.json",
-      "source_location": "L26",
+      "source_location": "L27",
       "weight": 1.0
     },
     {
@@ -6432,7 +7297,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "apps/frontend/package.json",
-      "source_location": "L21",
+      "source_location": "L22",
       "weight": 1.0
     },
     {
@@ -6444,7 +7309,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "apps/frontend/package.json",
-      "source_location": "L35",
+      "source_location": "L36",
       "weight": 1.0
     },
     {
@@ -6456,7 +7321,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "apps/frontend/package.json",
-      "source_location": "L36",
+      "source_location": "L37",
       "weight": 1.0
     },
     {
@@ -6468,7 +7333,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "apps/frontend/package.json",
-      "source_location": "L37",
+      "source_location": "L38",
       "weight": 1.0
     },
     {
@@ -6480,7 +7345,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "apps/frontend/package.json",
-      "source_location": "L29",
+      "source_location": "L30",
       "weight": 1.0
     },
     {
@@ -6492,7 +7357,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "apps/frontend/package.json",
-      "source_location": "L38",
+      "source_location": "L39",
       "weight": 1.0
     },
     {
@@ -6504,7 +7369,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "apps/frontend/package.json",
-      "source_location": "L39",
+      "source_location": "L40",
       "weight": 1.0
     },
     {
@@ -6516,7 +7381,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "apps/frontend/package.json",
-      "source_location": "L40",
+      "source_location": "L41",
       "weight": 1.0
     },
     {
@@ -6528,7 +7393,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "apps/frontend/package.json",
-      "source_location": "L41",
+      "source_location": "L42",
       "weight": 1.0
     },
     {
@@ -6540,7 +7405,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "apps/frontend/package.json",
-      "source_location": "L42",
+      "source_location": "L43",
       "weight": 1.0
     },
     {
@@ -6552,7 +7417,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "apps/frontend/package.json",
-      "source_location": "L43",
+      "source_location": "L44",
       "weight": 1.0
     },
     {
@@ -6564,7 +7429,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "apps/frontend/package.json",
-      "source_location": "L30",
+      "source_location": "L31",
       "weight": 1.0
     },
     {
@@ -6576,7 +7441,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "apps/frontend/package.json",
-      "source_location": "L31",
+      "source_location": "L32",
       "weight": 1.0
     },
     {
@@ -6588,7 +7453,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "apps/frontend/package.json",
-      "source_location": "L32",
+      "source_location": "L33",
       "weight": 1.0
     },
     {
@@ -6600,7 +7465,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "apps/frontend/package.json",
-      "source_location": "L33",
+      "source_location": "L34",
       "weight": 1.0
     },
     {
@@ -6612,7 +7477,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "apps/frontend/package.json",
-      "source_location": "L44",
+      "source_location": "L45",
       "weight": 1.0
     },
     {
@@ -6624,7 +7489,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "apps/frontend/package.json",
-      "source_location": "L34",
+      "source_location": "L35",
       "weight": 1.0
     },
     {
@@ -6636,7 +7501,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "apps/frontend/package.json",
-      "source_location": "L45",
+      "source_location": "L46",
       "weight": 1.0
     },
     {
@@ -6648,7 +7513,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "apps/frontend/package.json",
-      "source_location": "L46",
+      "source_location": "L47",
       "weight": 1.0
     },
     {
@@ -6660,7 +7525,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "apps/frontend/package.json",
-      "source_location": "L47",
+      "source_location": "L48",
       "weight": 1.0
     },
     {
@@ -6672,7 +7537,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "apps/frontend/package.json",
-      "source_location": "L48",
+      "source_location": "L49",
       "weight": 1.0
     },
     {
@@ -7445,14 +8310,14 @@
     },
     {
       "source": "apps_frontend_src_components_organisms_libraryview",
-      "target": "apps_frontend_src_components_organisms_trackstableview_trackstableview",
+      "target": "apps_frontend_src_components_organisms_albumsgridview_albumsgridview",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "apps/frontend/src/components/organisms/LibraryView.tsx",
-      "source_location": "L3",
+      "source_location": "L2",
       "weight": 1.0
     },
     {
@@ -7464,19 +8329,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "apps/frontend/src/components/organisms/LibraryView.tsx",
-      "source_location": "L4",
-      "weight": 1.0
-    },
-    {
-      "source": "apps_frontend_src_components_organisms_libraryview",
-      "target": "apps_frontend_src_components_organisms_albumsgridview_albumsgridview",
-      "relation": "imports",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "context": "import",
-      "source_file": "apps/frontend/src/components/organisms/LibraryView.tsx",
-      "source_location": "L5",
+      "source_location": "L3",
       "weight": 1.0
     },
     {
@@ -7488,7 +8341,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "apps/frontend/src/components/organisms/LibraryView.tsx",
-      "source_location": "L6",
+      "source_location": "L4",
       "weight": 1.0
     },
     {
@@ -7500,7 +8353,19 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "apps/frontend/src/components/organisms/LibraryView.tsx",
-      "source_location": "L6",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_frontend_src_components_organisms_libraryview",
+      "target": "apps_frontend_src_components_organisms_trackstableview_trackstableview",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "apps/frontend/src/components/organisms/LibraryView.tsx",
+      "source_location": "L5",
       "weight": 1.0
     },
     {
@@ -7512,7 +8377,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "apps/frontend/src/components/organisms/LibraryView.tsx",
-      "source_location": "L7",
+      "source_location": "L6",
       "weight": 1.0
     },
     {
@@ -7524,19 +8389,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "apps/frontend/src/components/organisms/LibraryView.tsx",
-      "source_location": "L7",
-      "weight": 1.0
-    },
-    {
-      "source": "apps_frontend_src_components_organisms_libraryview",
-      "target": "apps_frontend_src_types_columnvisibility",
-      "relation": "imports",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "context": "import",
-      "source_file": "apps/frontend/src/components/organisms/LibraryView.tsx",
-      "source_location": "L7",
+      "source_location": "L6",
       "weight": 1.0
     },
     {
@@ -7548,7 +8401,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "apps/frontend/src/components/organisms/LibraryView.tsx",
-      "source_location": "L7",
+      "source_location": "L6",
       "weight": 1.0
     },
     {
@@ -7560,43 +8413,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "apps/frontend/src/components/organisms/LibraryView.tsx",
-      "source_location": "L7",
-      "weight": 1.0
-    },
-    {
-      "source": "apps_frontend_src_components_organisms_libraryview",
-      "target": "apps_frontend_src_demo_catalog_local_albums",
-      "relation": "imports",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "context": "import",
-      "source_file": "apps/frontend/src/components/organisms/LibraryView.tsx",
-      "source_location": "L8",
-      "weight": 1.0
-    },
-    {
-      "source": "apps_frontend_src_components_organisms_libraryview",
-      "target": "apps_frontend_src_demo_catalog_local_artists",
-      "relation": "imports",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "context": "import",
-      "source_file": "apps/frontend/src/components/organisms/LibraryView.tsx",
-      "source_location": "L8",
-      "weight": 1.0
-    },
-    {
-      "source": "apps_frontend_src_components_organisms_libraryview",
-      "target": "apps_frontend_src_demo_catalog_local_tracks",
-      "relation": "imports",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "context": "import",
-      "source_file": "apps/frontend/src/components/organisms/LibraryView.tsx",
-      "source_location": "L8",
+      "source_location": "L6",
       "weight": 1.0
     },
     {
@@ -7972,6 +8789,90 @@
       "weight": 1.0
     },
     {
+      "source": "apps_frontend_src_hooks_uselibraryscan",
+      "target": "apps_frontend_src_services_tauri_bindings_apperror",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "apps/frontend/src/hooks/useLibraryScan.ts",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_frontend_src_hooks_uselibraryscan",
+      "target": "apps_frontend_src_services_tauri_bindings_scanprogress",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "apps/frontend/src/hooks/useLibraryScan.ts",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_frontend_src_hooks_uselibraryscan",
+      "target": "apps_frontend_src_services_libraryservice_chooselibraryfolder",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "apps/frontend/src/hooks/useLibraryScan.ts",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_frontend_src_hooks_uselibraryscan",
+      "target": "apps_frontend_src_services_libraryservice_errorsnapshot",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "apps/frontend/src/hooks/useLibraryScan.ts",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_frontend_src_hooks_uselibraryscan",
+      "target": "apps_frontend_src_services_libraryservice_initiallibraryscan",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "apps/frontend/src/hooks/useLibraryScan.ts",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_frontend_src_hooks_uselibraryscan",
+      "target": "apps_frontend_src_services_libraryservice_scanlibrary",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "apps/frontend/src/hooks/useLibraryScan.ts",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_frontend_src_hooks_uselibraryscan",
+      "target": "apps_frontend_src_services_libraryservice_tolibrarysnapshot",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "apps/frontend/src/hooks/useLibraryScan.ts",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
       "source": "apps_frontend_src_main",
       "target": "apps_frontend_src_app_app",
       "relation": "imports",
@@ -7981,6 +8882,54 @@
       "context": "import",
       "source_file": "apps/frontend/src/main.tsx",
       "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_frontend_src_pages_desktoplibrarypage",
+      "target": "apps_frontend_src_components_organisms_libraryview_libraryview",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "apps/frontend/src/pages/DesktopLibraryPage.tsx",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_frontend_src_pages_desktoplibrarypage",
+      "target": "apps_frontend_src_components_templates_appshell_appshell",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "apps/frontend/src/pages/DesktopLibraryPage.tsx",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_frontend_src_pages_desktoplibrarypage",
+      "target": "apps_frontend_src_hooks_uselibraryscan_uselibraryscan",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "apps/frontend/src/pages/DesktopLibraryPage.tsx",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_frontend_src_pages_desktoplibrarypage",
+      "target": "apps_frontend_src_services_themeservice_usetheme",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "apps/frontend/src/pages/DesktopLibraryPage.tsx",
+      "source_location": "L5",
       "weight": 1.0
     },
     {
@@ -8273,7 +9222,7 @@
     },
     {
       "source": "apps_frontend_src_pages_musicplayerpage",
-      "target": "apps_frontend_src_components_atoms_emptystate_emptystate",
+      "target": "apps_frontend_src_hooks_usedemomode_usedemomode",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -8285,7 +9234,7 @@
     },
     {
       "source": "apps_frontend_src_pages_musicplayerpage",
-      "target": "apps_frontend_src_components_templates_appshell_appshell",
+      "target": "apps_frontend_src_pages_desktoplibrarypage_desktoplibrarypage",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -8293,18 +9242,6 @@
       "context": "import",
       "source_file": "apps/frontend/src/pages/MusicPlayerPage.tsx",
       "source_location": "L35",
-      "weight": 1.0
-    },
-    {
-      "source": "apps_frontend_src_pages_musicplayerpage",
-      "target": "apps_frontend_src_hooks_usedemomode_usedemomode",
-      "relation": "imports",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "context": "import",
-      "source_file": "apps/frontend/src/pages/MusicPlayerPage.tsx",
-      "source_location": "L36",
       "weight": 1.0
     },
     {
@@ -8376,6 +9313,102 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "apps/frontend/src/services/antraEngineService.tsx",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_frontend_src_services_libraryservice",
+      "target": "apps_frontend_src_types_trackitem",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "apps/frontend/src/services/libraryService.ts",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_frontend_src_services_libraryservice",
+      "target": "apps_frontend_src_services_tauri_bindings_apperror",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "apps/frontend/src/services/libraryService.ts",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_frontend_src_services_libraryservice",
+      "target": "apps_frontend_src_services_tauri_bindings_commands",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "apps/frontend/src/services/libraryService.ts",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_frontend_src_services_libraryservice",
+      "target": "apps_frontend_src_services_tauri_bindings_libraryscan",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "apps/frontend/src/services/libraryService.ts",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_frontend_src_services_libraryservice",
+      "target": "apps_frontend_src_services_tauri_bindings_scanprogress",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "apps/frontend/src/services/libraryService.ts",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_frontend_src_services_libraryservice",
+      "target": "apps_frontend_src_services_tauri_bindings_tracksummary",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "apps/frontend/src/services/libraryService.ts",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_frontend_src_services_libraryservice_test",
+      "target": "apps_frontend_src_services_libraryservice_tolibrarysnapshot",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "apps/frontend/src/services/libraryService.test.ts",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_frontend_src_services_libraryservice_test",
+      "target": "apps_frontend_src_services_libraryservice_totrackitem",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "apps/frontend/src/services/libraryService.test.ts",
       "source_location": "L2",
       "weight": 1.0
     },
@@ -8921,14 +9954,14 @@
     },
     {
       "source": "apps_frontend_src_components_organisms_libraryview",
-      "target": "apps_frontend_src_components_organisms_trackstableview",
+      "target": "apps_frontend_src_components_organisms_albumsgridview",
       "relation": "imports_from",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "apps/frontend/src/components/organisms/LibraryView.tsx",
-      "source_location": "L3",
+      "source_location": "L2",
       "weight": 1.0
     },
     {
@@ -8940,19 +9973,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "apps/frontend/src/components/organisms/LibraryView.tsx",
-      "source_location": "L4",
-      "weight": 1.0
-    },
-    {
-      "source": "apps_frontend_src_components_organisms_libraryview",
-      "target": "apps_frontend_src_components_organisms_albumsgridview",
-      "relation": "imports_from",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "context": "import",
-      "source_file": "apps/frontend/src/components/organisms/LibraryView.tsx",
-      "source_location": "L5",
+      "source_location": "L3",
       "weight": 1.0
     },
     {
@@ -8964,7 +9985,19 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "apps/frontend/src/components/organisms/LibraryView.tsx",
-      "source_location": "L6",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_frontend_src_components_organisms_libraryview",
+      "target": "apps_frontend_src_components_organisms_trackstableview",
+      "relation": "imports_from",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "apps/frontend/src/components/organisms/LibraryView.tsx",
+      "source_location": "L5",
       "weight": 1.0
     },
     {
@@ -8976,19 +10009,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "apps/frontend/src/components/organisms/LibraryView.tsx",
-      "source_location": "L7",
-      "weight": 1.0
-    },
-    {
-      "source": "apps_frontend_src_components_organisms_libraryview",
-      "target": "apps_frontend_src_demo_catalog",
-      "relation": "imports_from",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "context": "import",
-      "source_file": "apps/frontend/src/components/organisms/LibraryView.tsx",
-      "source_location": "L8",
+      "source_location": "L6",
       "weight": 1.0
     },
     {
@@ -9220,6 +10241,30 @@
       "weight": 1.0
     },
     {
+      "source": "apps_frontend_src_hooks_uselibraryscan",
+      "target": "apps_frontend_src_services_tauri_bindings",
+      "relation": "imports_from",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "apps/frontend/src/hooks/useLibraryScan.ts",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_frontend_src_hooks_uselibraryscan",
+      "target": "apps_frontend_src_services_libraryservice",
+      "relation": "imports_from",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "apps/frontend/src/hooks/useLibraryScan.ts",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
       "source": "apps_frontend_src_main",
       "target": "apps_frontend_src_app",
       "relation": "imports_from",
@@ -9229,6 +10274,54 @@
       "context": "import",
       "source_file": "apps/frontend/src/main.tsx",
       "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_frontend_src_pages_desktoplibrarypage",
+      "target": "apps_frontend_src_components_organisms_libraryview",
+      "relation": "imports_from",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "apps/frontend/src/pages/DesktopLibraryPage.tsx",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_frontend_src_pages_desktoplibrarypage",
+      "target": "apps_frontend_src_components_templates_appshell",
+      "relation": "imports_from",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "apps/frontend/src/pages/DesktopLibraryPage.tsx",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_frontend_src_pages_desktoplibrarypage",
+      "target": "apps_frontend_src_hooks_uselibraryscan",
+      "relation": "imports_from",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "apps/frontend/src/pages/DesktopLibraryPage.tsx",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_frontend_src_pages_desktoplibrarypage",
+      "target": "apps_frontend_src_services_themeservice",
+      "relation": "imports_from",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "apps/frontend/src/pages/DesktopLibraryPage.tsx",
+      "source_location": "L5",
       "weight": 1.0
     },
     {
@@ -9413,7 +10506,7 @@
     },
     {
       "source": "apps_frontend_src_pages_musicplayerpage",
-      "target": "apps_frontend_src_components_atoms_emptystate",
+      "target": "apps_frontend_src_hooks_usedemomode",
       "relation": "imports_from",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -9425,7 +10518,7 @@
     },
     {
       "source": "apps_frontend_src_pages_musicplayerpage",
-      "target": "apps_frontend_src_components_templates_appshell",
+      "target": "apps_frontend_src_pages_desktoplibrarypage",
       "relation": "imports_from",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -9433,18 +10526,6 @@
       "context": "import",
       "source_file": "apps/frontend/src/pages/MusicPlayerPage.tsx",
       "source_location": "L35",
-      "weight": 1.0
-    },
-    {
-      "source": "apps_frontend_src_pages_musicplayerpage",
-      "target": "apps_frontend_src_hooks_usedemomode",
-      "relation": "imports_from",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "context": "import",
-      "source_file": "apps/frontend/src/pages/MusicPlayerPage.tsx",
-      "source_location": "L36",
       "weight": 1.0
     },
     {
@@ -9496,6 +10577,42 @@
       "weight": 1.0
     },
     {
+      "source": "apps_frontend_src_services_libraryservice",
+      "target": "apps_frontend_src_types",
+      "relation": "imports_from",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "apps/frontend/src/services/libraryService.ts",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_frontend_src_services_libraryservice",
+      "target": "apps_frontend_src_services_tauri_bindings",
+      "relation": "imports_from",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "apps/frontend/src/services/libraryService.ts",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_frontend_src_services_libraryservice_test",
+      "target": "apps_frontend_src_services_libraryservice",
+      "relation": "imports_from",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "apps/frontend/src/services/libraryService.test.ts",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
       "source": "apps_frontend_src_services_realaudioengine",
       "target": "apps_frontend_src_types",
       "relation": "imports_from",
@@ -9528,19 +10645,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L10",
-      "weight": 1.0
-    },
-    {
-      "source": "src_tauri_src_lib",
-      "target": "state",
-      "relation": "imports_from",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "context": "import",
-      "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L11",
+      "source_location": "L12",
       "weight": 1.0
     },
     {
@@ -9556,6 +10661,54 @@
       "weight": 1.0
     },
     {
+      "source": "src_tauri_src_lib_apperror_invalid_library_root",
+      "target": "error",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "parameter_type",
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L40",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_lib_audioextension_from_path",
+      "target": "path",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "parameter_type",
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L62",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_lib_canonical_track_path",
+      "target": "path",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "parameter_type",
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L225",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_lib_display_title",
+      "target": "path",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "parameter_type",
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L181",
+      "weight": 1.0
+    },
+    {
       "source": "src_tauri_src_lib_export_typescript_bindings",
       "target": "builder",
       "relation": "references",
@@ -9564,7 +10717,7 @@
       "confidence_score": 1.0,
       "context": "parameter_type",
       "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L154",
+      "source_location": "L385",
       "weight": 1.0
     },
     {
@@ -9576,7 +10729,127 @@
       "confidence_score": 1.0,
       "context": "parameter_type",
       "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L123",
+      "source_location": "L354",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_lib_is_hidden",
+      "target": "direntry",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "parameter_type",
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L168",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_lib_probe_audio_metadata",
+      "target": "path",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "parameter_type",
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L189",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_lib_probe_audio_metadata",
+      "target": "src_tauri_src_lib_audioextension",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "parameter_type",
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L189",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_lib_scan_library",
+      "target": "apphandle",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "parameter_type",
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L336",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_lib_scan_library",
+      "target": "state",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "parameter_type",
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L336",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_lib_scan_library",
+      "target": "string",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "parameter_type",
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L336",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_lib_scan_library_at",
+      "target": "f",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "parameter_type",
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L243",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_lib_scan_library_at",
+      "target": "path",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "parameter_type",
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L243",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_lib_track_id",
+      "target": "path",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "parameter_type",
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L175",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_lib_apperror_invalid_library_root",
+      "target": "self",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "return_type",
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L40",
       "weight": 1.0
     },
     {
@@ -9588,7 +10861,43 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L24",
+      "source_location": "L32",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_lib_audioextension_from_path",
+      "target": "option",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "return_type",
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L62",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_lib_canonical_track_path",
+      "target": "result",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "return_type",
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L225",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_lib_display_title",
+      "target": "string",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "return_type",
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L181",
       "weight": 1.0
     },
     {
@@ -9600,7 +10909,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L123",
+      "source_location": "L354",
       "weight": 1.0
     },
     {
@@ -9612,7 +10921,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L143",
+      "source_location": "L373",
       "weight": 1.0
     },
     {
@@ -9624,7 +10933,67 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L80",
+      "source_location": "L119",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_lib_probe_audio_metadata",
+      "target": "src_tauri_src_lib_audiometadata",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "return_type",
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L189",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_lib_scan_library",
+      "target": "result",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "return_type",
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L336",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_lib_scan_library_at",
+      "target": "result",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "return_type",
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L243",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_lib_temporary_directory",
+      "target": "pathbuf",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "return_type",
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L417",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_lib_track_id",
+      "target": "string",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "return_type",
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L175",
       "weight": 1.0
     },
     {
@@ -9668,7 +11037,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/frontend/package.json",
-      "source_location": "L28",
+      "source_location": "L29",
       "weight": 1.0
     },
     {
@@ -9739,7 +11108,7 @@
     },
     {
       "source": "apps_frontend_package_dependencies",
-      "target": "apps_frontend_package_dependencies_vitejs_plugin_react",
+      "target": "apps_frontend_package_dependencies_tauri_apps_plugin_dialog",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -9750,7 +11119,7 @@
     },
     {
       "source": "apps_frontend_package_dependencies",
-      "target": "apps_frontend_package_dependencies_lucide_react",
+      "target": "apps_frontend_package_dependencies_vitejs_plugin_react",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -9761,7 +11130,7 @@
     },
     {
       "source": "apps_frontend_package_dependencies",
-      "target": "apps_frontend_package_dependencies_motion",
+      "target": "apps_frontend_package_dependencies_lucide_react",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -9772,7 +11141,7 @@
     },
     {
       "source": "apps_frontend_package_dependencies",
-      "target": "apps_frontend_package_dependencies_react",
+      "target": "apps_frontend_package_dependencies_motion",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -9783,7 +11152,7 @@
     },
     {
       "source": "apps_frontend_package_dependencies",
-      "target": "apps_frontend_package_dependencies_react_dom",
+      "target": "apps_frontend_package_dependencies_react",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -9794,13 +11163,24 @@
     },
     {
       "source": "apps_frontend_package_dependencies",
-      "target": "apps_frontend_package_dependencies_vite",
+      "target": "apps_frontend_package_dependencies_react_dom",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/frontend/package.json",
       "source_location": "L26",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_frontend_package_dependencies",
+      "target": "apps_frontend_package_dependencies_vite",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "apps/frontend/package.json",
+      "source_location": "L27",
       "weight": 1.0
     },
     {
@@ -9811,7 +11191,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/frontend/package.json",
-      "source_location": "L29",
+      "source_location": "L30",
       "weight": 1.0
     },
     {
@@ -9822,7 +11202,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/frontend/package.json",
-      "source_location": "L30",
+      "source_location": "L31",
       "weight": 1.0
     },
     {
@@ -9833,7 +11213,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/frontend/package.json",
-      "source_location": "L31",
+      "source_location": "L32",
       "weight": 1.0
     },
     {
@@ -9844,7 +11224,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/frontend/package.json",
-      "source_location": "L32",
+      "source_location": "L33",
       "weight": 1.0
     },
     {
@@ -9855,7 +11235,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/frontend/package.json",
-      "source_location": "L33",
+      "source_location": "L34",
       "weight": 1.0
     },
     {
@@ -9866,7 +11246,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/frontend/package.json",
-      "source_location": "L34",
+      "source_location": "L35",
       "weight": 1.0
     },
     {
@@ -9877,7 +11257,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/frontend/package.json",
-      "source_location": "L35",
+      "source_location": "L36",
       "weight": 1.0
     },
     {
@@ -9888,7 +11268,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/frontend/package.json",
-      "source_location": "L36",
+      "source_location": "L37",
       "weight": 1.0
     },
     {
@@ -9899,7 +11279,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/frontend/package.json",
-      "source_location": "L37",
+      "source_location": "L38",
       "weight": 1.0
     },
     {
@@ -9910,7 +11290,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/frontend/package.json",
-      "source_location": "L38",
+      "source_location": "L39",
       "weight": 1.0
     },
     {
@@ -9921,7 +11301,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/frontend/package.json",
-      "source_location": "L39",
+      "source_location": "L40",
       "weight": 1.0
     },
     {
@@ -9932,7 +11312,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/frontend/package.json",
-      "source_location": "L40",
+      "source_location": "L41",
       "weight": 1.0
     },
     {
@@ -9943,7 +11323,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/frontend/package.json",
-      "source_location": "L41",
+      "source_location": "L42",
       "weight": 1.0
     },
     {
@@ -9954,7 +11334,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/frontend/package.json",
-      "source_location": "L42",
+      "source_location": "L43",
       "weight": 1.0
     },
     {
@@ -9965,7 +11345,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/frontend/package.json",
-      "source_location": "L43",
+      "source_location": "L44",
       "weight": 1.0
     },
     {
@@ -9976,7 +11356,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/frontend/package.json",
-      "source_location": "L44",
+      "source_location": "L45",
       "weight": 1.0
     },
     {
@@ -9987,7 +11367,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/frontend/package.json",
-      "source_location": "L45",
+      "source_location": "L46",
       "weight": 1.0
     },
     {
@@ -9998,7 +11378,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/frontend/package.json",
-      "source_location": "L46",
+      "source_location": "L47",
       "weight": 1.0
     },
     {
@@ -10009,7 +11389,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/frontend/package.json",
-      "source_location": "L47",
+      "source_location": "L48",
       "weight": 1.0
     },
     {
@@ -10020,7 +11400,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/frontend/package.json",
-      "source_location": "L48",
+      "source_location": "L49",
       "weight": 1.0
     },
     {
@@ -10586,35 +11966,24 @@
     },
     {
       "source": "apps_frontend_src_components_organisms_libraryview",
-      "target": "apps_frontend_src_components_organisms_libraryview_libraryviewprops",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "apps/frontend/src/components/organisms/LibraryView.tsx",
-      "source_location": "L10",
-      "weight": 1.0
-    },
-    {
-      "source": "apps_frontend_src_components_organisms_libraryview",
-      "target": "apps_frontend_src_components_organisms_libraryview_default_columns",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "apps/frontend/src/components/organisms/LibraryView.tsx",
-      "source_location": "L20",
-      "weight": 1.0
-    },
-    {
-      "source": "apps_frontend_src_components_organisms_libraryview",
       "target": "apps_frontend_src_components_organisms_libraryview_libraryview",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/frontend/src/components/organisms/LibraryView.tsx",
-      "source_location": "L35",
+      "source_location": "L22",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_frontend_src_components_organisms_libraryview",
+      "target": "apps_frontend_src_components_organisms_libraryview_libraryviewprops",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "apps/frontend/src/components/organisms/LibraryView.tsx",
+      "source_location": "L8",
       "weight": 1.0
     },
     {
@@ -10937,6 +12306,28 @@
       "weight": 1.0
     },
     {
+      "source": "apps_frontend_src_hooks_uselibraryscan",
+      "target": "apps_frontend_src_hooks_uselibraryscan_uselibraryscan",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "apps/frontend/src/hooks/useLibraryScan.ts",
+      "source_location": "L12",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_frontend_src_pages_desktoplibrarypage",
+      "target": "apps_frontend_src_pages_desktoplibrarypage_desktoplibrarypage",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "apps/frontend/src/pages/DesktopLibraryPage.tsx",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
       "source": "apps_frontend_src_pages_musicplayerpage",
       "target": "apps_frontend_src_pages_musicplayerpage_musicplayerpage",
       "relation": "contains",
@@ -10944,18 +12335,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/frontend/src/pages/MusicPlayerPage.tsx",
-      "source_location": "L38",
-      "weight": 1.0
-    },
-    {
-      "source": "apps_frontend_src_pages_musicplayerpage",
-      "target": "apps_frontend_src_pages_musicplayerpage_emptylibrarypage",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "apps/frontend/src/pages/MusicPlayerPage.tsx",
-      "source_location": "L50",
+      "source_location": "L37",
       "weight": 1.0
     },
     {
@@ -10966,7 +12346,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/frontend/src/pages/MusicPlayerPage.tsx",
-      "source_location": "L63",
+      "source_location": "L49",
       "weight": 1.0
     },
     {
@@ -11010,6 +12390,138 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/frontend/src/services/antraEngineService.tsx",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_frontend_src_services_libraryservice",
+      "target": "apps_frontend_src_services_libraryservice_errorsnapshot",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "apps/frontend/src/services/libraryService.ts",
+      "source_location": "L101",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_frontend_src_services_libraryservice",
+      "target": "apps_frontend_src_services_libraryservice_libraryscanphase",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "apps/frontend/src/services/libraryService.ts",
+      "source_location": "L11",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_frontend_src_services_libraryservice",
+      "target": "apps_frontend_src_services_libraryservice_libraryscansnapshot",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "apps/frontend/src/services/libraryService.ts",
+      "source_location": "L14",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_frontend_src_services_libraryservice",
+      "target": "apps_frontend_src_services_libraryservice_initiallibraryscan",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "apps/frontend/src/services/libraryService.ts",
+      "source_location": "L23",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_frontend_src_services_libraryservice",
+      "target": "apps_frontend_src_services_libraryservice_chooselibraryfolder",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "apps/frontend/src/services/libraryService.ts",
+      "source_location": "L32",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_frontend_src_services_libraryservice",
+      "target": "apps_frontend_src_services_libraryservice_scanlibrary",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "apps/frontend/src/services/libraryService.ts",
+      "source_location": "L41",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_frontend_src_services_libraryservice",
+      "target": "apps_frontend_src_services_libraryservice_formatduration",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "apps/frontend/src/services/libraryService.ts",
+      "source_location": "L49",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_frontend_src_services_libraryservice",
+      "target": "apps_frontend_src_services_libraryservice_formatsamplerate",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "apps/frontend/src/services/libraryService.ts",
+      "source_location": "L55",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_frontend_src_services_libraryservice",
+      "target": "apps_frontend_src_services_libraryservice_formatbitrate",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "apps/frontend/src/services/libraryService.ts",
+      "source_location": "L60",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_frontend_src_services_libraryservice",
+      "target": "apps_frontend_src_services_libraryservice_totrackitem",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "apps/frontend/src/services/libraryService.ts",
+      "source_location": "L66",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_frontend_src_services_libraryservice",
+      "target": "apps_frontend_src_services_libraryservice_tolibrarysnapshot",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "apps/frontend/src/services/libraryService.ts",
+      "source_location": "L86",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_frontend_src_services_libraryservice_test",
+      "target": "apps_frontend_src_services_libraryservice_test_scannedtrack",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "apps/frontend/src/services/libraryService.test.ts",
       "source_location": "L4",
       "weight": 1.0
     },
@@ -11065,7 +12577,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/frontend/src/services/tauri-bindings.ts",
-      "source_location": "L11",
+      "source_location": "L12",
       "weight": 1.0
     },
     {
@@ -11076,7 +12588,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/frontend/src/services/tauri-bindings.ts",
-      "source_location": "L13",
+      "source_location": "L14",
       "weight": 1.0
     },
     {
@@ -11087,7 +12599,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/frontend/src/services/tauri-bindings.ts",
-      "source_location": "L19",
+      "source_location": "L20",
       "weight": 1.0
     },
     {
@@ -11098,7 +12610,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/frontend/src/services/tauri-bindings.ts",
-      "source_location": "L25",
+      "source_location": "L26",
       "weight": 1.0
     },
     {
@@ -11109,7 +12621,18 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/frontend/src/services/tauri-bindings.ts",
-      "source_location": "L27",
+      "source_location": "L28",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_frontend_src_services_tauri_bindings",
+      "target": "apps_frontend_src_services_tauri_bindings_libraryscan",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "apps/frontend/src/services/tauri-bindings.ts",
+      "source_location": "L33",
       "weight": 1.0
     },
     {
@@ -11120,7 +12643,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/frontend/src/services/tauri-bindings.ts",
-      "source_location": "L32",
+      "source_location": "L39",
       "weight": 1.0
     },
     {
@@ -11131,7 +12654,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/frontend/src/services/tauri-bindings.ts",
-      "source_location": "L42",
+      "source_location": "L49",
       "weight": 1.0
     },
     {
@@ -11142,7 +12665,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/frontend/src/services/tauri-bindings.ts",
-      "source_location": "L44",
+      "source_location": "L51",
       "weight": 1.0
     },
     {
@@ -11153,7 +12676,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/frontend/src/services/tauri-bindings.ts",
-      "source_location": "L50",
+      "source_location": "L57",
       "weight": 1.0
     },
     {
@@ -11175,7 +12698,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/frontend/src/services/tauri-bindings.ts",
-      "source_location": "L63",
+      "source_location": "L70",
       "weight": 1.0
     },
     {
@@ -12632,156 +14155,13 @@
     },
     {
       "source": "src_tauri_src_lib",
-      "target": "src_tauri_src_lib_desktopstate",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L103",
-      "weight": 1.0
-    },
-    {
-      "source": "src_tauri_src_lib",
-      "target": "src_tauri_src_lib_playbackengine",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L109",
-      "weight": 1.0
-    },
-    {
-      "source": "src_tauri_src_lib",
-      "target": "src_tauri_src_lib_appstate",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L116",
-      "weight": 1.0
-    },
-    {
-      "source": "src_tauri_src_lib",
-      "target": "src_tauri_src_lib_get_desktop_state",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L123",
-      "weight": 1.0
-    },
-    {
-      "source": "src_tauri_src_lib",
-      "target": "src_tauri_src_lib_ipc_bindings",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L143",
-      "weight": 1.0
-    },
-    {
-      "source": "src_tauri_src_lib",
-      "target": "src_tauri_src_lib_export_typescript_bindings",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L154",
-      "weight": 1.0
-    },
-    {
-      "source": "src_tauri_src_lib",
-      "target": "src_tauri_src_lib_apperror",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L16",
-      "weight": 1.0
-    },
-    {
-      "source": "src_tauri_src_lib",
-      "target": "src_tauri_src_lib_run",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L164",
-      "weight": 1.0
-    },
-    {
-      "source": "src_tauri_src_lib",
-      "target": "src_tauri_src_lib_desktop_state_starts_without_a_library_or_active_track",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L185",
-      "weight": 1.0
-    },
-    {
-      "source": "src_tauri_src_lib",
-      "target": "src_tauri_src_lib_exports_typescript_ipc_contracts",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L195",
-      "weight": 1.0
-    },
-    {
-      "source": "src_tauri_src_lib",
-      "target": "src_tauri_src_lib_audioextension",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L35",
-      "weight": 1.0
-    },
-    {
-      "source": "src_tauri_src_lib",
-      "target": "src_tauri_src_lib_tracksummary",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L44",
-      "weight": 1.0
-    },
-    {
-      "source": "src_tauri_src_lib",
-      "target": "src_tauri_src_lib_playbackstatus",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L58",
-      "weight": 1.0
-    },
-    {
-      "source": "src_tauri_src_lib",
       "target": "src_tauri_src_lib_playbackstate",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L69",
+      "source_location": "L108",
       "weight": 1.0
     },
     {
@@ -12792,7 +14172,271 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L95",
+      "source_location": "L134",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_lib",
+      "target": "src_tauri_src_lib_desktopstate",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L142",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_lib",
+      "target": "src_tauri_src_lib_playbackengine",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L148",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_lib",
+      "target": "src_tauri_src_lib_appstate",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L155",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_lib",
+      "target": "src_tauri_src_lib_audiometadata",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L161",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_lib",
+      "target": "src_tauri_src_lib_is_hidden",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L168",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_lib",
+      "target": "src_tauri_src_lib_track_id",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L175",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_lib",
+      "target": "src_tauri_src_lib_display_title",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L181",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_lib",
+      "target": "src_tauri_src_lib_probe_audio_metadata",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L189",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_lib",
+      "target": "src_tauri_src_lib_canonical_track_path",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L225",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_lib",
+      "target": "src_tauri_src_lib_apperror",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L24",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_lib",
+      "target": "src_tauri_src_lib_scan_library_at",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L243",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_lib",
+      "target": "src_tauri_src_lib_scan_library",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L336",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_lib",
+      "target": "src_tauri_src_lib_get_desktop_state",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L354",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_lib",
+      "target": "src_tauri_src_lib_ipc_bindings",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L373",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_lib",
+      "target": "src_tauri_src_lib_export_typescript_bindings",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L385",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_lib",
+      "target": "src_tauri_src_lib_run",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L395",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_lib",
+      "target": "src_tauri_src_lib_temporary_directory",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L417",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_lib",
+      "target": "src_tauri_src_lib_scan_recognizes_supported_files_and_ignores_hidden_or_other_files",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L428",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_lib",
+      "target": "src_tauri_src_lib_canonical_track_paths_cannot_escape_the_active_library",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L458",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_lib",
+      "target": "src_tauri_src_lib_exports_typescript_ipc_contracts",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L476",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_lib",
+      "target": "src_tauri_src_lib_audioextension",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L54",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_lib",
+      "target": "src_tauri_src_lib_tracksummary",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L75",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_lib",
+      "target": "src_tauri_src_lib_libraryscan",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L89",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_lib",
+      "target": "src_tauri_src_lib_playbackstatus",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L97",
       "weight": 1.0
     },
     {
@@ -13001,7 +14645,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L79",
+      "source_location": "L118",
       "weight": 1.0
     },
     {
@@ -13177,7 +14821,29 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L24",
+      "source_location": "L32",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_lib_apperror",
+      "target": "src_tauri_src_lib_apperror_invalid_library_root",
+      "relation": "method",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L40",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_lib_audioextension",
+      "target": "src_tauri_src_lib_audioextension_from_path",
+      "relation": "method",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L62",
       "weight": 1.0
     },
     {
@@ -13188,10 +14854,22 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L80",
+      "source_location": "L119",
+      "weight": 1.0
+    },
+    {
+      "source": "apps_frontend_src_services_libraryservice_tolibrarysnapshot",
+      "target": "apps_frontend_src_services_libraryservice_totrackitem",
+      "relation": "indirect_call",
+      "_origin": "ast",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "context": "argument",
+      "source_file": "apps/frontend/src/services/libraryService.ts",
+      "source_location": "L90",
       "weight": 1.0
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "2fbb8aa3139f3bdcf4c26c91e3292ec1d113d56c"
+  "built_at_commit": "0a12fb440c27a69408445c379901ee34b5e968fe"
 }

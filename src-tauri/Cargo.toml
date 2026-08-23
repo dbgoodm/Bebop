@@ -19,9 +19,12 @@ tauri-build = { version = "2.6.3", features = [] }
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
+sha2 = "0.10.9"
 specta = { version = "=2.0.0-rc.25", features = ["derive"] }
 specta-typescript = "0.0.12"
+symphonia = { version = "0.5.4", features = ["all"] }
 tauri = { version = "2.11.5", features = [] }
 tauri-plugin-dialog = "2.7.2"
 tauri-plugin-fs = "2.5.1"
 tauri-specta = { version = "=2.0.0-rc.25", features = ["typescript"] }
+walkdir = "2.5.0"

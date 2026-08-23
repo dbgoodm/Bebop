@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "identifier": "com.dbgoodm.bebop",
   "build": {
-    "beforeDevCommand": "VITE_BEBOP_DEMO=true npm run dev --workspace=@bebop/frontend",
+    "beforeDevCommand": "npm run dev --workspace=@bebop/frontend",
     "beforeBuildCommand": "npm run build --workspace=@bebop/frontend",
     "devUrl": "http://localhost:1420",
     "frontendDist": "../apps/frontend/dist"

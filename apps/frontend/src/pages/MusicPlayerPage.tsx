@@ -31,9 +31,8 @@ import { LOCAL_TRACKS, LOCAL_ALBUMS, LOCAL_ARTISTS } from '@/demo/catalog';
 
 import { ThemeProvider, useTheme } from '@/services/themeService';
 import { ThemeSelectorModal } from '@/components/organisms/ThemeSelectorModal';
-import { EmptyState } from '@/components/atoms/EmptyState';
-import { AppShell } from '@/components/templates/AppShell';
 import { useDemoMode } from '@/hooks/useDemoMode';
+import { DesktopLibraryPage } from './DesktopLibraryPage';
 
 export default function MusicPlayerPage() {
   const demoMode = useDemoMode();
@@ -41,22 +40,9 @@ export default function MusicPlayerPage() {
   return (
     <ThemeProvider>
       <AntraEngineProvider>
-        {demoMode ? <DemoMusicPlayer /> : <EmptyLibraryPage />}
+        {demoMode ? <DemoMusicPlayer /> : <DesktopLibraryPage />}
       </AntraEngineProvider>
     </ThemeProvider>
-  );
-}
-
-function EmptyLibraryPage() {
-  const { currentTheme } = useTheme();
-
-  return (
-    <AppShell background={currentTheme.bgCanvasGradient || currentTheme.bgCanvas}>
-      <EmptyState title="Bebop">
-        Your library is ready to be selected. Local folder scanning and native playback arrive in
-        the desktop vertical slice.
-      </EmptyState>
-    </AppShell>
   );
 }
 
@@ -488,6 +474,10 @@ function DemoMusicPlayer() {
             {activeTab === 'LIBRARY' && (
               <div id="library-view-section" className="flex flex-col gap-4 animate-fadeIn">
                 <LibraryView
+                  tracks={LOCAL_TRACKS}
+                  artists={LOCAL_ARTISTS}
+                  albums={LOCAL_ALBUMS}
+                  showDemoDiscovery={true}
                   currentTrackId={currentTrack?.id}
                   isPlaying={isPlaying}
                   onPlayTrack={handlePlayTrack}
