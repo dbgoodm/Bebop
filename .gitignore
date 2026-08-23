@@ -6,3 +6,7 @@ coverage/
 .env.*
 !.env.example
 target/
+graphify-out/*
+!graphify-out/graph.html
+!graphify-out/GRAPH_REPORT.md
+!graphify-out/graph.json
