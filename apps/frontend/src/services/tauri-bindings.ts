@@ -6,6 +6,7 @@ import { invoke as __TAURI_INVOKE } from "@tauri-apps/api/core";
 export const commands = {
 	addLibraryRoot: (path: string, label: string | null) => typedError<LibraryScan, AppError_Serialize>(__TAURI_INVOKE("add_library_root", { path, label })),
 	applyMusicbrainzCandidate: (trackId: string, candidate: EnrichmentCandidate) => typedError<MetadataPatch, AppError_Serialize>(__TAURI_INVOKE("apply_musicbrainz_candidate", { trackId, candidate })),
+	cleanupMissingTracks: (rootId: string | null, confirmed: boolean) => typedError<number, AppError_Serialize>(__TAURI_INVOKE("cleanup_missing_tracks", { rootId, confirmed })),
 	getAlbumDetail: (albumId: string) => typedError<AlbumDetail, AppError_Serialize>(__TAURI_INVOKE("get_album_detail", { albumId })),
 	getArtistDetail: (artistId: string) => typedError<ArtistDetail, AppError_Serialize>(__TAURI_INVOKE("get_artist_detail", { artistId })),
 	getDesktopState: () => typedError<DesktopState, AppError_Serialize>(__TAURI_INVOKE("get_desktop_state")),

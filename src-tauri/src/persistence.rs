@@ -1,4 +1,5 @@
 use std::{
+    collections::HashMap,
     fs,
     path::{Path, PathBuf},
     sync::mpsc::{self, Receiver, Sender},
@@ -19,12 +20,21 @@ use crate::{
     metadata::{CachedArtwork, MetadataPatch},
 };
 
-const SCHEMA_VERSION: i64 = 1;
-const MIGRATIONS: &[(i64, &str)] = &[(1, include_str!("migrations/0001_catalog.sql"))];
+const SCHEMA_VERSION: i64 = 2;
+const MIGRATIONS: &[(i64, &str)] = &[
+    (1, include_str!("migrations/0001_catalog.sql")),
+    (2, include_str!("migrations/0002_live_indexing.sql")),
+];
+type CatalogSignatures = HashMap<String, (String, u64, Option<i64>, bool)>;
 
 #[derive(Clone)]
 pub(crate) struct DatabaseWorker {
     sender: Sender<Request>,
+}
+
+pub(crate) struct Reconciliation {
+    pub tracks: Vec<TrackSummary>,
+    pub changed_track_ids: Vec<String>,
 }
 
 enum Request {
@@ -50,7 +60,7 @@ enum Request {
     Reconcile {
         root_id: String,
         scan: ScannedLibrary,
-        reply: Sender<Result<Vec<TrackSummary>, AppError>>,
+        reply: Sender<Result<Reconciliation, AppError>>,
     },
     MarkRootUnavailable {
         root_id: String,
@@ -108,6 +118,16 @@ enum Request {
     SaveArtwork {
         artwork: CachedArtwork,
         reply: Sender<Result<(), AppError>>,
+    },
+    CleanupMissingTracks {
+        root_id: Option<String>,
+        reply: Sender<Result<u64, AppError>>,
+    },
+    ReconcilePaths {
+        root_id: String,
+        scanned: Vec<crate::catalog::ScannedTrack>,
+        missing_relative_paths: Vec<String>,
+        reply: Sender<Result<Vec<String>, AppError>>,
     },
 }
 
@@ -205,7 +225,7 @@ impl DatabaseWorker {
         &self,
         root_id: String,
         scan: ScannedLibrary,
-    ) -> Result<Vec<TrackSummary>, AppError> {
+    ) -> Result<Reconciliation, AppError> {
         self.request(|reply| Request::Reconcile {
             root_id,
             scan,
@@ -306,6 +326,24 @@ impl DatabaseWorker {
 
     pub(crate) fn save_artwork(&self, artwork: CachedArtwork) -> Result<(), AppError> {
         self.request(|reply| Request::SaveArtwork { artwork, reply })
+    }
+
+    pub(crate) fn cleanup_missing_tracks(&self, root_id: Option<String>) -> Result<u64, AppError> {
+        self.request(|reply| Request::CleanupMissingTracks { root_id, reply })
+    }
+
+    pub(crate) fn reconcile_paths(
+        &self,
+        root_id: String,
+        scanned: Vec<crate::catalog::ScannedTrack>,
+        missing_relative_paths: Vec<String>,
+    ) -> Result<Vec<String>, AppError> {
+        self.request(|reply| Request::ReconcilePaths {
+            root_id,
+            scanned,
+            missing_relative_paths,
+            reply,
+        })
     }
 }
 
@@ -467,6 +505,21 @@ fn database_loop(mut connection: Connection, receiver: Receiver<Request>) {
             Request::SaveArtwork { artwork, reply } => {
                 send(reply, save_artwork(&connection, &artwork));
             }
+            Request::CleanupMissingTracks { root_id, reply } => {
+                send(
+                    reply,
+                    cleanup_missing_tracks(&connection, root_id.as_deref()),
+                );
+            }
+            Request::ReconcilePaths {
+                root_id,
+                scanned,
+                missing_relative_paths,
+                reply,
+            } => send(
+                reply,
+                reconcile_paths(&mut connection, &root_id, scanned, missing_relative_paths),
+            ),
         }
     }
 }
@@ -517,8 +570,9 @@ fn add_root(
     let id = Uuid::new_v4().to_string();
     connection
         .execute(
-            "INSERT INTO library_roots (id, canonical_path, label, created_at, updated_at)
-             VALUES (?1, ?2, ?3, ?4, ?4)
+            "INSERT INTO library_roots
+             (id, canonical_path, label, watch_mode, created_at, updated_at)
+             VALUES (?1, ?2, ?3, 'native', ?4, ?4)
              ON CONFLICT(canonical_path) DO UPDATE SET enabled = 1, label = excluded.label, updated_at = excluded.updated_at",
             params![id, canonical_path, label, now],
         )
@@ -586,7 +640,8 @@ fn reconcile(
     connection: &mut Connection,
     root_id: &str,
     scan: ScannedLibrary,
-) -> Result<Vec<TrackSummary>, AppError> {
+) -> Result<Reconciliation, AppError> {
+    let before = catalog_signatures(connection, root_id)?;
     let now = Utc::now().to_rfc3339();
     let transaction = connection
         .transaction()
@@ -598,6 +653,7 @@ fn reconcile(
         )
         .map_err(database_error("mark-library-tracks-missing"))?;
     for track in scan.tracks {
+        relink_moved_track(&transaction, root_id, &track, &now)?;
         upsert_track(&transaction, root_id, &track, &now)?;
     }
     let track_count: u64 = transaction
@@ -617,15 +673,103 @@ fn reconcile(
     transaction
         .commit()
         .map_err(database_error("commit-library-reconciliation"))?;
-    query_tracks(
+    let tracks = query_tracks(
         connection,
         CatalogQuery {
             root_id: Some(root_id.to_owned()),
             limit: u32::MAX,
             ..CatalogQuery::default()
         },
-    )
-    .map(|page| page.items)
+    )?
+    .items;
+    let after = catalog_signatures(connection, root_id)?;
+    let mut changed_track_ids: Vec<_> = before
+        .keys()
+        .chain(after.keys())
+        .filter(|id| before.get(*id) != after.get(*id))
+        .cloned()
+        .collect();
+    changed_track_ids.sort();
+    changed_track_ids.dedup();
+    Ok(Reconciliation {
+        tracks,
+        changed_track_ids,
+    })
+}
+
+fn catalog_signatures(
+    connection: &Connection,
+    root_id: &str,
+) -> Result<CatalogSignatures, AppError> {
+    let mut statement = connection
+        .prepare(
+            "SELECT id, canonical_path, file_size, modified_at_ms, available
+             FROM tracks WHERE root_id = ?1",
+        )
+        .map_err(database_error("prepare-catalog-signatures"))?;
+    statement
+        .query_map([root_id], |row| {
+            Ok((
+                row.get::<_, String>(0)?,
+                (row.get(1)?, row.get(2)?, row.get(3)?, row.get(4)?),
+            ))
+        })
+        .map_err(database_error("query-catalog-signatures"))?
+        .collect::<rusqlite::Result<HashMap<_, _>>>()
+        .map_err(database_error("read-catalog-signatures"))
+}
+
+fn reconcile_paths(
+    connection: &mut Connection,
+    root_id: &str,
+    scanned: Vec<crate::catalog::ScannedTrack>,
+    missing_relative_paths: Vec<String>,
+) -> Result<Vec<String>, AppError> {
+    let before = catalog_signatures(connection, root_id)?;
+    let now = Utc::now().to_rfc3339();
+    let transaction = connection
+        .transaction()
+        .map_err(database_error("begin-path-reconciliation"))?;
+    for relative_path in missing_relative_paths {
+        transaction
+            .execute(
+                "UPDATE tracks SET available = 0, updated_at = ?3
+                 WHERE root_id = ?1 AND relative_path = ?2",
+                params![root_id, relative_path, now],
+            )
+            .map_err(database_error("mark-path-missing"))?;
+    }
+    for track in scanned {
+        relink_moved_track(&transaction, root_id, &track, &now)?;
+        upsert_track(&transaction, root_id, &track, &now)?;
+    }
+    let track_count: u64 = transaction
+        .query_row(
+            "SELECT COUNT(*) FROM tracks WHERE root_id = ?1 AND available = 1",
+            [root_id],
+            |row| row.get(0),
+        )
+        .map_err(database_error("count-reconciled-paths"))?;
+    transaction
+        .execute(
+            "UPDATE library_roots SET track_count = ?2, availability = 'online',
+             updated_at = ?3 WHERE id = ?1",
+            params![root_id, track_count, now],
+        )
+        .map_err(database_error("finish-path-reconciliation"))?;
+    transaction
+        .commit()
+        .map_err(database_error("commit-path-reconciliation"))?;
+    let after = catalog_signatures(connection, root_id)?;
+    let mut changed: Vec<_> = before
+        .keys()
+        .chain(after.keys())
+        .filter(|id| before.get(*id) != after.get(*id))
+        .cloned()
+        .collect();
+    changed.sort();
+    changed.dedup();
+    Ok(changed)
 }
 
 fn upsert_track(
@@ -700,10 +844,11 @@ fn upsert_track(
                 label, catalog_number, isrc, musicbrainz_recording_id, artwork_id,
                 replaygain_track_gain, replaygain_track_peak, replaygain_album_gain,
                 replaygain_album_peak, lyrics, available, modified_at_ms, added_at, updated_at
+                , content_fingerprint
              ) VALUES (
                 ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13,
                 ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25,
-                ?26, ?27, ?28, ?29, ?30, 1, ?31, ?32, ?32
+                ?26, ?27, ?28, ?29, ?30, 1, ?31, ?32, ?32, ?33
              )
              ON CONFLICT(root_id, relative_path) DO UPDATE SET
                 canonical_path = excluded.canonical_path, title = excluded.title,
@@ -720,7 +865,9 @@ fn upsert_track(
                 replaygain_track_peak = excluded.replaygain_track_peak,
                 replaygain_album_gain = excluded.replaygain_album_gain,
                 replaygain_album_peak = excluded.replaygain_album_peak, lyrics = excluded.lyrics,
-                available = 1, modified_at_ms = excluded.modified_at_ms, updated_at = excluded.updated_at",
+                available = 1, modified_at_ms = excluded.modified_at_ms,
+                content_fingerprint = excluded.content_fingerprint,
+                updated_at = excluded.updated_at",
             params![
                 id,
                 root_id,
@@ -754,6 +901,7 @@ fn upsert_track(
                 metadata.lyrics,
                 track.modified_at_ms,
                 now,
+                track.content_fingerprint,
             ],
         )
         .map_err(database_error("upsert-library-track"))?;
@@ -807,6 +955,51 @@ fn upsert_track(
                 params![track_id, genre_id],
             )
             .map_err(database_error("attach-track-genre"))?;
+    }
+    Ok(())
+}
+
+fn relink_moved_track(
+    transaction: &Transaction<'_>,
+    root_id: &str,
+    track: &crate::catalog::ScannedTrack,
+    now: &str,
+) -> Result<(), AppError> {
+    let target_exists: bool = transaction
+        .query_row(
+            "SELECT EXISTS(SELECT 1 FROM tracks WHERE root_id = ?1 AND relative_path = ?2)",
+            params![root_id, track.relative_path],
+            |row| row.get(0),
+        )
+        .map_err(database_error("find-move-target"))?;
+    if target_exists {
+        return Ok(());
+    }
+    let mut statement = transaction
+        .prepare(
+            "SELECT id, canonical_path FROM tracks
+             WHERE root_id = ?1 AND available = 0 AND file_size = ?2
+             AND content_fingerprint = ?3 LIMIT 2",
+        )
+        .map_err(database_error("prepare-move-candidates"))?;
+    let candidates = statement
+        .query_map(
+            params![root_id, track.file_size, track.content_fingerprint],
+            |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?)),
+        )
+        .map_err(database_error("query-move-candidates"))?
+        .collect::<rusqlite::Result<Vec<_>>>()
+        .map_err(database_error("read-move-candidates"))?;
+    if let [(id, previous_path)] = candidates.as_slice()
+        && !Path::new(previous_path).exists()
+    {
+        transaction
+            .execute(
+                "UPDATE tracks SET canonical_path = ?2, relative_path = ?3, updated_at = ?4
+                 WHERE id = ?1",
+                params![id, track.canonical_path, track.relative_path, now],
+            )
+            .map_err(database_error("relink-moved-track"))?;
     }
     Ok(())
 }
@@ -1584,6 +1777,19 @@ fn save_artwork(connection: &Connection, artwork: &CachedArtwork) -> Result<(), 
     Ok(())
 }
 
+fn cleanup_missing_tracks(connection: &Connection, root_id: Option<&str>) -> Result<u64, AppError> {
+    let removed = if let Some(root_id) = root_id {
+        connection.execute(
+            "DELETE FROM tracks WHERE available = 0 AND root_id = ?1",
+            [root_id],
+        )
+    } else {
+        connection.execute("DELETE FROM tracks WHERE available = 0", [])
+    }
+    .map_err(database_error("cleanup-missing-tracks"))?;
+    Ok(removed.try_into().unwrap_or(u64::MAX))
+}
+
 fn resolve_track(
     connection: &Connection,
     canonical_path: &str,
@@ -1621,6 +1827,32 @@ mod tests {
         let worker = DatabaseWorker::in_memory().expect("database starts");
         let roots = worker.list_roots().expect("roots query");
         assert!(roots.is_empty());
+    }
+
+    #[test]
+    fn version_one_catalogs_upgrade_to_live_indexing() {
+        let mut connection = Connection::open_in_memory().expect("open old database");
+        connection
+            .execute_batch(include_str!("migrations/0001_catalog.sql"))
+            .expect("install version one schema");
+        connection
+            .pragma_update(None, "user_version", 1)
+            .expect("set old schema version");
+        migrate(&mut connection).expect("upgrade schema");
+        let version: i64 = connection
+            .pragma_query_value(None, "user_version", |row| row.get(0))
+            .expect("read upgraded version");
+        let fingerprint_exists: bool = connection
+            .query_row(
+                "SELECT EXISTS(
+                   SELECT 1 FROM pragma_table_info('tracks') WHERE name = 'content_fingerprint'
+                 )",
+                [],
+                |row| row.get(0),
+            )
+            .expect("inspect upgraded tracks");
+        assert_eq!(version, 2);
+        assert!(fingerprint_exists);
     }
 
     #[test]

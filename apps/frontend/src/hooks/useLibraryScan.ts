@@ -1,16 +1,18 @@
 import { useCallback, useEffect, useState } from 'react';
 import { listen } from '@tauri-apps/api/event';
-import type { AppError, ScanProgress } from '@/services/tauri-bindings';
+import type { AppError, LibraryChanged, ScanProgress } from '@/services/tauri-bindings';
 import {
   chooseLibraryFolder,
   errorSnapshot,
   initialLibraryScan,
+  loadLibraryDelta,
   loadLibraryCatalog,
   removeLibraryRoot,
   rescanLibraryRoot,
   scanLibrary,
   setLibraryRootEnabled,
   toLibrarySnapshot,
+  toTrackItem,
 } from '@/services/libraryService';
 
 export function useLibraryScan(search = '') {
@@ -34,7 +36,41 @@ export function useLibraryScan(search = '') {
     }).then((dispose) => {
       unlistenProgress = dispose;
     });
-    void listen('library://changed', () => void reload()).then((dispose) => {
+    void listen<LibraryChanged>('library://changed', ({ payload }) => {
+      if (payload.trackIds.length === 0 || payload.trackIds.length > 100) {
+        void reload();
+        return;
+      }
+      void loadLibraryDelta(payload.trackIds)
+        .then(({ roots, tracks }) => {
+          if (!active) return;
+          const changed = new Map(tracks.map((track) => [track.id, track]));
+          setLibrary((current) => {
+            const retained = current.tracks.filter((track) => {
+              const update = changed.get(track.id);
+              return !update || update.available;
+            });
+            const retainedIds = new Set(retained.map((track) => track.id));
+            const updated = retained.map((track, index) => {
+              const replacement = changed.get(track.id);
+              return replacement ? toTrackItem(replacement, index) : track;
+            });
+            for (const track of tracks) {
+              if (track.available && !retainedIds.has(track.id)) {
+                updated.push(toTrackItem(track, updated.length));
+              }
+            }
+            updated.sort((left, right) => left.title.localeCompare(right.title));
+            return {
+              ...current,
+              roots,
+              tracks: updated,
+              totalTracks: roots.reduce((total, root) => total + root.trackCount, 0),
+            };
+          });
+        })
+        .catch(() => void reload());
+    }).then((dispose) => {
       unlistenChanged = dispose;
     });
     return () => {

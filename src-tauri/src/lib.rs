@@ -14,6 +14,7 @@ mod catalog;
 mod enrichment;
 mod metadata;
 mod persistence;
+mod watcher;
 
 use serde::{Deserialize, Serialize};
 use specta::Type;
@@ -34,6 +35,7 @@ use enrichment::{MusicBrainzClient, enrich_track, patch_from_candidate};
 pub use metadata::{MetadataPatch, MetadataWriteResult};
 use metadata::{cache_external_artwork, restore_backup, write_patch_atomically};
 use persistence::DatabaseWorker;
+use watcher::LibraryWatcher;
 
 const SCAN_PROGRESS_EVENT: &str = "library://scan-progress";
 const LIBRARY_CHANGED_EVENT: &str = "library://changed";
@@ -197,16 +199,18 @@ pub struct AppState {
     database: DatabaseWorker,
     artwork_cache: PathBuf,
     musicbrainz: Arc<MusicBrainzClient>,
+    watcher: LibraryWatcher,
     playback: Arc<Mutex<PlaybackEngine>>,
     running: Arc<AtomicBool>,
 }
 
 impl AppState {
-    fn new(database: DatabaseWorker, artwork_cache: PathBuf) -> Self {
+    fn new(database: DatabaseWorker, artwork_cache: PathBuf, watcher: LibraryWatcher) -> Self {
         Self {
             database,
             artwork_cache,
             musicbrainz: Arc::new(MusicBrainzClient::default()),
+            watcher,
             playback: Arc::new(Mutex::new(PlaybackEngine::default())),
             running: Arc::new(AtomicBool::new(true)),
         }
@@ -222,11 +226,14 @@ async fn scan_library(
 ) -> Result<LibraryScan, AppError> {
     let database = state.database.clone();
     let artwork_cache = state.artwork_cache.clone();
-    tauri::async_runtime::spawn_blocking(move || {
+    let scan = tauri::async_runtime::spawn_blocking(move || {
         add_and_scan_root(&app, &database, &artwork_cache, root, None)
     })
     .await
-    .map_err(|error| AppError::new("background-task-failed", error.to_string()))?
+    .map_err(|error| AppError::new("background-task-failed", error.to_string()))??;
+    let root = state.database.get_root(scan.root_id.clone())?;
+    state.watcher.watch_root(&root)?;
+    Ok(scan)
 }
 
 #[tauri::command]
@@ -245,11 +252,14 @@ async fn add_library_root(
 ) -> Result<LibraryScan, AppError> {
     let database = state.database.clone();
     let artwork_cache = state.artwork_cache.clone();
-    tauri::async_runtime::spawn_blocking(move || {
+    let scan = tauri::async_runtime::spawn_blocking(move || {
         add_and_scan_root(&app, &database, &artwork_cache, path, label)
     })
     .await
-    .map_err(|error| AppError::new("background-task-failed", error.to_string()))?
+    .map_err(|error| AppError::new("background-task-failed", error.to_string()))??;
+    let root = state.database.get_root(scan.root_id.clone())?;
+    state.watcher.watch_root(&root)?;
+    Ok(scan)
 }
 
 fn add_and_scan_root(
@@ -290,6 +300,11 @@ fn set_library_root_enabled(
     enabled: bool,
 ) -> Result<LibraryRoot, AppError> {
     let root = state.database.set_root_enabled(root_id.clone(), enabled)?;
+    if enabled {
+        state.watcher.watch_root(&root)?;
+    } else {
+        state.watcher.unwatch_root(Path::new(&root.path))?;
+    }
     emit_library_changed(&app, "root-updated", Some(root_id), Vec::new());
     Ok(root)
 }
@@ -308,9 +323,30 @@ fn remove_library_root(
             "Removing a library root requires confirmation. Music files are never deleted.",
         ));
     }
+    let root = state.database.get_root(root_id.clone())?;
+    state.watcher.unwatch_root(Path::new(&root.path))?;
     state.database.remove_root(root_id.clone())?;
     emit_library_changed(&app, "root-removed", Some(root_id), Vec::new());
     Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+fn cleanup_missing_tracks(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    root_id: Option<String>,
+    confirmed: bool,
+) -> Result<u64, AppError> {
+    if !confirmed {
+        return Err(AppError::new(
+            "library-cleanup-not-confirmed",
+            "Permanent catalog cleanup requires confirmation. Music files are never deleted.",
+        ));
+    }
+    let removed = state.database.cleanup_missing_tracks(root_id.clone())?;
+    emit_library_changed(&app, "missing-tracks-cleaned", root_id, Vec::new());
+    Ok(removed)
 }
 
 #[tauri::command]
@@ -339,12 +375,15 @@ async fn restore_library_root(
 ) -> Result<LibraryScan, AppError> {
     let database = state.database.clone();
     let artwork_cache = state.artwork_cache.clone();
-    tauri::async_runtime::spawn_blocking(move || {
+    let scan = tauri::async_runtime::spawn_blocking(move || {
         let root = database.set_root_enabled(root_id, true)?;
         scan_root(&app, &database, &artwork_cache, root)
     })
     .await
-    .map_err(|error| AppError::new("background-task-failed", error.to_string()))?
+    .map_err(|error| AppError::new("background-task-failed", error.to_string()))??;
+    let root = state.database.get_root(scan.root_id.clone())?;
+    state.watcher.watch_root(&root)?;
+    Ok(scan)
 }
 
 fn scan_root(
@@ -370,13 +409,17 @@ fn scan_root(
     };
     let warnings = scanned.warnings.clone();
     let canonical_root = scanned.canonical_root.clone();
-    let tracks = database.reconcile(root.id.clone(), scanned)?;
-    let track_ids = tracks.iter().map(|track| track.id.clone()).collect();
-    emit_library_changed(app, "root-reconciled", Some(root.id.clone()), track_ids);
+    let reconciliation = database.reconcile(root.id.clone(), scanned)?;
+    emit_library_changed(
+        app,
+        "root-reconciled",
+        Some(root.id.clone()),
+        reconciliation.changed_track_ids,
+    );
     Ok(LibraryScan {
         root_id: root.id,
         root: canonical_root,
-        tracks,
+        tracks: reconciliation.tracks,
         warnings,
     })
 }
@@ -480,8 +523,9 @@ async fn write_metadata_to_file(
     ensure_track_not_playing(&state, &track_id)?;
     let database = state.database.clone();
     let task_track_id = track_id.clone();
+    let path = state.database.resolve_track_id(track_id.clone())?;
+    state.watcher.suppress_path(path.clone());
     let result = tauri::async_runtime::spawn_blocking(move || {
-        let path = database.resolve_track_id(task_track_id.clone())?;
         if path
             .metadata()
             .map_err(|error| AppError::new("track-unavailable", error.to_string()))?
@@ -523,10 +567,10 @@ async fn rollback_metadata_file(
     track_id: String,
 ) -> Result<MetadataWriteResult, AppError> {
     ensure_track_not_playing(&state, &track_id)?;
-    let database = state.database.clone();
     let task_track_id = track_id.clone();
+    let path = state.database.resolve_track_id(track_id.clone())?;
+    state.watcher.suppress_path(path.clone());
     let result = tauri::async_runtime::spawn_blocking(move || {
-        let path = database.resolve_track_id(task_track_id.clone())?;
         let backup = restore_backup(&path)
             .map_err(|error| AppError::new("metadata-rollback-failed", error))?;
         Ok(MetadataWriteResult {
@@ -929,6 +973,7 @@ fn ipc_bindings() -> Builder<tauri::Wry> {
         .commands(collect_commands![
             add_library_root,
             apply_musicbrainz_candidate,
+            cleanup_missing_tracks,
             get_album_detail,
             get_artist_detail,
             get_desktop_state,
@@ -1010,9 +1055,36 @@ pub fn run() {
             let app_data = app.path().app_data_dir()?;
             let database = DatabaseWorker::start(app_data.join("bebop.sqlite3"))
                 .map_err(|error| std::io::Error::other(error.message))?;
-            app.manage(AppState::new(database, app_data.join("artwork")));
+            let artwork_cache = app_data.join("artwork");
+            let watcher = LibraryWatcher::start(
+                app.handle().clone(),
+                database.clone(),
+                artwork_cache.clone(),
+            )
+            .map_err(|error| std::io::Error::other(error.message))?;
+            let roots = database
+                .list_roots()
+                .map_err(|error| std::io::Error::other(error.message))?;
+            for root in &roots {
+                watcher
+                    .watch_root(root)
+                    .map_err(|error| std::io::Error::other(error.message))?;
+            }
+            app.manage(AppState::new(
+                database.clone(),
+                artwork_cache.clone(),
+                watcher,
+            ));
             let state = app.state::<AppState>();
             spawn_playback_monitor(app.handle().clone(), &state);
+            let startup_app = app.handle().clone();
+            thread::Builder::new()
+                .name("bebop-startup-reconciliation".into())
+                .spawn(move || {
+                    for root in roots.into_iter().filter(|root| root.enabled) {
+                        let _ = scan_root(&startup_app, &database, &artwork_cache, root);
+                    }
+                })?;
             Ok(())
         })
         .on_window_event(|window, event| {
@@ -1093,14 +1165,58 @@ mod tests {
                 library_root.id.clone(),
                 scan_library_at(&root, &root.join(".artwork-cache"), |_| {}).expect("first scan"),
             )
-            .expect("first reconciliation");
+            .expect("first reconciliation")
+            .tracks;
         let second = database
             .reconcile(
                 library_root.id,
                 scan_library_at(&root, &root.join(".artwork-cache"), |_| {}).expect("second scan"),
             )
-            .expect("second reconciliation");
+            .expect("second reconciliation")
+            .tracks;
         assert_eq!(first[0].id, second[0].id);
+        fs::remove_dir_all(root).expect("remove root fixture");
+    }
+
+    #[test]
+    fn reconciliation_preserves_track_identity_after_a_move() {
+        let root = temporary_directory("moved-track-id");
+        let fixture = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/tone.flac");
+        fs::copy(&fixture, root.join("before.flac")).expect("copy fixture");
+        let database = DatabaseWorker::in_memory().expect("database starts");
+        let library_root = database
+            .add_root(
+                root.canonicalize()
+                    .expect("canonical root")
+                    .to_string_lossy()
+                    .into_owned(),
+                "Music".into(),
+            )
+            .expect("root added");
+        let first = database
+            .reconcile(
+                library_root.id.clone(),
+                scan_library_at(&root, &root.join(".artwork-cache"), |_| {}).expect("first scan"),
+            )
+            .expect("first reconciliation")
+            .tracks;
+        fs::rename(root.join("before.flac"), root.join("after.flac")).expect("move fixture");
+        let moved = catalog::scan_track_at(
+            &root,
+            &root.join("after.flac"),
+            &root.join(".artwork-cache"),
+        )
+        .expect("probe moved track")
+        .expect("supported moved track");
+        database
+            .reconcile_paths(library_root.id, vec![moved], vec!["before.flac".into()])
+            .expect("move reconciliation");
+        let second = database
+            .query_tracks(CatalogQuery::default())
+            .expect("query moved track")
+            .items;
+        assert_eq!(first[0].id, second[0].id);
+        assert_eq!(second[0].relative_path, "after.flac");
         fs::remove_dir_all(root).expect("remove root fixture");
     }
 
@@ -1124,7 +1240,8 @@ mod tests {
                 library_root.id,
                 scan_library_at(&root, &root.join(".artwork-cache"), |_| {}).expect("fixture scan"),
             )
-            .expect("fixture reconciliation");
+            .expect("fixture reconciliation")
+            .tracks;
         assert_eq!(tracks[0].title, "Fixture FLAC");
         assert_eq!(tracks[0].artists[0].name, "Fixture Artist");
         assert_eq!(tracks[0].album, "Fixture Album");

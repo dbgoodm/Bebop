@@ -20,6 +20,7 @@ tauri-build = { version = "2.6.3", features = [] }
 [dependencies]
 chrono = { version = "0.4.42", default-features = false, features = ["clock", "serde"] }
 lofty = "=0.22.4"
+notify = "=8.2.0"
 rodio = { version = "=0.21.1", default-features = false, features = ["playback", "flac", "mp3", "mp4", "symphonia-aiff", "symphonia-alac", "vorbis", "wav"] }
 reqwest = { version = "0.12.23", default-features = false, features = ["blocking", "json", "rustls-tls"] }
 rusqlite = { version = "0.37.0", features = ["backup", "bundled"] }

@@ -92,6 +92,18 @@ export async function loadLibraryCatalog(search = ''): Promise<LibraryScanSnapsh
   };
 }
 
+export async function loadLibraryDelta(trackIds: string[]) {
+  const [rootsResult, trackResults] = await Promise.all([
+    commands.listLibraryRoots(),
+    Promise.all(trackIds.map((trackId) => commands.getTrackMetadata(trackId))),
+  ]);
+  if (rootsResult.status === 'error') throw rootsResult.error;
+  return {
+    roots: rootsResult.data,
+    tracks: trackResults.flatMap((result) => (result.status === 'ok' ? [result.data] : [])),
+  };
+}
+
 export async function setLibraryRootEnabled(rootId: string, enabled: boolean) {
   const result = await commands.setLibraryRootEnabled(rootId, enabled);
   if (result.status === 'error') throw result.error;

@@ -10,6 +10,7 @@ contain only the user's media; Bebop never places its database inside a library 
 React pages/hooks
   ├─ root commands → Rust scanner → reconciliation transaction → SQLite worker
   ├─ bounded catalog queries ← pagination/search/sort/filter ← SQLite worker
+  ├─ notify watcher → 750ms coalescing → per-path reconciliation → compact library deltas
   ├─ tag draft/review → metadata overrides + audit → optional atomic Lofty file write
   ├─ opt-in enrichment → rate-limited MusicBrainz worker → persistent result cache
   └─ generated IPC → playback commands → Rust PlaybackEngine → Rodio / CPAL → output device
@@ -66,6 +67,20 @@ seconds, may update the SQLite override. Every other candidate requires a user r
 never writes tags to files. When a reviewed release has an approved front image, its 500px Cover
 Art Archive representation is stored in the same hash-addressed cache, with its provider and
 release ID retained in SQLite.
+
+Enabled online roots use Notify's platform-recommended recursive watcher. A dedicated worker
+coalesces bursts after 750ms and incrementally reconciles ordinary audio-file creates, changes,
+renames, and removals in one SQLite transaction. Ambiguous directory and sidecar-artwork events
+fall back to a full root reconciliation, as do startup and explicit rescans because OS and network
+filesystem watchers can miss events. Deletes first mark tracks unavailable. Only the confirmed
+`cleanup_missing_tracks` command removes those catalog rows.
+
+Each file stores a size plus sampled-content SHA-256 fingerprint. When a former path is gone and
+exactly one unavailable fingerprint matches a new path, reconciliation updates the existing row
+instead of creating a new track UUID, preserving favorites and listening history. Paths touched by
+Bebop's own atomic tag writer are suppressed briefly, and `.bebop-backups`/temporary files are
+ignored. `library://changed` contains only changed track IDs; React patches a small delta directly
+and falls back to a bounded catalog refresh for root-wide changes.
 
 ## IPC contracts
 
@@ -131,5 +146,5 @@ and Windows NSIS bundle. Hardware audio is intentionally outside CI coverage.
 
 ## Deferred work
 
-File watching, native spectrum samples, Last.fm, Discord presence, acquisition, installers beyond
-CI bundles, code signing, and auto-updates remain deferred to later stages in the V2 plan.
+Native spectrum samples, Last.fm, Discord presence, acquisition, installers beyond CI bundles,
+code signing, and auto-updates remain deferred to later stages in the V2 plan.

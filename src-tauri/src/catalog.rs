@@ -1,6 +1,11 @@
-use std::{fs::File, path::Path};
+use std::{
+    fs::File,
+    io::{Read, Seek, SeekFrom},
+    path::Path,
+};
 
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 use specta::Type;
 use symphonia::core::{
     formats::FormatOptions, io::MediaSourceStream, meta::MetadataOptions, probe::Hint,
@@ -310,6 +315,7 @@ pub(crate) struct ScannedTrack {
     pub channels: Option<u16>,
     pub bit_depth: Option<u16>,
     pub modified_at_ms: Option<i64>,
+    pub content_fingerprint: String,
     pub metadata: EmbeddedMetadata,
 }
 
@@ -343,6 +349,25 @@ fn display_title(path: &Path) -> String {
         .to_owned()
 }
 
+fn sampled_content_fingerprint(path: &Path, file_size: u64) -> Result<String, std::io::Error> {
+    const SAMPLE_SIZE: usize = 64 * 1_024;
+    let mut file = File::open(path)?;
+    let mut hasher = Sha256::new();
+    hasher.update(file_size.to_le_bytes());
+    let mut buffer = vec![0_u8; SAMPLE_SIZE];
+    for offset in [
+        0,
+        file_size.saturating_sub(SAMPLE_SIZE as u64) / 2,
+        file_size.saturating_sub(SAMPLE_SIZE as u64),
+    ] {
+        file.seek(SeekFrom::Start(offset))?;
+        let read = file.read(&mut buffer)?;
+        hasher.update((read as u64).to_le_bytes());
+        hasher.update(&buffer[..read]);
+    }
+    Ok(format!("{:x}", hasher.finalize()))
+}
+
 pub(crate) fn probe_audio_metadata(path: &Path, extension: &AudioExtension) -> AudioMetadata {
     let Ok(file) = File::open(path) else {
         return AudioMetadata::default();
@@ -372,6 +397,56 @@ pub(crate) fn probe_audio_metadata(path: &Path, extension: &AudioExtension) -> A
         channels: params.channels.map(|channels| channels.count() as u16),
         bit_depth: params.bits_per_sample.map(|bits| bits as u16),
     }
+}
+
+pub(crate) fn scan_track_at(
+    root: &Path,
+    requested_path: &Path,
+    artwork_cache: &Path,
+) -> Result<Option<ScannedTrack>, String> {
+    let Some(extension) = AudioExtension::from_path(requested_path) else {
+        return Ok(None);
+    };
+    let canonical_path = requested_path
+        .canonicalize()
+        .map_err(|error| error.to_string())?;
+    if !canonical_path.starts_with(root) || !canonical_path.is_file() {
+        return Err("The changed path is outside its library root or is not a file.".into());
+    }
+    let file_metadata = canonical_path
+        .metadata()
+        .map_err(|error| error.to_string())?;
+    let relative_path = canonical_path
+        .strip_prefix(root)
+        .map_err(|error| error.to_string())?
+        .to_string_lossy()
+        .into_owned();
+    let audio = probe_audio_metadata(&canonical_path, &extension);
+    let embedded = read_embedded_metadata(&canonical_path, artwork_cache).unwrap_or_default();
+    let modified_at_ms = file_metadata
+        .modified()
+        .ok()
+        .and_then(|time| time.duration_since(std::time::UNIX_EPOCH).ok())
+        .map(|duration| duration.as_millis().min(i64::MAX as u128) as i64);
+    let content_fingerprint = sampled_content_fingerprint(&canonical_path, file_metadata.len())
+        .map_err(|error| error.to_string())?;
+    Ok(Some(ScannedTrack {
+        canonical_path: canonical_path.to_string_lossy().into_owned(),
+        relative_path,
+        title: embedded
+            .title
+            .clone()
+            .unwrap_or_else(|| display_title(&canonical_path)),
+        extension,
+        file_size: file_metadata.len(),
+        duration_ms: audio.duration_ms,
+        sample_rate: audio.sample_rate,
+        channels: audio.channels,
+        bit_depth: audio.bit_depth,
+        modified_at_ms,
+        content_fingerprint,
+        metadata: embedded,
+    }))
 }
 
 pub(crate) fn scan_library_at<F>(
@@ -462,6 +537,16 @@ where
             .ok()
             .and_then(|time| time.duration_since(std::time::UNIX_EPOCH).ok())
             .map(|duration| duration.as_millis().min(i64::MAX as u128) as i64);
+        let content_fingerprint = match sampled_content_fingerprint(&canonical_path, metadata.len())
+        {
+            Ok(fingerprint) => fingerprint,
+            Err(error) => {
+                warnings.push(format!(
+                    "Skipped unreadable file {current_path} while fingerprinting: {error}"
+                ));
+                continue;
+            }
+        };
         tracks.push(ScannedTrack {
             canonical_path: canonical_path.to_string_lossy().into_owned(),
             relative_path,
@@ -476,6 +561,7 @@ where
             channels: audio.channels,
             bit_depth: audio.bit_depth,
             modified_at_ms,
+            content_fingerprint,
             metadata: embedded,
         });
         emit_progress(&ScanProgress {
