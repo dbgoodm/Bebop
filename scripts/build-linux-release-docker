@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repository_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+signing_key="${TAURI_SIGNING_PRIVATE_KEY_PATH:-}"
+
+if [[ -z "${signing_key}" || ! -f "${signing_key}" ]]; then
+  echo "Set TAURI_SIGNING_PRIVATE_KEY_PATH to the updater private-key file." >&2
+  exit 1
+fi
+
+output_directory="${repository_root}/dist/linux"
+mkdir -p "${output_directory}"
+
+docker build \
+  --tag bebop-linux-release:bookworm \
+  --file "${repository_root}/packaging/linux/Dockerfile" \
+  "${repository_root}/packaging/linux"
+
+docker run --rm \
+  --volume "${repository_root}:/source:ro" \
+  --volume "${output_directory}:/output" \
+  --volume "${signing_key}:/run/secrets/bebop-updater.key:ro" \
+  --env TAURI_SIGNING_PRIVATE_KEY=/run/secrets/bebop-updater.key \
+  --env TAURI_SIGNING_PRIVATE_KEY_PASSWORD="${TAURI_SIGNING_PRIVATE_KEY_PASSWORD:-}" \
+  bebop-linux-release:bookworm \
+  bash -lc '
+    set -euo pipefail
+    mkdir /work
+    tar -C /source --exclude=.git --exclude=node_modules --exclude=target -cf - . | tar -C /work -xf -
+    cd /work
+    npm ci
+    npm exec tauri -- build --config src-tauri/tauri.conf.json --bundles appimage,deb,rpm
+    cp target/release/bundle/appimage/*.AppImage target/release/bundle/appimage/*.sig /output/
+    cp target/release/bundle/deb/*.deb target/release/bundle/deb/*.sig /output/
+    cp target/release/bundle/rpm/*.rpm target/release/bundle/rpm/*.sig /output/
+  '

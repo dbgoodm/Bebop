@@ -1,16 +1,16 @@
 # Graph Report - Bebop  (2026-08-23)
 
 ## Corpus Check
-- 104 files · ~92,382 words
+- 111 files · ~95,873 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1379 nodes · 4068 edges · 68 communities (51 shown, 17 thin omitted)
-- Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 44 edges (avg confidence: 0.85)
+- 1441 nodes · 4174 edges · 74 communities (55 shown, 19 thin omitted)
+- Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 45 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `31904f7a`
+- Built from commit: `d367c2e5`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -19,7 +19,7 @@
 - useTheme
 - devDependencies
 - What You Must Do When Invoked
-- catalogService.ts
+- LibraryView.tsx
 - SpectrumAnalyzer
 - compilerOptions
 - RealAudioEngine
@@ -28,7 +28,7 @@
 - .prettierrc.json
 - graphify reference: extra exports and benchmark
 - lib.rs
-- tauri.conf.json
+- bundle
 - scripts
 - main.json
 - LibraryWatcher
@@ -45,7 +45,7 @@
 - Result
 - catalog.rs
 - libraryService.ts
-- types.ts
+- MusicPlayerPage.tsx
 - scripts
 - integrations.rs
 - tauri-dev.mjs
@@ -61,7 +61,7 @@
 - useNativePlayback.ts
 - @testing-library/user-event
 - vitest
-- App.tsx
+- types.ts
 - catalog.ts
 - enrichment.rs
 - tauri-bindings.ts
@@ -76,11 +76,17 @@
 - ListeningStats.tsx
 - slskd acquisition
 - @testing-library/react
+- updates.rs
+- UpdatePanel.tsx
+- catalogService.ts
+- Releases and signed updates
+- install-bebop
+- build-linux-release-docker
 
 ## God Nodes (most connected - your core abstractions)
-1. `AppState` - 89 edges
-2. `AppError` - 82 edges
-3. `DatabaseWorker` - 79 edges
+1. `AppState` - 90 edges
+2. `AppError` - 84 edges
+3. `DatabaseWorker` - 81 edges
 4. `database_error()` - 56 edges
 5. `database_loop()` - 50 edges
 6. `TrackItem` - 41 edges
@@ -96,23 +102,23 @@
   apps/frontend/src/components/organisms/DiscoverView.tsx → apps/frontend/src/services/themeService.tsx
 - `FullscreenNowPlayingProps` --references--> `TrackItem`  [EXTRACTED]
   apps/frontend/src/components/organisms/FullscreenNowPlaying.tsx → apps/frontend/src/types.ts
-- `GenresGridViewProps` --references--> `TrackItem`  [EXTRACTED]
-  apps/frontend/src/components/organisms/GenresGridView.tsx → apps/frontend/src/types.ts
 - `MetadataEditorProps` --references--> `TrackItem`  [EXTRACTED]
   apps/frontend/src/components/organisms/MetadataEditor.tsx → apps/frontend/src/types.ts
+- `NowPlayingBarProps` --references--> `TrackItem`  [EXTRACTED]
+  apps/frontend/src/components/organisms/NowPlayingBar.tsx → apps/frontend/src/types.ts
 
 ## Import Cycles
 - None detected.
 
-## Communities (68 total, 17 thin omitted)
+## Communities (74 total, 19 thin omitted)
 
 ### Community 0 - "PlaybackEngine"
 Cohesion: 0.07
 Nodes (41): AudioOutputDevice, AudioOutputState, Device, OutputStream, PlaybackState, SampleFormat, Send, Sink (+33 more)
 
 ### Community 1 - "useTheme"
-Cohesion: 0.11
-Nodes (24): RecentlyAddedRail(), FullscreenNowPlaying(), FullscreenNowPlayingProps, MonstercatVisualizer(), MonstercatVisualizerProps, generateCompactWaveform(), NowPlayingBar(), NowPlayingBarProps (+16 more)
+Cohesion: 0.09
+Nodes (28): ContinueListeningRail(), SAMPLE_CONTINUE_ITEMS, RecentlyAddedRail(), FullscreenNowPlaying(), FullscreenNowPlayingProps, MonstercatVisualizer(), MonstercatVisualizerProps, generateCompactWaveform() (+20 more)
 
 ### Community 2 - "devDependencies"
 Cohesion: 0.10
@@ -122,9 +128,9 @@ Nodes (21): devDependencies, autoprefixer, eslint-plugin-react-refresh, prettier
 Cohesion: 0.08
 Nodes (24): For /graphify add and --watch, For /graphify query, For the commit hook and native CLAUDE.md integration, For --update and --cluster-only, /graphify, Honesty Rules, Interpreter guard for subcommands, Part A - Structural extraction for code files (+16 more)
 
-### Community 4 - "catalogService.ts"
-Cohesion: 0.15
-Nodes (22): AlbumsGridView(), AlbumsGridViewProps, ArtistsGridView(), ArtistsGridViewProps, GenreCategory, GenresGridView(), GenresGridViewProps, LOCAL_GENRES (+14 more)
+### Community 4 - "LibraryView.tsx"
+Cohesion: 0.23
+Nodes (12): AlbumsGridView(), AlbumsGridViewProps, ArtistsGridView(), ArtistsGridViewProps, GenreCategory, GenresGridView(), LOCAL_GENRES, LibraryView() (+4 more)
 
 ### Community 5 - "SpectrumAnalyzer"
 Cohesion: 0.08
@@ -152,11 +158,11 @@ Nodes (8): graphify reference: extra exports and benchmark, Step 6b - Wiki (only
 
 ### Community 17 - "lib.rs"
 Cohesion: 0.06
-Nodes (148): AcquisitionJob, AcquisitionSearch, AcquisitionSearchFile, AcquisitionSettings, AcquisitionStatus, Builder, EnrichmentCandidate, EnrichmentJob (+140 more)
+Nodes (151): AcquisitionJob, AcquisitionSearch, AcquisitionSearchFile, AcquisitionSettings, AcquisitionStatus, Builder, EnrichmentCandidate, EnrichmentJob (+143 more)
 
-### Community 18 - "tauri.conf.json"
-Cohesion: 0.09
-Nodes (21): deb, icons/icon.png, rpm, app, security, windows, withGlobalTauri, build (+13 more)
+### Community 18 - "bundle"
+Cohesion: 0.05
+Nodes (42): https://github.com/dbgoodm/Bebop/releases/latest/download/latest.json, icons/128x128@2x.png, icons/128x128.png, icons/32x32.png, icons/icon.ico, icons/icon.png, app, security (+34 more)
 
 ### Community 19 - "scripts"
 Cohesion: 0.11
@@ -188,19 +194,19 @@ Nodes (3): For --cluster-only, For --update (incremental re-extraction), graphif
 
 ### Community 34 - "Result"
 Cohesion: 0.06
-Nodes (116): AlbumSummary, ArtistSummary, CatalogSignatures, Connection, GenreSummary, RootAvailability, Row, AcquisitionRecord (+108 more)
+Nodes (115): AlbumSummary, ArtistSummary, CatalogSignatures, Connection, GenreSummary, RootAvailability, Row, acquisition_jobs_round_trip_without_exposing_credentials() (+107 more)
 
 ### Community 35 - "catalog.rs"
 Cohesion: 0.10
 Nodes (42): DirEntry, F, SortDirection, AlbumDetail, AlbumSummary, ArtistDetail, ArtistReference, ArtistSummary (+34 more)
 
 ### Community 36 - "libraryService.ts"
-Cohesion: 0.14
-Nodes (27): AcquisitionPanelProps, useLibraryScan(), chooseLibraryFolder(), defaultCatalogQuery, errorSnapshot(), formatBitrate(), formatDuration(), formatSampleRate() (+19 more)
+Cohesion: 0.18
+Nodes (22): AcquisitionPanelProps, useLibraryScan(), chooseLibraryFolder(), defaultCatalogQuery, errorSnapshot(), formatBitrate(), formatDuration(), formatSampleRate() (+14 more)
 
-### Community 37 - "types.ts"
-Cohesion: 0.12
-Nodes (27): ContinueListeningRail(), SAMPLE_CONTINUE_ITEMS, RediscoverRail(), MAIN_NAV_ITEMS, TopNavRail(), AntraQueueDrawer(), AntraQueueDrawerProps, ArtistDetailPage() (+19 more)
+### Community 37 - "MusicPlayerPage.tsx"
+Cohesion: 0.13
+Nodes (20): App(), MAIN_NAV_ITEMS, TopNavRail(), AntraQueueDrawer(), AntraQueueDrawerProps, ArtistDetailPage(), ArtistDetailPageProps, useDemoMode() (+12 more)
 
 ### Community 38 - "scripts"
 Cohesion: 0.18
@@ -230,13 +236,13 @@ Nodes (35): ItemKey, apply_patch_to_path(), cache_artwork(), cache_bytes(), cach
 Cohesion: 0.19
 Nodes (24): asAppError(), PlaybackEventName, mocks, playingState, track, useNativePlayback(), getPlaybackState(), initialPlaybackState (+16 more)
 
-### Community 53 - "App.tsx"
-Cohesion: 0.50
-Nodes (3): App(), useDemoMode(), MusicPlayerPage()
+### Community 53 - "types.ts"
+Cohesion: 0.22
+Nodes (12): RediscoverRail(), DEMO_RECENTLY_ADDED, DEMO_REDISCOVER_ITEMS, LOCAL_REDISCOVER_ITEMS, AudioFormat, ContinueListeningType, MetricCardData, RecentlyAddedItem (+4 more)
 
 ### Community 54 - "catalog.ts"
-Cohesion: 0.12
-Nodes (18): AlbumsListViewProps, DiscoverView(), DiscoverViewProps, DEMO_ALBUMS, DEMO_ARTISTS, DEMO_TRACKS, LOCAL_ALBUMS, LOCAL_ARTISTS (+10 more)
+Cohesion: 0.17
+Nodes (13): AlbumsListViewProps, DiscoverView(), DiscoverViewProps, DEMO_ALBUMS, DEMO_ARTISTS, DEMO_TRACKS, LOCAL_ALBUMS, LOCAL_ARTISTS (+5 more)
 
 ### Community 55 - "enrichment.rs"
 Cohesion: 0.15
@@ -244,35 +250,35 @@ Nodes (29): candidate_is_confident(), candidates_from_recording(), enrich_track(
 
 ### Community 56 - "tauri-bindings.ts"
 Cohesion: 0.05
-Nodes (37): AcquisitionJob_Deserialize, AcquisitionJob_Serialize, AcquisitionJobStatus, AcquisitionSearch, AcquisitionSearchFile, AcquisitionSearchGroup, AcquisitionStatus, AcquisitionStatus_Deserialize (+29 more)
+Nodes (37): AcquisitionJob_Deserialize, AcquisitionJob_Serialize, AcquisitionJobStatus, AcquisitionSearchGroup, AcquisitionStatus_Deserialize, AcquisitionStatus_Serialize, AlbumDetail, AppError_Deserialize (+29 more)
 
 ### Community 57 - "DesktopLibraryPage.tsx"
 Cohesion: 0.12
 Nodes (34): EmptyState(), EmptyStateProps, AppShell(), AppShellProps, useCatalogDiscovery(), DesktopLibraryPage(), EMPTY_SPECTRUM_BINS, formatBytes() (+26 more)
 
 ### Community 58 - "MetadataEditor.tsx"
-Cohesion: 0.25
-Nodes (16): MetadataEditor(), MetadataEditorProps, splitValues(), applyMusicBrainzCandidate(), getMusicBrainzEnabled(), loadTrackMetadata(), patchFromTrack(), patchFromTrackSummary() (+8 more)
+Cohesion: 0.23
+Nodes (17): MetadataEditor(), MetadataEditorProps, splitValues(), applyMusicBrainzCandidate(), getMusicBrainzEnabled(), loadTrackMetadata(), patchFromTrack(), patchFromTrackSummary() (+9 more)
 
 ### Community 59 - "acquisition.rs"
 Cohesion: 0.09
-Nodes (62): Method, RequestBuilder, AcquisitionJob, AcquisitionJobStatus, AcquisitionManager, AcquisitionSearch, AcquisitionSearchFile, AcquisitionSearchGroup (+54 more)
+Nodes (63): Method, RequestBuilder, AcquisitionJob, AcquisitionJobStatus, AcquisitionManager, AcquisitionRecord, AcquisitionSearch, AcquisitionSearchFile (+55 more)
 
 ### Community 60 - "user_state.rs"
 Cohesion: 0.28
 Nodes (11): FavoriteReference, HomeSnapshot, PersistentPlayerState, PlayerPreferences, PlaylistSummary, Default, Option, Self (+3 more)
 
 ### Community 61 - "AcquisitionPanel.tsx"
-Cohesion: 0.26
-Nodes (20): AcquisitionPanel(), DEFAULT_SETTINGS, message(), cancelAcquisition(), disconnectSlskd(), enqueueSlskdFile(), importAcquisition(), listAcquisitionJobs() (+12 more)
+Cohesion: 0.22
+Nodes (23): AcquisitionPanel(), DEFAULT_SETTINGS, message(), cancelAcquisition(), disconnectSlskd(), enqueueSlskdFile(), importAcquisition(), listAcquisitionJobs() (+15 more)
 
 ### Community 62 - "Online integrations"
 Cohesion: 0.40
 Nodes (4): Discord privacy, Last.fm privacy and reliability, Online integrations, Release configuration
 
 ### Community 64 - "TrackItem"
-Cohesion: 0.18
-Nodes (14): ALL_AVAILABLE_COLUMNS, ColumnDefinition, ColumnKey, UniversalTracklist(), UniversalTracklistProps, AlbumDetailPage(), AlbumDetailPageProps, NowPlayingQueueModal() (+6 more)
+Cohesion: 0.16
+Nodes (15): ALL_AVAILABLE_COLUMNS, ColumnDefinition, ColumnKey, UniversalTracklist(), UniversalTracklistProps, AlbumDetailPage(), AlbumDetailPageProps, GenresGridViewProps (+7 more)
 
 ### Community 65 - "ListeningStats.tsx"
 Cohesion: 0.50
@@ -282,25 +288,41 @@ Nodes (4): DEFAULT_STATS, ListeningStats(), ListeningStatsProps, ListeningStatsD
 Cohesion: 0.50
 Nodes (3): Connection and credentials, Import boundary, slskd acquisition
 
+### Community 68 - "updates.rs"
+Cohesion: 0.25
+Nodes (14): Display, check(), check_due(), emit_status(), failed(), install(), AppError, AppHandle (+6 more)
+
+### Community 69 - "UpdatePanel.tsx"
+Cohesion: 0.38
+Nodes (10): errorMessage(), UpdatePanel(), AppError, UpdateProgress, UpdateStatus, checkForUpdates(), installUpdate(), subscribeUpdateProgress() (+2 more)
+
+### Community 70 - "catalogService.ts"
+Cohesion: 0.29
+Nodes (10): emptyDiscovery, albumItem(), artistItem(), CatalogDiscovery, durationLabel(), loadAlbumDetail(), loadArtistDetail(), loadDiscovery() (+2 more)
+
+### Community 71 - "Releases and signed updates"
+Cohesion: 0.40
+Nodes (4): Client behavior, Omarchy and Arch-family install, Protected release configuration, Releases and signed updates
+
 ## Knowledge Gaps
-- **259 isolated node(s):** `singleQuote`, `trailingComma`, `printWidth`, `name`, `private` (+254 more)
+- **280 isolated node(s):** `singleQuote`, `trailingComma`, `printWidth`, `name`, `private` (+275 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **17 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **19 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `DatabaseWorker` connect `Result` to `integrations.rs`, `lib.rs`, `LibraryWatcher`, `enrichment.rs`, `acquisition.rs`?**
-  _High betweenness centrality (0.122) - this node is a cross-community bridge._
-- **Why does `devDependencies` connect `devDependencies` to `@testing-library/react`, `frontend/package.json`, `vite`, `eslint`, `@eslint/js`, `eslint-plugin-react-hooks`, `globals`, `jsdom`, `@testing-library/user-event`, `vitest`, `esbuild`?**
+- **Why does `DatabaseWorker` connect `Result` to `updates.rs`, `integrations.rs`, `lib.rs`, `LibraryWatcher`, `enrichment.rs`, `acquisition.rs`?**
+  _High betweenness centrality (0.114) - this node is a cross-community bridge._
+- **Why does `AppState` connect `lib.rs` to `PlaybackEngine`, `Result`, `integrations.rs`, `LibraryWatcher`, `enrichment.rs`, `acquisition.rs`?**
   _High betweenness centrality (0.053) - this node is a cross-community bridge._
-- **Why does `typescript` connect `devDependencies` to `lib.rs`?**
-  _High betweenness centrality (0.052) - this node is a cross-community bridge._
+- **Why does `devDependencies` connect `devDependencies` to `@testing-library/react`, `frontend/package.json`, `vite`, `eslint`, `@eslint/js`, `eslint-plugin-react-hooks`, `globals`, `jsdom`, `@testing-library/user-event`, `vitest`, `esbuild`?**
+  _High betweenness centrality (0.051) - this node is a cross-community bridge._
 - **What connects `singleQuote`, `trailingComma`, `printWidth` to the rest of the system?**
-  _259 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _280 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `PlaybackEngine` be split into smaller, more focused modules?**
   _Cohesion score 0.06913367756741251 - nodes in this community are weakly interconnected._
 - **Should `useTheme` be split into smaller, more focused modules?**
-  _Cohesion score 0.10887096774193548 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.0915915915915916 - nodes in this community are weakly interconnected._
 - **Should `devDependencies` be split into smaller, more focused modules?**
   _Cohesion score 0.09523809523809523 - nodes in this community are weakly interconnected._

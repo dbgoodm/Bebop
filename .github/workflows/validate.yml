@@ -16,9 +16,15 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: Linux
-            os: ubuntu-24.04
+          - name: Linux AppImage
+            os: ubuntu-22.04
+            bundle: appimage
+          - name: Linux DEB
+            os: ubuntu-22.04
             bundle: deb
+          - name: Linux RPM
+            os: ubuntu-22.04
+            bundle: rpm
           - name: Windows
             os: windows-latest
             bundle: nsis
@@ -67,4 +73,4 @@ jobs:
         run: cargo test
 
       - name: Build Tauri bundle
-        run: npm exec tauri -- build --config src-tauri/tauri.conf.json --bundles ${{ matrix.bundle }}
+        run: npm exec tauri -- build --config src-tauri/tauri.conf.json --config src-tauri/tauri.ci.conf.json --bundles ${{ matrix.bundle }}

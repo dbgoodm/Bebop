@@ -1,0 +1,59 @@
+name: Promote stable release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Stable release tag to promote (for example v1.2.3)
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  promote:
+    runs-on: windows-latest
+    environment: stable-release
+    steps:
+      - name: Reject prerelease tags
+        shell: pwsh
+        run: |
+          if ("${{ inputs.tag }}" -notmatch '^v\d+\.\d+\.\d+$') {
+            throw "Only stable semantic-version tags can be promoted."
+          }
+
+      - name: Download draft release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release download "${{ inputs.tag }}" --repo "${{ github.repository }}" --dir release-assets
+
+      - name: Verify required artifacts, checksums, updater signatures, and Authenticode
+        shell: pwsh
+        run: |
+          $files = Get-ChildItem release-assets -File
+          foreach ($pattern in @('*.AppImage', '*.deb', '*.rpm', '*setup.exe', '*.sig', 'latest.json', 'CHECKSUMS.txt')) {
+            if (-not ($files | Where-Object Name -Like $pattern)) {
+              throw "Required release asset is missing: $pattern"
+            }
+          }
+          Push-Location release-assets
+          foreach ($line in Get-Content CHECKSUMS.txt) {
+            if ($line -match '^([0-9a-f]{64})\s+(.+)$') {
+              $actual = (Get-FileHash -Algorithm SHA256 $Matches[2]).Hash.ToLowerInvariant()
+              if ($actual -ne $Matches[1]) { throw "Checksum mismatch: $($Matches[2])" }
+            }
+          }
+          $installer = Get-ChildItem -Filter '*setup.exe' | Select-Object -First 1
+          $signature = Get-AuthenticodeSignature $installer.FullName
+          if ($signature.Status -ne 'Valid') {
+            throw "Windows installer Authenticode signature is not valid: $($signature.Status)"
+          }
+          Pop-Location
+
+      - name: Publish as the latest stable release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release edit "${{ inputs.tag }}" --repo "${{ github.repository }}" --draft=false --prerelease=false --latest

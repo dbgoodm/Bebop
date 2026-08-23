@@ -28,7 +28,38 @@
   },
   "bundle": {
     "active": true,
-    "icon": ["icons/icon.png"],
-    "targets": ["deb", "rpm"]
+    "category": "Music",
+    "shortDescription": "Local-first hi-fi music player",
+    "longDescription": "Bebop indexes and plays your local music library with metadata editing and opt-in online integrations.",
+    "publisher": "Daniel Goodman",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.ico",
+      "icons/icon.png"
+    ],
+    "targets": "all",
+    "createUpdaterArtifacts": true,
+    "windows": {
+      "digestAlgorithm": "sha256",
+      "timestampUrl": "http://timestamp.digicert.com",
+      "allowDowngrades": false,
+      "nsis": {
+        "installMode": "currentUser",
+        "installerIcon": "icons/icon.ico"
+      }
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEVENUQ3Q0RCQkRDRTMxMzUKUldRMU1jNjkyM3hkN1l2MkUxdnFFSWYwSnRDdHdGbnBOb1Z1bGlWOFZ5bmdLUTBweVJQa0lhbUwK",
+      "endpoints": [
+        "https://github.com/dbgoodm/Bebop/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
   }
 }

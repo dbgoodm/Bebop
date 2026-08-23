@@ -1,0 +1,147 @@
+name: Build signed desktop release
+
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+*"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    environment: release
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux x64
+            os: ubuntu-22.04
+            bundles: appimage,deb,rpm
+            artifact: bebop-linux-x64
+          - name: Windows x64
+            os: windows-latest
+            bundles: nsis
+            artifact: bebop-windows-x64
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Linux Tauri dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf xdg-utils
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: . -> target
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Validate source
+        shell: bash
+        run: |
+          npm run format:check
+          npm run lint
+          npm run typecheck
+          npm test
+          cargo fmt --all -- --check
+          cargo clippy --all-targets --all-features -- -D warnings
+          cargo test --all-features
+
+      - name: Require and import Windows Authenticode certificate
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+          IS_PRERELEASE: ${{ contains(github.ref_name, '-') }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:WINDOWS_CERTIFICATE)) {
+            if ($env:IS_PRERELEASE -ne "true") {
+              throw "Stable Windows releases require the protected WINDOWS_CERTIFICATE secret."
+            }
+            Write-Warning "Building an unsigned Windows prerelease."
+            exit 0
+          }
+          $pfxPath = Join-Path $env:RUNNER_TEMP "bebop-release.pfx"
+          $bytes = [Convert]::FromBase64String(($env:WINDOWS_CERTIFICATE -replace '\s', ''))
+          [IO.File]::WriteAllBytes($pfxPath, $bytes)
+          $password = ConvertTo-SecureString $env:WINDOWS_CERTIFICATE_PASSWORD -AsPlainText -Force
+          $certificate = Import-PfxCertificate -FilePath $pfxPath -CertStoreLocation Cert:\CurrentUser\My -Password $password
+          $config = @{ bundle = @{ windows = @{ certificateThumbprint = $certificate.Thumbprint } } } | ConvertTo-Json -Compress -Depth 5
+          "TAURI_CONFIG=$config" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Build, sign, and attach release artifacts
+        uses: tauri-apps/tauri-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          BEBOP_LASTFM_API_KEY: ${{ secrets.BEBOP_LASTFM_API_KEY }}
+          BEBOP_LASTFM_API_SECRET: ${{ secrets.BEBOP_LASTFM_API_SECRET }}
+          BEBOP_DISCORD_APPLICATION_ID: ${{ secrets.BEBOP_DISCORD_APPLICATION_ID }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: Bebop __VERSION__
+          releaseBody: |
+            Signed Bebop desktop installers and mandatory updater signatures.
+          generateReleaseNotes: true
+          releaseDraft: true
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          uploadUpdaterJson: true
+          updaterJsonPreferNsis: true
+          uploadUpdaterSignatures: true
+          args: --bundles ${{ matrix.bundles }}
+
+      - name: Retain platform bundles
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: src-tauri/target/release/bundle/**
+          if-no-files-found: error
+          retention-days: 30
+
+  checksums:
+    name: Publish release checksums
+    needs: build
+    runs-on: ubuntu-latest
+    environment: release
+    steps:
+      - name: Download draft assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release download "${{ github.ref_name }}" --repo "${{ github.repository }}" --dir release-assets
+
+      - name: Generate checksums
+        working-directory: release-assets
+        run: find . -maxdepth 1 -type f ! -name CHECKSUMS.txt -printf '%f\0' | sort -z | xargs -0 sha256sum > CHECKSUMS.txt
+
+      - name: Upload checksums
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ github.ref_name }}" release-assets/CHECKSUMS.txt --repo "${{ github.repository }}" --clobber
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bebop-release-checksums
+          path: release-assets/CHECKSUMS.txt
+          retention-days: 90

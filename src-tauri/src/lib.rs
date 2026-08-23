@@ -17,6 +17,7 @@ mod integrations;
 mod metadata;
 mod persistence;
 mod spectrum;
+mod updates;
 mod user_state;
 mod watcher;
 
@@ -50,6 +51,7 @@ pub use integrations::{IntegrationSettings, IntegrationStatus};
 pub use metadata::{MetadataPatch, MetadataWriteResult};
 use metadata::{cache_external_artwork, restore_backup, write_patch_atomically};
 use persistence::DatabaseWorker;
+pub use updates::{UpdateProgress, UpdateStatus};
 pub use user_state::{
     FavoriteReference, HomeSnapshot, PersistentPlayerState, PlayerPreferences, PlaylistSummary,
 };
@@ -440,6 +442,23 @@ async fn import_acquisition(
     })
     .await
     .map_err(|error| AppError::new("background-task-failed", error.to_string()))?
+}
+
+#[tauri::command]
+#[specta::specta]
+async fn check_for_updates(
+    app: AppHandle,
+    state: State<'_, AppState>,
+) -> Result<UpdateStatus, AppError> {
+    let status = updates::check(app.clone(), state.database.clone(), true).await;
+    updates::emit_status(&app, &status);
+    Ok(status)
+}
+
+#[tauri::command]
+#[specta::specta]
+async fn install_update(app: AppHandle, confirmed: bool) -> Result<(), AppError> {
+    updates::install(app, confirmed).await
 }
 
 #[tauri::command]
@@ -1673,6 +1692,7 @@ fn ipc_bindings() -> Builder<tauri::Wry> {
             add_library_root,
             apply_musicbrainz_candidate,
             cancel_acquisition,
+            check_for_updates,
             cleanup_missing_tracks,
             configure_slskd_api_key,
             configure_lastfm_session,
@@ -1696,6 +1716,7 @@ fn ipc_bindings() -> Builder<tauri::Wry> {
             get_track_metadata,
             get_ui_preference,
             import_acquisition,
+            install_update,
             list_acquisition_jobs,
             list_library_roots,
             list_favorites,
@@ -1776,6 +1797,8 @@ fn ipc_bindings() -> Builder<tauri::Wry> {
         .typ::<TrackPage>()
         .typ::<TrackSort>()
         .typ::<TrackSummary>()
+        .typ::<UpdateProgress>()
+        .typ::<UpdateStatus>()
         .dangerously_cast_bigints_to_number()
 }
 
@@ -1798,6 +1821,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|app| {
             let app_data = app.path().app_data_dir()?;
             let database = DatabaseWorker::start(app_data.join("bebop.sqlite3"))
@@ -1830,6 +1854,14 @@ pub fn run() {
             let state = app.state::<AppState>();
             spawn_playback_monitor(app.handle().clone(), &state);
             spawn_spectrum_emitter(app.handle().clone(), &state);
+            let update_app = app.handle().clone();
+            let update_database = database.clone();
+            tauri::async_runtime::spawn(async move {
+                let status = updates::check(update_app.clone(), update_database, false).await;
+                if status.checked {
+                    updates::emit_status(&update_app, &status);
+                }
+            });
             let startup_app = app.handle().clone();
             thread::Builder::new()
                 .name("bebop-startup-reconciliation".into())

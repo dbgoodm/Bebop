@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repository="dbgoodm/Bebop"
+release_api="https://api.github.com/repos/${repository}/releases/latest"
+release_json="$(curl --fail --silent --show-error --location "${release_api}")"
+asset_url="$(jq --raw-output '.assets[] | select(.name | test("_amd64\\.AppImage$")) | .browser_download_url' <<<"${release_json}" | head -n 1)"
+checksum_url="$(jq --raw-output '.assets[] | select(.name == "CHECKSUMS.txt") | .browser_download_url' <<<"${release_json}")"
+
+if [[ -z "${asset_url}" || "${asset_url}" == "null" || -z "${checksum_url}" || "${checksum_url}" == "null" ]]; then
+  echo "The latest Bebop release does not contain the required AppImage or checksums." >&2
+  exit 1
+fi
+
+install_root="${XDG_DATA_HOME:-${HOME}/.local/share}/bebop"
+binary_root="${HOME}/.local/bin"
+application_root="${XDG_DATA_HOME:-${HOME}/.local/share}/applications"
+work_root="$(mktemp -d)"
+trap 'gio trash "${work_root}" 2>/dev/null || true' EXIT
+
+asset_name="${asset_url##*/}"
+curl --fail --show-error --location "${asset_url}" --output "${work_root}/${asset_name}"
+curl --fail --show-error --location "${checksum_url}" --output "${work_root}/CHECKSUMS.txt"
+(
+  cd "${work_root}"
+  grep "  ${asset_name}$" CHECKSUMS.txt | sha256sum --check --strict
+)
+
+install -d "${install_root}" "${binary_root}" "${application_root}"
+install -m 0755 "${work_root}/${asset_name}" "${install_root}/Bebop.AppImage"
+ln -sfn "${install_root}/Bebop.AppImage" "${binary_root}/bebop"
+
+desktop_file="${application_root}/com.dbgoodm.bebop.desktop"
+{
+  echo '[Desktop Entry]'
+  echo 'Name=Bebop'
+  echo 'Comment=Local-first hi-fi music player'
+  echo "Exec=${binary_root}/bebop"
+  echo 'Terminal=false'
+  echo 'Type=Application'
+  echo 'Categories=Audio;Music;Player;'
+} >"${desktop_file}"
+
+echo "Bebop was installed to ${install_root}/Bebop.AppImage"

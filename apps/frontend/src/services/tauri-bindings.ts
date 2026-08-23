@@ -7,6 +7,7 @@ export const commands = {
 	addLibraryRoot: (path: string, label: string | null) => typedError<LibraryScan, AppError_Serialize>(__TAURI_INVOKE("add_library_root", { path, label })),
 	applyMusicbrainzCandidate: (trackId: string, candidate: EnrichmentCandidate) => typedError<MetadataPatch, AppError_Serialize>(__TAURI_INVOKE("apply_musicbrainz_candidate", { trackId, candidate })),
 	cancelAcquisition: (jobId: string) => typedError<AcquisitionJob_Serialize, AppError_Serialize>(__TAURI_INVOKE("cancel_acquisition", { jobId })),
+	checkForUpdates: () => typedError<UpdateStatus_Serialize, AppError_Serialize>(__TAURI_INVOKE("check_for_updates")),
 	cleanupMissingTracks: (rootId: string | null, confirmed: boolean) => typedError<number, AppError_Serialize>(__TAURI_INVOKE("cleanup_missing_tracks", { rootId, confirmed })),
 	configureSlskdApiKey: (apiKey: string) => typedError<AcquisitionStatus_Serialize, AppError_Serialize>(__TAURI_INVOKE("configure_slskd_api_key", { apiKey })),
 	configureLastfmSession: (sessionKey: string) => typedError<IntegrationStatus_Serialize[], AppError_Serialize>(__TAURI_INVOKE("configure_lastfm_session", { sessionKey })),
@@ -47,6 +48,7 @@ export const commands = {
 	getTrackMetadata: (trackId: string) => typedError<TrackSummary, AppError_Serialize>(__TAURI_INVOKE("get_track_metadata", { trackId })),
 	getUiPreference: (key: string) => typedError<string | null, AppError_Serialize>(__TAURI_INVOKE("get_ui_preference", { key })),
 	importAcquisition: (jobId: string, rootId: string) => typedError<AcquisitionJob_Serialize, AppError_Serialize>(__TAURI_INVOKE("import_acquisition", { jobId, rootId })),
+	installUpdate: (confirmed: boolean) => typedError<null, AppError_Serialize>(__TAURI_INVOKE("install_update", { confirmed })),
 	listAcquisitionJobs: () => typedError<AcquisitionJob_Serialize[], AppError_Serialize>(__TAURI_INVOKE("list_acquisition_jobs")),
 	listLibraryRoots: () => typedError<LibraryRoot[], AppError_Serialize>(__TAURI_INVOKE("list_library_roots")),
 	listFavorites: () => typedError<FavoriteReference[], AppError_Serialize>(__TAURI_INVOKE("list_favorites")),
@@ -489,6 +491,34 @@ export type TrackSummary = {
 	bitDepth: number | null,
 	playCount: number,
 	available: boolean,
+};
+
+export type UpdateProgress = {
+	downloadedBytes: number,
+	totalBytes: number | null,
+	finished: boolean,
+};
+
+export type UpdateStatus = UpdateStatus_Serialize | UpdateStatus_Deserialize;
+
+export type UpdateStatus_Deserialize = {
+	checked: boolean,
+	available: boolean,
+	currentVersion: string,
+	version: string | null,
+	notes: string | null,
+	publishedAt: string | null,
+	error: AppError_Deserialize | null,
+};
+
+export type UpdateStatus_Serialize = {
+	checked: boolean,
+	available: boolean,
+	currentVersion: string,
+	version: string | null,
+	notes: string | null,
+	publishedAt: string | null,
+	error: AppError_Serialize | null,
 };
 
 export type WatchMode = "native" | "poll" | "manual";
