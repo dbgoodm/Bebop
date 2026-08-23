@@ -86,6 +86,10 @@ vi.mock('@/hooks/useNativePlayback', () => ({
   }),
 }));
 
+vi.mock('@/hooks/useCatalogDiscovery', () => ({
+  useCatalogDiscovery: () => ({ artists: [], albums: [], genres: [] }),
+}));
+
 vi.mock('@/services/themeService', () => ({
   useTheme: () => ({ currentTheme: { bgCanvas: '#000' } }),
 }));

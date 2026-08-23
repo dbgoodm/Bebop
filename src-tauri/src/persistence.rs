@@ -12,8 +12,9 @@ use uuid::Uuid;
 use crate::{
     AppError,
     catalog::{
-        AudioExtension, CatalogQuery, LibraryRoot, RootAvailability, ScannedLibrary, SortDirection,
-        TrackPage, TrackSort, TrackSummary, WatchMode,
+        AlbumDetail, AlbumSummary, ArtistDetail, ArtistSummary, AudioExtension, CatalogQuery,
+        DiscoveryCatalog, DiscoveryQuery, GenreSummary, LibraryRoot, RootAvailability,
+        ScannedLibrary, SortDirection, TrackPage, TrackSort, TrackSummary, WatchMode,
     },
 };
 
@@ -62,6 +63,18 @@ enum Request {
     ResolveTrack {
         canonical_path: String,
         reply: Sender<Result<(String, PathBuf), AppError>>,
+    },
+    QueryDiscovery {
+        query: DiscoveryQuery,
+        reply: Sender<Result<DiscoveryCatalog, AppError>>,
+    },
+    GetArtistDetail {
+        id: String,
+        reply: Sender<Result<ArtistDetail, AppError>>,
+    },
+    GetAlbumDetail {
+        id: String,
+        reply: Sender<Result<AlbumDetail, AppError>>,
     },
 }
 
@@ -192,6 +205,21 @@ impl DatabaseWorker {
             reply,
         })
     }
+
+    pub(crate) fn query_discovery(
+        &self,
+        query: DiscoveryQuery,
+    ) -> Result<DiscoveryCatalog, AppError> {
+        self.request(|reply| Request::QueryDiscovery { query, reply })
+    }
+
+    pub(crate) fn get_artist_detail(&self, id: String) -> Result<ArtistDetail, AppError> {
+        self.request(|reply| Request::GetArtistDetail { id, reply })
+    }
+
+    pub(crate) fn get_album_detail(&self, id: String) -> Result<AlbumDetail, AppError> {
+        self.request(|reply| Request::GetAlbumDetail { id, reply })
+    }
 }
 
 fn backup_before_upgrade(database_path: &Path) -> Result<(), AppError> {
@@ -305,6 +333,15 @@ fn database_loop(mut connection: Connection, receiver: Receiver<Request>) {
                 reply,
             } => {
                 send(reply, resolve_track(&connection, &canonical_path));
+            }
+            Request::QueryDiscovery { query, reply } => {
+                send(reply, query_discovery(&connection, query));
+            }
+            Request::GetArtistDetail { id, reply } => {
+                send(reply, get_artist_detail(&connection, &id));
+            }
+            Request::GetAlbumDetail { id, reply } => {
+                send(reply, get_album_detail(&connection, &id));
             }
         }
     }
@@ -819,7 +856,14 @@ fn query_tracks(connection: &Connection, query: CatalogQuery) -> Result<TrackPag
         search.map(|value| format!("%{}%", value.replace('%', "\\%").replace('_', "\\_")));
     let available = query.available.map(i64::from);
     let where_clause = "(?1 IS NULL OR root_id = ?1) AND (?2 IS NULL OR available = ?2)
-        AND (?3 IS NULL OR title LIKE ?3 ESCAPE '\\' COLLATE NOCASE OR relative_path LIKE ?3 ESCAPE '\\' COLLATE NOCASE)";
+        AND (?3 IS NULL OR title LIKE ?3 ESCAPE '\\' COLLATE NOCASE OR relative_path LIKE ?3 ESCAPE '\\' COLLATE NOCASE
+          OR composer LIKE ?3 ESCAPE '\\' COLLATE NOCASE OR label LIKE ?3 ESCAPE '\\' COLLATE NOCASE
+          OR catalog_number LIKE ?3 ESCAPE '\\' COLLATE NOCASE
+          OR EXISTS (SELECT 1 FROM albums sal WHERE sal.id = tracks.album_id AND sal.title LIKE ?3 ESCAPE '\\' COLLATE NOCASE)
+          OR EXISTS (SELECT 1 FROM track_artists sta JOIN artists sa ON sa.id = sta.artist_id
+                     WHERE sta.track_id = tracks.id AND sa.name LIKE ?3 ESCAPE '\\' COLLATE NOCASE)
+          OR EXISTS (SELECT 1 FROM track_genres stg JOIN genres sg ON sg.id = stg.genre_id
+                     WHERE stg.track_id = tracks.id AND sg.name LIKE ?3 ESCAPE '\\' COLLATE NOCASE))";
     let total: u64 = connection
         .query_row(
             &format!("SELECT COUNT(*) FROM tracks WHERE {where_clause}"),
@@ -922,6 +966,279 @@ fn artist_references(
         .map_err(database_error("query-track-artists"))?
         .collect::<rusqlite::Result<Vec<_>>>()
         .map_err(database_error("read-track-artists"))
+}
+
+fn query_discovery(
+    connection: &Connection,
+    query: DiscoveryQuery,
+) -> Result<DiscoveryCatalog, AppError> {
+    let limit = query.limit.clamp(1, 100);
+    let pattern = query
+        .search
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(|value| format!("%{}%", value.replace('%', "\\%").replace('_', "\\_")));
+    Ok(DiscoveryCatalog {
+        artists: query_artists(connection, pattern.as_deref(), query.offset, limit)?,
+        albums: query_albums(connection, pattern.as_deref(), query.offset, limit)?,
+        genres: query_genres(connection, pattern.as_deref(), query.offset, limit)?,
+    })
+}
+
+fn query_artists(
+    connection: &Connection,
+    pattern: Option<&str>,
+    offset: u32,
+    limit: u32,
+) -> Result<Vec<ArtistSummary>, AppError> {
+    let mut statement = connection
+        .prepare(
+            "SELECT a.id, a.name,
+                (SELECT COUNT(DISTINCT t.album_id) FROM track_artists ta JOIN tracks t ON t.id = ta.track_id
+                 WHERE ta.artist_id = a.id AND ta.role = 'artist'),
+                (SELECT COUNT(*) FROM track_artists ta JOIN tracks t ON t.id = ta.track_id
+                 WHERE ta.artist_id = a.id AND ta.role = 'artist'),
+                (SELECT COALESCE(SUM(t.duration_ms), 0) FROM track_artists ta JOIN tracks t ON t.id = ta.track_id
+                 WHERE ta.artist_id = a.id AND ta.role = 'artist'),
+                (SELECT al.artwork_id FROM track_artists ta JOIN tracks t ON t.id = ta.track_id
+                 JOIN albums al ON al.id = t.album_id WHERE ta.artist_id = a.id AND al.artwork_id IS NOT NULL LIMIT 1)
+             FROM artists a
+             WHERE ?1 IS NULL OR a.name LIKE ?1 ESCAPE '\\' COLLATE NOCASE OR EXISTS (
+                SELECT 1 FROM track_artists ta JOIN tracks t ON t.id = ta.track_id
+                LEFT JOIN albums al ON al.id = t.album_id
+                WHERE ta.artist_id = a.id AND (
+                  t.title LIKE ?1 ESCAPE '\\' COLLATE NOCASE OR t.composer LIKE ?1 ESCAPE '\\' COLLATE NOCASE OR
+                  t.label LIKE ?1 ESCAPE '\\' COLLATE NOCASE OR t.catalog_number LIKE ?1 ESCAPE '\\' COLLATE NOCASE OR
+                  al.title LIKE ?1 ESCAPE '\\' COLLATE NOCASE OR EXISTS (
+                    SELECT 1 FROM track_genres tg JOIN genres g ON g.id = tg.genre_id
+                    WHERE tg.track_id = t.id AND g.name LIKE ?1 ESCAPE '\\' COLLATE NOCASE
+                  )
+                )
+             )
+             ORDER BY a.name COLLATE NOCASE, a.id LIMIT ?2 OFFSET ?3",
+        )
+        .map_err(database_error("prepare-artists-query"))?;
+    let mut artists = statement
+        .query_map(params![pattern, limit, offset], |row| {
+            Ok(ArtistSummary {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                genres: Vec::new(),
+                album_count: row.get(2)?,
+                track_count: row.get(3)?,
+                total_duration_ms: row.get(4)?,
+                artwork_id: row.get(5)?,
+            })
+        })
+        .map_err(database_error("query-artists"))?
+        .collect::<rusqlite::Result<Vec<_>>>()
+        .map_err(database_error("read-artists"))?;
+    drop(statement);
+    for artist in &mut artists {
+        let mut genres = connection
+            .prepare(
+                "SELECT DISTINCT g.name FROM track_artists ta
+                 JOIN track_genres tg ON tg.track_id = ta.track_id JOIN genres g ON g.id = tg.genre_id
+                 WHERE ta.artist_id = ?1 ORDER BY g.name COLLATE NOCASE",
+            )
+            .map_err(database_error("prepare-artist-genres"))?;
+        artist.genres = genres
+            .query_map([&artist.id], |row| row.get(0))
+            .map_err(database_error("query-artist-genres"))?
+            .collect::<rusqlite::Result<Vec<_>>>()
+            .map_err(database_error("read-artist-genres"))?;
+    }
+    Ok(artists)
+}
+
+fn query_albums(
+    connection: &Connection,
+    pattern: Option<&str>,
+    offset: u32,
+    limit: u32,
+) -> Result<Vec<AlbumSummary>, AppError> {
+    let mut statement = connection
+        .prepare(
+            "SELECT al.id, al.title, al.year, al.label, al.catalog_number, al.artwork_id,
+                COUNT(t.id), COALESCE(SUM(t.duration_ms), 0)
+             FROM albums al LEFT JOIN tracks t ON t.album_id = al.id
+             WHERE ?1 IS NULL OR al.title LIKE ?1 ESCAPE '\\' COLLATE NOCASE OR
+                al.label LIKE ?1 ESCAPE '\\' COLLATE NOCASE OR al.catalog_number LIKE ?1 ESCAPE '\\' COLLATE NOCASE OR
+                EXISTS (SELECT 1 FROM album_artists aa JOIN artists a ON a.id = aa.artist_id
+                        WHERE aa.album_id = al.id AND a.name LIKE ?1 ESCAPE '\\' COLLATE NOCASE) OR
+                EXISTS (SELECT 1 FROM tracks st WHERE st.album_id = al.id AND
+                        (st.title LIKE ?1 ESCAPE '\\' COLLATE NOCASE OR st.composer LIKE ?1 ESCAPE '\\' COLLATE NOCASE))
+             GROUP BY al.id ORDER BY al.title COLLATE NOCASE, al.id LIMIT ?2 OFFSET ?3",
+        )
+        .map_err(database_error("prepare-albums-query"))?;
+    let mut albums = statement
+        .query_map(params![pattern, limit, offset], |row| {
+            Ok(AlbumSummary {
+                id: row.get(0)?,
+                title: row.get(1)?,
+                artists: Vec::new(),
+                year: row.get(2)?,
+                label: row.get(3)?,
+                catalog_number: row.get(4)?,
+                artwork_id: row.get(5)?,
+                track_count: row.get(6)?,
+                total_duration_ms: row.get(7)?,
+            })
+        })
+        .map_err(database_error("query-albums"))?
+        .collect::<rusqlite::Result<Vec<_>>>()
+        .map_err(database_error("read-albums"))?;
+    drop(statement);
+    for album in &mut albums {
+        album.artists = album_artists(connection, &album.id)?;
+    }
+    Ok(albums)
+}
+
+fn album_artists(
+    connection: &Connection,
+    album_id: &str,
+) -> Result<Vec<crate::ArtistReference>, AppError> {
+    let mut statement = connection
+        .prepare(
+            "SELECT a.id, a.name FROM album_artists aa JOIN artists a ON a.id = aa.artist_id
+             WHERE aa.album_id = ?1 ORDER BY aa.position",
+        )
+        .map_err(database_error("prepare-album-artists"))?;
+    statement
+        .query_map([album_id], |row| {
+            Ok(crate::ArtistReference {
+                id: row.get(0)?,
+                name: row.get(1)?,
+            })
+        })
+        .map_err(database_error("query-album-artists"))?
+        .collect::<rusqlite::Result<Vec<_>>>()
+        .map_err(database_error("read-album-artists"))
+}
+
+fn query_genres(
+    connection: &Connection,
+    pattern: Option<&str>,
+    offset: u32,
+    limit: u32,
+) -> Result<Vec<GenreSummary>, AppError> {
+    let mut statement = connection
+        .prepare(
+            "SELECT g.id, g.name, COUNT(DISTINCT t.album_id), COUNT(DISTINCT t.id)
+             FROM genres g JOIN track_genres tg ON tg.genre_id = g.id JOIN tracks t ON t.id = tg.track_id
+             WHERE ?1 IS NULL OR g.name LIKE ?1 ESCAPE '\\' COLLATE NOCASE OR
+               t.title LIKE ?1 ESCAPE '\\' COLLATE NOCASE OR EXISTS (
+                 SELECT 1 FROM track_artists ta JOIN artists a ON a.id = ta.artist_id
+                 WHERE ta.track_id = t.id AND a.name LIKE ?1 ESCAPE '\\' COLLATE NOCASE)
+             GROUP BY g.id ORDER BY g.name COLLATE NOCASE, g.id LIMIT ?2 OFFSET ?3",
+        )
+        .map_err(database_error("prepare-genres-query"))?;
+    let mut genres = statement
+        .query_map(params![pattern, limit, offset], |row| {
+            Ok(GenreSummary {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                album_count: row.get(2)?,
+                track_count: row.get(3)?,
+                artists: Vec::new(),
+            })
+        })
+        .map_err(database_error("query-genres"))?
+        .collect::<rusqlite::Result<Vec<_>>>()
+        .map_err(database_error("read-genres"))?;
+    drop(statement);
+    for genre in &mut genres {
+        let mut artists = connection
+            .prepare(
+                "SELECT DISTINCT a.id, a.name FROM track_genres tg
+                 JOIN track_artists ta ON ta.track_id = tg.track_id AND ta.role = 'artist'
+                 JOIN artists a ON a.id = ta.artist_id WHERE tg.genre_id = ?1
+                 ORDER BY a.name COLLATE NOCASE",
+            )
+            .map_err(database_error("prepare-genre-artists"))?;
+        genre.artists = artists
+            .query_map([&genre.id], |row| {
+                Ok(crate::ArtistReference {
+                    id: row.get(0)?,
+                    name: row.get(1)?,
+                })
+            })
+            .map_err(database_error("query-genre-artists"))?
+            .collect::<rusqlite::Result<Vec<_>>>()
+            .map_err(database_error("read-genre-artists"))?;
+    }
+    Ok(genres)
+}
+
+fn get_artist_detail(connection: &Connection, id: &str) -> Result<ArtistDetail, AppError> {
+    let artist = query_artists(connection, None, 0, u32::MAX)?
+        .into_iter()
+        .find(|artist| artist.id == id)
+        .ok_or_else(|| {
+            AppError::new("artist-not-found", "The requested artist no longer exists.")
+        })?;
+    let mut album_statement = connection
+        .prepare(
+            "SELECT DISTINCT t.album_id FROM track_artists ta JOIN tracks t ON t.id = ta.track_id
+             WHERE ta.artist_id = ?1 AND t.album_id IS NOT NULL ORDER BY t.album_id",
+        )
+        .map_err(database_error("prepare-artist-albums"))?;
+    let album_ids = album_statement
+        .query_map([id], |row| row.get::<_, String>(0))
+        .map_err(database_error("query-artist-albums"))?
+        .collect::<rusqlite::Result<Vec<_>>>()
+        .map_err(database_error("read-artist-albums"))?;
+    drop(album_statement);
+    let all_albums = query_albums(connection, None, 0, u32::MAX)?;
+    let albums = all_albums
+        .into_iter()
+        .filter(|album| album_ids.contains(&album.id))
+        .collect();
+    let tracks = tracks_for_entity(
+        connection,
+        "SELECT DISTINCT track_id FROM track_artists WHERE artist_id = ?1",
+        id,
+    )?;
+    Ok(ArtistDetail {
+        artist,
+        albums,
+        tracks,
+    })
+}
+
+fn get_album_detail(connection: &Connection, id: &str) -> Result<AlbumDetail, AppError> {
+    let album = query_albums(connection, None, 0, u32::MAX)?
+        .into_iter()
+        .find(|album| album.id == id)
+        .ok_or_else(|| AppError::new("album-not-found", "The requested album no longer exists."))?;
+    let tracks = tracks_for_entity(connection, "SELECT id FROM tracks WHERE album_id = ?1", id)?;
+    Ok(AlbumDetail { album, tracks })
+}
+
+fn tracks_for_entity(
+    connection: &Connection,
+    id_query: &str,
+    id: &str,
+) -> Result<Vec<TrackSummary>, AppError> {
+    let sql = format!(
+        "SELECT {TRACK_COLUMNS} FROM tracks WHERE id IN ({id_query})
+         ORDER BY COALESCE(disc_number, 0), COALESCE(track_number, 0), title COLLATE NOCASE, id"
+    );
+    let mut statement = connection
+        .prepare(&sql)
+        .map_err(database_error("prepare-entity-tracks"))?;
+    let mut tracks = statement
+        .query_map([id], track_from_row)
+        .map_err(database_error("query-entity-tracks"))?
+        .collect::<rusqlite::Result<Vec<_>>>()
+        .map_err(database_error("read-entity-tracks"))?;
+    drop(statement);
+    for track in &mut tracks {
+        hydrate_track(connection, track)?;
+    }
+    Ok(tracks)
 }
 
 fn resolve_track(

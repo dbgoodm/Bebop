@@ -23,8 +23,9 @@ use tauri_specta::{Builder, collect_commands};
 
 use audio::{AudioBackendError, PlaybackEngine};
 pub use catalog::{
-    ArtistReference, AudioExtension, CatalogQuery, LibraryRoot, LibraryScan, RootAvailability,
-    ScanProgress, SortDirection, TrackPage, TrackSort, TrackSummary, WatchMode,
+    AlbumDetail, AlbumSummary, ArtistDetail, ArtistReference, ArtistSummary, AudioExtension,
+    CatalogQuery, DiscoveryCatalog, DiscoveryQuery, GenreSummary, LibraryRoot, LibraryScan,
+    RootAvailability, ScanProgress, SortDirection, TrackPage, TrackSort, TrackSummary, WatchMode,
 };
 use catalog::{probe_audio_metadata, scan_library_at};
 use persistence::DatabaseWorker;
@@ -381,6 +382,30 @@ fn query_catalog_tracks(
     state.database.query_tracks(query)
 }
 
+#[tauri::command]
+#[specta::specta]
+fn query_discovery(
+    state: State<'_, AppState>,
+    query: DiscoveryQuery,
+) -> Result<DiscoveryCatalog, AppError> {
+    state.database.query_discovery(query)
+}
+
+#[tauri::command]
+#[specta::specta]
+fn get_artist_detail(
+    state: State<'_, AppState>,
+    artist_id: String,
+) -> Result<ArtistDetail, AppError> {
+    state.database.get_artist_detail(artist_id)
+}
+
+#[tauri::command]
+#[specta::specta]
+fn get_album_detail(state: State<'_, AppState>, album_id: String) -> Result<AlbumDetail, AppError> {
+    state.database.get_album_detail(album_id)
+}
+
 fn emit_library_changed(
     app: &AppHandle,
     kind: &str,
@@ -667,6 +692,8 @@ fn ipc_bindings() -> Builder<tauri::Wry> {
     Builder::<tauri::Wry>::new()
         .commands(collect_commands![
             add_library_root,
+            get_album_detail,
+            get_artist_detail,
             get_desktop_state,
             get_playback_state,
             list_library_roots,
@@ -674,6 +701,7 @@ fn ipc_bindings() -> Builder<tauri::Wry> {
             pause_playback,
             play_track,
             query_catalog_tracks,
+            query_discovery,
             remove_library_root,
             rescan_library_root,
             resume_playback,
@@ -687,9 +715,16 @@ fn ipc_bindings() -> Builder<tauri::Wry> {
             stop_playback
         ])
         .typ::<AppError>()
+        .typ::<AlbumDetail>()
+        .typ::<AlbumSummary>()
+        .typ::<ArtistDetail>()
+        .typ::<ArtistSummary>()
         .typ::<AudioOutputDevice>()
         .typ::<AudioOutputState>()
         .typ::<CatalogQuery>()
+        .typ::<DiscoveryCatalog>()
+        .typ::<DiscoveryQuery>()
+        .typ::<GenreSummary>()
         .typ::<LibraryChanged>()
         .typ::<LibraryRoot>()
         .typ::<LibraryScan>()
@@ -844,6 +879,20 @@ mod tests {
         assert_eq!(tracks[0].artists[0].name, "Fixture Artist");
         assert_eq!(tracks[0].album, "Fixture Album");
         assert_eq!(tracks[0].genres, ["Jazz"]);
+        let discovery = database
+            .query_discovery(DiscoveryQuery {
+                search: Some("Fixture".into()),
+                offset: 0,
+                limit: 20,
+            })
+            .expect("query discovery");
+        assert_eq!(discovery.artists[0].name, "Fixture Artist");
+        assert_eq!(discovery.albums[0].title, "Fixture Album");
+        assert_eq!(discovery.genres[0].name, "Jazz");
+        let detail = database
+            .get_artist_detail(discovery.artists[0].id.clone())
+            .expect("artist detail");
+        assert_eq!(detail.tracks[0].id, tracks[0].id);
         fs::remove_dir_all(root).expect("remove fixture");
     }
 

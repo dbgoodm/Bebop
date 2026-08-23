@@ -13,7 +13,6 @@ import {
   FileAudio,
 } from 'lucide-react';
 import { AlbumItem, TrackItem, ArtistItem } from '@/types';
-import { LOCAL_ARTISTS } from '@/demo/catalog';
 import { UniversalTracklist } from '@/components/molecules/UniversalTracklist';
 import { useTheme } from '@/services/themeService';
 

@@ -165,6 +165,73 @@ pub struct ArtistReference {
 
 #[derive(Clone, Debug, Deserialize, Serialize, Type)]
 #[serde(rename_all = "camelCase")]
+pub struct DiscoveryQuery {
+    pub search: Option<String>,
+    pub offset: u32,
+    pub limit: u32,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct ArtistSummary {
+    pub id: String,
+    pub name: String,
+    pub genres: Vec<String>,
+    pub album_count: u64,
+    pub track_count: u64,
+    pub total_duration_ms: u64,
+    pub artwork_id: Option<String>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct AlbumSummary {
+    pub id: String,
+    pub title: String,
+    pub artists: Vec<ArtistReference>,
+    pub year: Option<u32>,
+    pub label: Option<String>,
+    pub catalog_number: Option<String>,
+    pub artwork_id: Option<String>,
+    pub track_count: u64,
+    pub total_duration_ms: u64,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct GenreSummary {
+    pub id: String,
+    pub name: String,
+    pub album_count: u64,
+    pub track_count: u64,
+    pub artists: Vec<ArtistReference>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct DiscoveryCatalog {
+    pub artists: Vec<ArtistSummary>,
+    pub albums: Vec<AlbumSummary>,
+    pub genres: Vec<GenreSummary>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct ArtistDetail {
+    pub artist: ArtistSummary,
+    pub albums: Vec<AlbumSummary>,
+    pub tracks: Vec<TrackSummary>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct AlbumDetail {
+    pub album: AlbumSummary,
+    pub tracks: Vec<TrackSummary>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
 pub struct LibraryScan {
     pub root_id: String,
     pub root: String,

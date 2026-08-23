@@ -1,7 +1,6 @@
 import React from 'react';
 import { Play, Disc, Music, Clock, Sparkles } from 'lucide-react';
 import { ArtistItem } from '@/types';
-import { LOCAL_ARTISTS } from '@/demo/catalog';
 
 interface ArtistsGridViewProps {
   artists?: ArtistItem[];
@@ -10,7 +9,7 @@ interface ArtistsGridViewProps {
 }
 
 export const ArtistsGridView: React.FC<ArtistsGridViewProps> = ({
-  artists = LOCAL_ARTISTS,
+  artists = [],
   onSelectArtist,
   onPlayArtist,
 }) => {

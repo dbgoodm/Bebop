@@ -5,6 +5,8 @@ import { invoke as __TAURI_INVOKE } from "@tauri-apps/api/core";
 /** Commands */
 export const commands = {
 	addLibraryRoot: (path: string, label: string | null) => typedError<LibraryScan, AppError_Serialize>(__TAURI_INVOKE("add_library_root", { path, label })),
+	getAlbumDetail: (albumId: string) => typedError<AlbumDetail, AppError_Serialize>(__TAURI_INVOKE("get_album_detail", { albumId })),
+	getArtistDetail: (artistId: string) => typedError<ArtistDetail, AppError_Serialize>(__TAURI_INVOKE("get_artist_detail", { artistId })),
 	getDesktopState: () => typedError<DesktopState, AppError_Serialize>(__TAURI_INVOKE("get_desktop_state")),
 	getPlaybackState: () => typedError<PlaybackState, AppError_Serialize>(__TAURI_INVOKE("get_playback_state")),
 	listLibraryRoots: () => typedError<LibraryRoot[], AppError_Serialize>(__TAURI_INVOKE("list_library_roots")),
@@ -12,6 +14,7 @@ export const commands = {
 	pausePlayback: () => typedError<PlaybackState, AppError_Serialize>(__TAURI_INVOKE("pause_playback")),
 	playTrack: (path: string) => typedError<PlaybackState, AppError_Serialize>(__TAURI_INVOKE("play_track", { path })),
 	queryCatalogTracks: (query: CatalogQuery) => typedError<TrackPage, AppError_Serialize>(__TAURI_INVOKE("query_catalog_tracks", { query })),
+	queryDiscovery: (query: DiscoveryQuery) => typedError<DiscoveryCatalog, AppError_Serialize>(__TAURI_INVOKE("query_discovery", { query })),
 	removeLibraryRoot: (rootId: string, confirmed: boolean) => typedError<null, AppError_Serialize>(__TAURI_INVOKE("remove_library_root", { rootId, confirmed })),
 	rescanLibraryRoot: (rootId: string) => typedError<LibraryScan, AppError_Serialize>(__TAURI_INVOKE("rescan_library_root", { rootId })),
 	resumePlayback: () => typedError<PlaybackState, AppError_Serialize>(__TAURI_INVOKE("resume_playback")),
@@ -26,6 +29,23 @@ export const commands = {
 };
 
 /* Types */
+export type AlbumDetail = {
+	album: AlbumSummary,
+	tracks: TrackSummary[],
+};
+
+export type AlbumSummary = {
+	id: string,
+	title: string,
+	artists: ArtistReference[],
+	year: number | null,
+	label: string | null,
+	catalogNumber: string | null,
+	artworkId: string | null,
+	trackCount: number,
+	totalDurationMs: number,
+};
+
 export type AppError = AppError_Serialize | AppError_Deserialize;
 
 export type AppError_Deserialize = {
@@ -40,9 +60,25 @@ export type AppError_Serialize = {
 	context?: { [key in string]: string } | null,
 };
 
+export type ArtistDetail = {
+	artist: ArtistSummary,
+	albums: AlbumSummary[],
+	tracks: TrackSummary[],
+};
+
 export type ArtistReference = {
 	id: string,
 	name: string,
+};
+
+export type ArtistSummary = {
+	id: string,
+	name: string,
+	genres: string[],
+	albumCount: number,
+	trackCount: number,
+	totalDurationMs: number,
+	artworkId: string | null,
 };
 
 export type AudioExtension = "flac" | "wav" | "mp3" | "ogg" | "aac" | "aiff" | "m4a";
@@ -85,6 +121,26 @@ export type DesktopState = {
 	libraryRoot: string | null,
 	libraryRoots: LibraryRoot[],
 	playback: PlaybackState,
+};
+
+export type DiscoveryCatalog = {
+	artists: ArtistSummary[],
+	albums: AlbumSummary[],
+	genres: GenreSummary[],
+};
+
+export type DiscoveryQuery = {
+	search: string | null,
+	offset: number,
+	limit: number,
+};
+
+export type GenreSummary = {
+	id: string,
+	name: string,
+	albumCount: number,
+	trackCount: number,
+	artists: ArtistReference[],
 };
 
 export type LibraryChanged = {

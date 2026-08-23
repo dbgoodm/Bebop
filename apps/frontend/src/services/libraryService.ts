@@ -62,10 +62,13 @@ const defaultCatalogQuery: CatalogQuery = {
   limit: 200,
 };
 
-export async function loadLibraryCatalog(): Promise<LibraryScanSnapshot> {
+export async function loadLibraryCatalog(search = ''): Promise<LibraryScanSnapshot> {
   const [rootsResult, tracksResult] = await Promise.all([
     commands.listLibraryRoots(),
-    commands.queryCatalogTracks(defaultCatalogQuery),
+    commands.queryCatalogTracks({
+      ...defaultCatalogQuery,
+      search: search.trim() || null,
+    }),
   ]);
   if (rootsResult.status === 'error') throw rootsResult.error;
   if (tracksResult.status === 'error') throw tracksResult.error;
@@ -140,6 +143,9 @@ export function toTrackItem(track: TrackSummary, index: number): TrackItem {
     duration: formatDuration(track.durationMs),
     durationSeconds: Math.floor((track.durationMs ?? 0) / 1_000),
     audioUrl: track.path,
+    artistIds: track.artists.map((artist) => artist.id),
+    albumId: track.albumId ?? undefined,
+    genres: track.genres,
   };
 }
 

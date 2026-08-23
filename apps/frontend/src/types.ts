@@ -135,6 +135,9 @@ export interface TrackItem {
   durationSeconds: number;
   coverUrl?: string;
   audioUrl?: string;
+  artistIds?: string[];
+  albumId?: string;
+  genres?: string[];
 }
 
 export interface ArtistTopTrack {
@@ -205,6 +208,15 @@ export interface ArtistItem {
   localStorageSize?: string; // e.g. "8.4 GB"
   discography?: ArtistDiscographyAlbum[];
   topTracks?: ArtistTopTrack[];
+  tracks?: TrackItem[];
+}
+
+export interface GenreItem {
+  id: string;
+  name: string;
+  albumCount: number;
+  trackCount: number;
+  artists: string[];
 }
 
 export interface AlbumItem {

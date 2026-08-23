@@ -13,7 +13,6 @@ import {
   ArrowDownToLine,
 } from 'lucide-react';
 import { ArtistItem, ArtistTopTrack, ArtistDiscographyAlbum, TrackItem } from '@/types';
-import { LOCAL_TRACKS } from '@/demo/catalog';
 import { UniversalTracklist } from '@/components/molecules/UniversalTracklist';
 import { useAntraEngine } from '@/services/antraEngineService';
 import { useTheme } from '@/services/themeService';
@@ -415,7 +414,7 @@ export const ArtistDetailPage: React.FC<ArtistDetailPageProps> = ({
           <UniversalTracklist
             idPrefix={`artist-${artist.id}-top-tracks`}
             tracks={topTracks.map((topTrack) => {
-              const match = LOCAL_TRACKS.find(
+              const match = artist.tracks?.find(
                 (t) => t.title.toLowerCase() === topTrack.title.toLowerCase(),
               );
               if (match) return match;

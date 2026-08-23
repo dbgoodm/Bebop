@@ -5,15 +5,26 @@ import { ContinueListeningRail } from '@/components/molecules/ContinueListeningR
 import { ListeningStats } from '@/components/molecules/ListeningStats';
 import { TopNavRail } from '@/components/molecules/TopNavRail';
 import { LibraryView } from '@/components/organisms/LibraryView';
+import { ArtistDetailPage } from '@/components/organisms/ArtistDetailPage';
+import { AlbumDetailPage } from '@/components/organisms/AlbumDetailPage';
 import { FullscreenNowPlaying } from '@/components/organisms/FullscreenNowPlaying';
 import { NowPlayingBar } from '@/components/organisms/NowPlayingBar';
 import { NowPlayingQueueModal } from '@/components/organisms/NowPlayingQueueModal';
 import { AppShell } from '@/components/templates/AppShell';
 import { useLibraryScan } from '@/hooks/useLibraryScan';
+import { useCatalogDiscovery } from '@/hooks/useCatalogDiscovery';
 import { useNativePlayback } from '@/hooks/useNativePlayback';
 import { useTheme } from '@/services/themeService';
 import { ThemeSelectorModal } from '@/components/organisms/ThemeSelectorModal';
-import type { ContinueListeningItem, ListeningStatsData, NavTab, TrackItem } from '@/types';
+import { loadAlbumDetail, loadArtistDetail } from '@/services/catalogService';
+import type {
+  AlbumItem,
+  ArtistItem,
+  ContinueListeningItem,
+  ListeningStatsData,
+  NavTab,
+  TrackItem,
+} from '@/types';
 
 function formatDuration(seconds: number, zeroLabel = '0m') {
   if (!Number.isFinite(seconds)) return 'Unknown';
@@ -27,12 +38,16 @@ function formatDuration(seconds: number, zeroLabel = '0m') {
 
 export function DesktopLibraryPage() {
   const { currentTheme } = useTheme();
-  const { library, selectAndScan, setRootEnabled, rescanRoot, removeRoot } = useLibraryScan();
-  const nativePlayback = useNativePlayback();
   const [activeTab, setActiveTab] = useState<NavTab>('HOME');
   const [searchQuery, setSearchQuery] = useState('');
+  const { library, selectAndScan, setRootEnabled, rescanRoot, removeRoot } =
+    useLibraryScan(searchQuery);
+  const discovery = useCatalogDiscovery(searchQuery);
+  const nativePlayback = useNativePlayback();
   const [queue, setQueue] = useState<TrackItem[]>([]);
   const [selectedTrack, setSelectedTrack] = useState<TrackItem | null>(null);
+  const [selectedArtist, setSelectedArtist] = useState<ArtistItem | null>(null);
+  const [selectedAlbum, setSelectedAlbum] = useState<AlbumItem | null>(null);
   const [isFullscreenOpen, setIsFullscreenOpen] = useState(false);
   const [isQueueOpen, setIsQueueOpen] = useState(false);
   const completedEnds = useRef(0);
@@ -107,6 +122,38 @@ export function DesktopLibraryPage() {
     await selectAndScan();
   }, [selectAndScan]);
 
+  const selectArtist = useCallback(
+    async (artist: ArtistItem | string) => {
+      const summary =
+        typeof artist === 'string'
+          ? discovery.artists.find(
+              (candidate) => candidate.name.toLocaleLowerCase() === artist.toLocaleLowerCase(),
+            )
+          : artist;
+      if (!summary) return;
+      setSelectedAlbum(null);
+      setSelectedArtist(await loadArtistDetail(summary.id));
+      setActiveTab('DISCOVER');
+    },
+    [discovery.artists],
+  );
+
+  const selectAlbum = useCallback(
+    async (album: AlbumItem | string) => {
+      const summary =
+        typeof album === 'string'
+          ? discovery.albums.find(
+              (candidate) => candidate.title.toLocaleLowerCase() === album.toLocaleLowerCase(),
+            )
+          : album;
+      if (!summary) return;
+      setSelectedArtist(null);
+      setSelectedAlbum(await loadAlbumDetail(summary.id));
+      setActiveTab('DISCOVER');
+    },
+    [discovery.albums],
+  );
+
   const playTrack = useCallback(
     async (track: TrackItem) => {
       setSelectedTrack(track);
@@ -116,6 +163,28 @@ export function DesktopLibraryPage() {
       await nativePlayback.playTrack(track);
     },
     [nativePlayback],
+  );
+
+  const playAlbum = useCallback(
+    async (album: AlbumItem) => {
+      const detail = album.tracks.length > 0 ? album : await loadAlbumDetail(album.id);
+      if (detail.tracks[0]) {
+        setQueue(detail.tracks);
+        await playTrack(detail.tracks[0]);
+      }
+    },
+    [playTrack],
+  );
+
+  const playArtist = useCallback(
+    async (artist: ArtistItem) => {
+      const detail = artist.tracks ? artist : await loadArtistDetail(artist.id);
+      if (detail.tracks?.[0]) {
+        setQueue(detail.tracks);
+        await playTrack(detail.tracks[0]);
+      }
+    },
+    [playTrack],
   );
 
   const playRelativeTrack = useCallback(
@@ -295,10 +364,40 @@ export function DesktopLibraryPage() {
 
         {activeTab === 'DISCOVER' && (
           <div className="py-8 animate-fadeIn">
-            <EmptyState title="Discovery is not indexed yet.">
-              Artist, album, and genre discovery needs embedded metadata support. Your scanned local
-              tracks remain available in Library.
-            </EmptyState>
+            {selectedArtist ? (
+              <ArtistDetailPage
+                artist={selectedArtist}
+                onBack={() => setSelectedArtist(null)}
+                onPlayTrack={(track) => void playTrack(track)}
+                onPlayArtist={(artist) => void playArtist(artist)}
+                onSelectAlbum={(album) => void selectAlbum(album)}
+              />
+            ) : selectedAlbum ? (
+              <AlbumDetailPage
+                album={selectedAlbum}
+                currentTrackId={currentTrack?.id}
+                isPlaying={isPlaying}
+                onBack={() => setSelectedAlbum(null)}
+                onPlayTrack={(track) => void playTrack(track)}
+                onPlayAlbum={(album) => void playAlbum(album)}
+                onSelectArtist={(artist) => void selectArtist(artist)}
+                onSelectAlbum={(album) => void selectAlbum(album)}
+              />
+            ) : (
+              <LibraryView
+                tracks={visibleTracks}
+                artists={discovery.artists}
+                albums={discovery.albums}
+                genres={discovery.genres}
+                currentTrackId={currentTrack?.id}
+                isPlaying={isPlaying}
+                onPlayTrack={(track) => void playTrack(track)}
+                onPlayAlbum={(album) => void playAlbum(album)}
+                onPlayArtist={(artist) => void playArtist(artist)}
+                onSelectArtist={(artist) => void selectArtist(artist)}
+                onSelectAlbum={(album) => void selectAlbum(album)}
+              />
+            )}
           </div>
         )}
 
@@ -521,9 +620,16 @@ export function DesktopLibraryPage() {
             {(library.phase === 'complete' || library.phase === 'partial-error') && (
               <LibraryView
                 tracks={visibleTracks}
+                artists={discovery.artists}
+                albums={discovery.albums}
+                genres={discovery.genres}
                 currentTrackId={currentTrack?.id}
                 isPlaying={isPlaying}
                 onPlayTrack={(track) => void playTrack(track)}
+                onPlayAlbum={(album) => void playAlbum(album)}
+                onPlayArtist={(artist) => void playArtist(artist)}
+                onSelectArtist={(artist) => void selectArtist(artist)}
+                onSelectAlbum={(album) => void selectAlbum(album)}
               />
             )}
           </div>
@@ -548,6 +654,8 @@ export function DesktopLibraryPage() {
         volumeLocked={nativePlayback.playback.hifiMode}
         onUnlockVolume={() => nativePlayback.setHifi(false)}
         spectrumAvailable={false}
+        onSelectArtist={(artist) => void selectArtist(artist)}
+        onSelectAlbum={(album) => void selectAlbum(album)}
       />
 
       <NowPlayingQueueModal
@@ -561,6 +669,8 @@ export function DesktopLibraryPage() {
         onMoveTrack={moveQueueTrack}
         onClearQueue={clearQueue}
         onShuffleQueue={shuffleQueue}
+        onSelectArtist={(artist) => void selectArtist(artist)}
+        onSelectAlbum={(album) => void selectAlbum(album)}
       />
 
       <FullscreenNowPlaying
@@ -582,6 +692,8 @@ export function DesktopLibraryPage() {
         volumeLocked={nativePlayback.playback.hifiMode}
         onUnlockVolume={() => nativePlayback.setHifi(false)}
         spectrumAvailable={false}
+        onSelectArtist={(artist) => void selectArtist(artist)}
+        onSelectAlbum={(album) => void selectAlbum(album)}
       />
       <ThemeSelectorModal />
     </AppShell>

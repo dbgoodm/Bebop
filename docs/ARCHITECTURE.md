@@ -32,6 +32,11 @@ WAL mode are enabled on startup. Schema changes use ordered migrations, and an e
 backed up in the application-data directory before an upgrade. Catalog queries are limited to 500
 rows and use stable identity tie-breakers; React restores a bounded first page on startup.
 
+Artist, album, and genre summaries are derived from normalized catalog relationships rather than
+prototype entities. Global search runs in SQLite across track title, artist, album, genre,
+composer, label, and catalog number. Artist and album detail commands return ordered real tracks;
+React fetches those details on navigation and keeps demo data behind `VITE_BEBOP_DEMO=true`.
+
 Playback-tested extensions are `flac`, `wav`, `mp3`, `ogg`, `aac`, `aif`/`aiff`, and
 `m4a`/`mp4` (AAC or ALAC). Lofty reads embedded titles, artists, album artists, albums, genres,
 numbering, dates, credits, identifiers, ReplayGain, lyrics, and artwork. Missing tags explicitly

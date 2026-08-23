@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { AlbumsGridView } from './AlbumsGridView';
 import { ArtistsGridView } from './ArtistsGridView';
-import { GenresGridView, LOCAL_GENRES } from './GenresGridView';
+import { GenresGridView, LOCAL_GENRES, type GenreCategory } from './GenresGridView';
 import { TracksTableView } from './TracksTableView';
 import { AlbumItem, ArtistItem, LibrarySubTab, TrackItem } from '@/types';
 
@@ -9,6 +9,7 @@ interface LibraryViewProps {
   tracks: TrackItem[];
   artists?: ArtistItem[];
   albums?: AlbumItem[];
+  genres?: GenreCategory[];
   currentTrackId?: string;
   isPlaying?: boolean;
   onPlayTrack: (track: TrackItem) => void;
@@ -21,8 +22,10 @@ interface LibraryViewProps {
 
 export const LibraryView: React.FC<LibraryViewProps> = ({
   tracks,
+  showDemoDiscovery = false,
   artists = [],
   albums = [],
+  genres = showDemoDiscovery ? LOCAL_GENRES : [],
   currentTrackId,
   isPlaying,
   onPlayTrack,
@@ -30,7 +33,6 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
   onPlayArtist,
   onSelectArtist,
   onSelectAlbum,
-  showDemoDiscovery = false,
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<LibrarySubTab>(
     showDemoDiscovery ? 'artists' : 'tracks',
@@ -38,8 +40,8 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
 
   const showDiscoveryEmptyState = () => (
     <div className="rounded border border-neutral-800 bg-neutral-950/50 p-6 text-sm text-neutral-400">
-      Artist, album, and genre discovery needs embedded metadata support, which is not part of this
-      scanning milestone. Your scanned tracks are available under Tracks.
+      No matching tagged entities were found. Untagged files remain available under Tracks with
+      explicit Unknown Artist and Unknown Album fallbacks.
     </div>
   );
 
@@ -82,7 +84,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
           {activeSubTab === 'albums' &&
             `${albums.length} indexed album${albums.length === 1 ? '' : 's'}`}
           {activeSubTab === 'genres' &&
-            (showDemoDiscovery ? `${LOCAL_GENRES.length} curated genres` : 'No genres indexed')}
+            `${genres.length} indexed genre${genres.length === 1 ? '' : 's'}`}
         </div>
       </div>
 
@@ -97,7 +99,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
         />
       )}
       {activeSubTab === 'artists' &&
-        (showDemoDiscovery ? (
+        (artists.length > 0 ? (
           <ArtistsGridView
             artists={artists}
             onPlayArtist={onPlayArtist}
@@ -107,7 +109,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
           showDiscoveryEmptyState()
         ))}
       {activeSubTab === 'albums' &&
-        (showDemoDiscovery ? (
+        (albums.length > 0 ? (
           <AlbumsGridView
             albums={albums}
             onPlayAlbum={onPlayAlbum}
@@ -118,11 +120,12 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
           showDiscoveryEmptyState()
         ))}
       {activeSubTab === 'genres' &&
-        (showDemoDiscovery ? (
+        (genres.length > 0 ? (
           <GenresGridView
+            genres={genres}
+            tracks={tracks}
             onPlayTrack={onPlayTrack}
-            onSelectArtist={onSelectArtist}
-            onSelectAlbum={onSelectAlbum}
+            onSelectArtist={onSelectArtist as ((artist: string) => void) | undefined}
           />
         ) : (
           showDiscoveryEmptyState()

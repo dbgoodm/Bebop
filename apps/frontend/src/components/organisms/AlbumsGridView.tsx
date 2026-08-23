@@ -1,7 +1,6 @@
 import React from 'react';
 import { Play, Disc3, Sparkles } from 'lucide-react';
 import { AlbumItem, TrackItem, ArtistItem } from '@/types';
-import { LOCAL_ALBUMS } from '@/demo/catalog';
 
 interface AlbumsGridViewProps {
   albums?: AlbumItem[];
@@ -11,7 +10,7 @@ interface AlbumsGridViewProps {
 }
 
 export const AlbumsGridView: React.FC<AlbumsGridViewProps> = ({
-  albums = LOCAL_ALBUMS,
+  albums = [],
   onPlayAlbum,
   onSelectAlbum,
   onSelectArtist,

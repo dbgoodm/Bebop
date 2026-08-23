@@ -13,7 +13,7 @@ import {
   toLibrarySnapshot,
 } from '@/services/libraryService';
 
-export function useLibraryScan() {
+export function useLibraryScan(search = '') {
   const [library, setLibrary] = useState(initialLibraryScan);
 
   useEffect(() => {
@@ -22,7 +22,7 @@ export function useLibraryScan() {
     let active = true;
     const reload = async () => {
       try {
-        const catalog = await loadLibraryCatalog();
+        const catalog = await loadLibraryCatalog(search);
         if (active) setLibrary(catalog);
       } catch (cause) {
         if (active) setLibrary(errorSnapshot(cause as AppError));
@@ -42,7 +42,7 @@ export function useLibraryScan() {
       unlistenProgress?.();
       unlistenChanged?.();
     };
-  }, []);
+  }, [search]);
 
   const selectAndScan = useCallback(async () => {
     try {
@@ -50,7 +50,7 @@ export function useLibraryScan() {
       if (!root) return;
       setLibrary({ ...initialLibraryScan, phase: 'scanning', root });
       const scan = await scanLibrary(root);
-      const catalog = await loadLibraryCatalog();
+      const catalog = await loadLibraryCatalog(search);
       setLibrary((current) => ({
         ...catalog,
         warnings: [...toLibrarySnapshot(scan, current.progress).warnings, ...catalog.warnings],
@@ -59,23 +59,32 @@ export function useLibraryScan() {
     } catch (cause) {
       setLibrary(errorSnapshot(cause as AppError));
     }
-  }, []);
+  }, [search]);
 
-  const setRootEnabled = useCallback(async (rootId: string, enabled: boolean) => {
-    await setLibraryRootEnabled(rootId, enabled);
-    setLibrary(await loadLibraryCatalog());
-  }, []);
+  const setRootEnabled = useCallback(
+    async (rootId: string, enabled: boolean) => {
+      await setLibraryRootEnabled(rootId, enabled);
+      setLibrary(await loadLibraryCatalog(search));
+    },
+    [search],
+  );
 
-  const rescanRoot = useCallback(async (rootId: string) => {
-    setLibrary((current) => ({ ...current, phase: 'scanning' }));
-    await rescanLibraryRoot(rootId);
-    setLibrary(await loadLibraryCatalog());
-  }, []);
+  const rescanRoot = useCallback(
+    async (rootId: string) => {
+      setLibrary((current) => ({ ...current, phase: 'scanning' }));
+      await rescanLibraryRoot(rootId);
+      setLibrary(await loadLibraryCatalog(search));
+    },
+    [search],
+  );
 
-  const removeRoot = useCallback(async (rootId: string) => {
-    await removeLibraryRoot(rootId);
-    setLibrary(await loadLibraryCatalog());
-  }, []);
+  const removeRoot = useCallback(
+    async (rootId: string) => {
+      await removeLibraryRoot(rootId);
+      setLibrary(await loadLibraryCatalog(search));
+    },
+    [search],
+  );
 
   return { library, selectAndScan, setRootEnabled, rescanRoot, removeRoot };
 }
