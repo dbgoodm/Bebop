@@ -1,16 +1,16 @@
 # Graph Report - Bebop  (2026-08-23)
 
 ## Corpus Check
-- 77 files · ~57,119 words
+- 79 files · ~58,275 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 601 nodes · 1246 edges · 41 communities (33 shown, 8 thin omitted)
+- 617 nodes · 1261 edges · 42 communities (34 shown, 8 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 2 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `2b113ebd`
+- Built from commit: `0d96feaf`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -20,7 +20,7 @@
 - devDependencies
 - What You Must Do When Invoked
 - TrackItem
-- types.ts
+- RecentlyAddedRail.tsx
 - compilerOptions
 - RealAudioEngine
 - Bebop clean rebuild and vertical-slice plan
@@ -45,10 +45,11 @@
 - EmptyState.tsx
 - FullscreenNowPlaying.tsx
 - DesktopLibraryPage.tsx
-- antraEngineService.tsx
+- types.ts
 - MusicPlayerPage.tsx
 - NowPlayingBar.tsx
 - ListeningStats.tsx
+- Bebop vertical-slice architecture
 
 ## God Nodes (most connected - your core abstractions)
 1. `TrackItem` - 38 edges
@@ -77,15 +78,15 @@
 ## Import Cycles
 - None detected.
 
-## Communities (41 total, 8 thin omitted)
+## Communities (42 total, 8 thin omitted)
 
 ### Community 0 - "PlaybackEngine"
 Cohesion: 0.08
 Nodes (40): AudioOutputDevice, AudioOutputState, Box, Device, Into, OutputStream, PlaybackState, SampleFormat (+32 more)
 
 ### Community 1 - "useTheme"
-Cohesion: 0.18
-Nodes (13): AlbumDetailPage(), DiscoverView(), SettingsView(), ThemeSelectorModal(), DemoMusicPlayer(), AmbientOrbConfig, StatCardColorConfig, THEME_PRESETS (+5 more)
+Cohesion: 0.16
+Nodes (15): RediscoverRail(), AlbumDetailPage(), DiscoverView(), SettingsView(), ThemeSelectorModal(), AmbientOrbConfig, StatCardColorConfig, THEME_PRESETS (+7 more)
 
 ### Community 2 - "devDependencies"
 Cohesion: 0.05
@@ -96,12 +97,12 @@ Cohesion: 0.08
 Nodes (24): For /graphify add and --watch, For /graphify query, For the commit hook and native CLAUDE.md integration, For --update and --cluster-only, /graphify, Honesty Rules, Interpreter guard for subcommands, Part A - Structural extraction for code files (+16 more)
 
 ### Community 4 - "TrackItem"
-Cohesion: 0.11
-Nodes (31): ALL_AVAILABLE_COLUMNS, ColumnDefinition, ColumnKey, UniversalTracklist(), UniversalTracklistProps, AlbumDetailPageProps, AlbumsGridView(), AlbumsGridViewProps (+23 more)
+Cohesion: 0.10
+Nodes (36): ALL_AVAILABLE_COLUMNS, ColumnDefinition, ColumnKey, UniversalTracklist(), UniversalTracklistProps, AlbumDetailPageProps, AlbumsGridView(), AlbumsGridViewProps (+28 more)
 
-### Community 5 - "types.ts"
-Cohesion: 0.15
-Nodes (17): RecentlyAddedRail(), RediscoverRail(), DEMO_RECENTLY_ADDED, DEMO_REDISCOVER_ITEMS, LOCAL_RECENTLY_ADDED, LOCAL_REDISCOVER_ITEMS, ArtistTopTrack, AudioFormat (+9 more)
+### Community 5 - "RecentlyAddedRail.tsx"
+Cohesion: 0.40
+Nodes (4): RecentlyAddedRail(), AudioFormat, RecentlyAddedItem, RecentlyAddedRailProps
 
 ### Community 6 - "compilerOptions"
 Cohesion: 0.10
@@ -167,13 +168,13 @@ Nodes (9): FullscreenNowPlaying(), FullscreenNowPlayingProps, generateSoundcloud
 Cohesion: 0.24
 Nodes (7): LibraryView(), NowPlayingQueueModal(), NowPlayingQueueModalProps, AppShell(), AppShellProps, DesktopLibraryPage(), mocks
 
-### Community 37 - "antraEngineService.tsx"
-Cohesion: 0.17
-Nodes (14): MAIN_NAV_ITEMS, TopNavRail(), AntraQueueDrawer(), AntraQueueDrawerProps, ArtistDetailPage(), AntraEngineContext, AntraEngineContextType, AntraEngineProvider() (+6 more)
+### Community 37 - "types.ts"
+Cohesion: 0.16
+Nodes (18): MAIN_NAV_ITEMS, TopNavRail(), AntraQueueDrawer(), AntraQueueDrawerProps, ArtistDetailPage(), AntraEngineContext, AntraEngineContextType, AntraEngineProvider() (+10 more)
 
 ### Community 38 - "MusicPlayerPage.tsx"
-Cohesion: 0.27
-Nodes (7): App(), ContinueListeningRail(), SAMPLE_CONTINUE_ITEMS, useDemoMode(), DemoAudioEngine, MusicPlayerPage(), ContinueListeningItem
+Cohesion: 0.20
+Nodes (9): App(), ContinueListeningRail(), SAMPLE_CONTINUE_ITEMS, useDemoMode(), DemoAudioEngine, DemoMusicPlayer(), MusicPlayerPage(), ContinueListeningItem (+1 more)
 
 ### Community 39 - "NowPlayingBar.tsx"
 Cohesion: 0.38
@@ -183,8 +184,12 @@ Nodes (5): MonstercatVisualizer(), MonstercatVisualizerProps, generateCompactWav
 Cohesion: 0.50
 Nodes (4): DEFAULT_STATS, ListeningStats(), ListeningStatsProps, ListeningStatsData
 
+### Community 41 - "Bebop vertical-slice architecture"
+Cohesion: 0.12
+Nodes (14): Audio signal path, Bebop vertical-slice architecture, Deferred work, Hardware-audio smoke tests, IPC contracts, Library boundaries, Omarchy Linux / PipeWire, Scope (+6 more)
+
 ## Knowledge Gaps
-- **196 isolated node(s):** `singleQuote`, `trailingComma`, `printWidth`, `name`, `private` (+191 more)
+- **207 isolated node(s):** `singleQuote`, `trailingComma`, `printWidth`, `name`, `private` (+202 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **8 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -192,11 +197,11 @@ Nodes (4): DEFAULT_STATS, ListeningStats(), ListeningStatsProps, ListeningStatsD
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `devDependencies` connect `devDependencies` to `scripts`?**
-  _High betweenness centrality (0.070) - this node is a cross-community bridge._
+  _High betweenness centrality (0.067) - this node is a cross-community bridge._
 - **Why does `typescript` connect `devDependencies` to `lib.rs`?**
-  _High betweenness centrality (0.060) - this node is a cross-community bridge._
+  _High betweenness centrality (0.057) - this node is a cross-community bridge._
 - **What connects `singleQuote`, `trailingComma`, `printWidth` to the rest of the system?**
-  _196 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _207 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `PlaybackEngine` be split into smaller, more focused modules?**
   _Cohesion score 0.07789473684210527 - nodes in this community are weakly interconnected._
 - **Should `devDependencies` be split into smaller, more focused modules?**
@@ -204,4 +209,4 @@ _Questions this graph is uniquely positioned to answer:_
 - **Should `What You Must Do When Invoked` be split into smaller, more focused modules?**
   _Cohesion score 0.08 - nodes in this community are weakly interconnected._
 - **Should `TrackItem` be split into smaller, more focused modules?**
-  _Cohesion score 0.11193339500462535 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.09714285714285714 - nodes in this community are weakly interconnected._

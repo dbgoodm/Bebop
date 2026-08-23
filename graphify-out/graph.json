@@ -56,6 +56,32 @@
       "source_location": "L970"
     },
     {
+      "id": "apps_frontend_src_types_rediscoveritem",
+      "label": "RediscoverItem",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 1,
+      "community_name": "useTheme",
+      "file_type": "code",
+      "norm_label": "rediscoveritem",
+      "source_file": "apps/frontend/src/types.ts",
+      "source_location": "L92"
+    },
+    {
+      "id": "apps_frontend_src_types_rediscoverrailprops",
+      "label": "RediscoverRailProps",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 1,
+      "community_name": "useTheme",
+      "file_type": "code",
+      "norm_label": "rediscoverrailprops",
+      "source_file": "apps/frontend/src/types.ts",
+      "source_location": "L106"
+    },
+    {
       "id": "apps_frontend_src_hooks_usenativeplayback_playbackeventname",
       "label": "PlaybackEventName",
       "_callable": true,
@@ -348,7 +374,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 37,
-      "community_name": "antraEngineService.tsx",
+      "community_name": "types.ts",
       "file_type": "code",
       "norm_label": "antraqueuedrawerprops",
       "source_file": "apps/frontend/src/components/organisms/AntraQueueDrawer.tsx",
@@ -361,7 +387,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 37,
-      "community_name": "antraEngineService.tsx",
+      "community_name": "types.ts",
       "file_type": "code",
       "norm_label": "antraenginecontexttype",
       "source_file": "apps/frontend/src/services/antraEngineService.tsx",
@@ -374,7 +400,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 37,
-      "community_name": "antraEngineService.tsx",
+      "community_name": "types.ts",
       "file_type": "code",
       "norm_label": "antraingeststatus",
       "source_file": "apps/frontend/src/types.ts",
@@ -387,7 +413,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 37,
-      "community_name": "antraEngineService.tsx",
+      "community_name": "types.ts",
       "file_type": "code",
       "norm_label": "antraqueueitem",
       "source_file": "apps/frontend/src/types.ts",
@@ -400,11 +426,50 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 37,
-      "community_name": "antraEngineService.tsx",
+      "community_name": "types.ts",
       "file_type": "code",
       "norm_label": "artistdiscographyalbum",
       "source_file": "apps/frontend/src/types.ts",
       "source_location": "L149"
+    },
+    {
+      "id": "apps_frontend_src_types_artisttoptrack",
+      "label": "ArtistTopTrack",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 37,
+      "community_name": "types.ts",
+      "file_type": "code",
+      "norm_label": "artisttoptrack",
+      "source_file": "apps/frontend/src/types.ts",
+      "source_location": "L135"
+    },
+    {
+      "id": "apps_frontend_src_types_continuelisteningtype",
+      "label": "ContinueListeningType",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 37,
+      "community_name": "types.ts",
+      "file_type": "code",
+      "norm_label": "continuelisteningtype",
+      "source_file": "apps/frontend/src/types.ts",
+      "source_location": "L43"
+    },
+    {
+      "id": "apps_frontend_src_types_metriccarddata",
+      "label": "MetricCardData",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 37,
+      "community_name": "types.ts",
+      "file_type": "code",
+      "norm_label": "metriccarddata",
+      "source_file": "apps/frontend/src/types.ts",
+      "source_location": "L13"
     },
     {
       "id": "apps_frontend_src_types_navtab",
@@ -413,11 +478,24 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 37,
-      "community_name": "antraEngineService.tsx",
+      "community_name": "types.ts",
       "file_type": "code",
       "norm_label": "navtab",
       "source_file": "apps/frontend/src/types.ts",
       "source_location": "L1"
+    },
+    {
+      "id": "apps_frontend_src_types_rediscovertype",
+      "label": "RediscoverType",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 37,
+      "community_name": "types.ts",
+      "file_type": "code",
+      "norm_label": "rediscovertype",
+      "source_file": "apps/frontend/src/types.ts",
+      "source_location": "L90"
     },
     {
       "id": "apps_frontend_src_types_topnavrailprops",
@@ -426,7 +504,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 37,
-      "community_name": "antraEngineService.tsx",
+      "community_name": "types.ts",
       "file_type": "code",
       "norm_label": "topnavrailprops",
       "source_file": "apps/frontend/src/types.ts",
@@ -457,6 +535,19 @@
       "norm_label": "continuelisteningitem",
       "source_file": "apps/frontend/src/types.ts",
       "source_location": "L45"
+    },
+    {
+      "id": "apps_frontend_src_types_continuelisteningrailprops",
+      "label": "ContinueListeningRailProps",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 38,
+      "community_name": "MusicPlayerPage.tsx",
+      "file_type": "code",
+      "norm_label": "continuelisteningrailprops",
+      "source_file": "apps/frontend/src/types.ts",
+      "source_location": "L57"
     },
     {
       "id": "apps_frontend_src_components_organisms_monstercatvisualizer_monstercatvisualizerprops",
@@ -693,6 +784,19 @@
       "source_location": "L229"
     },
     {
+      "id": "apps_frontend_src_types_librarysubtab",
+      "label": "LibrarySubTab",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 4,
+      "community_name": "TrackItem",
+      "file_type": "code",
+      "norm_label": "librarysubtab",
+      "source_file": "apps/frontend/src/types.ts",
+      "source_location": "L114"
+    },
+    {
       "id": "apps_frontend_src_types_trackitem",
       "label": "TrackItem",
       "_callable": true,
@@ -732,82 +836,17 @@
       "source_location": "L22"
     },
     {
-      "id": "apps_frontend_src_types_artisttoptrack",
-      "label": "ArtistTopTrack",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 5,
-      "community_name": "types.ts",
-      "file_type": "code",
-      "norm_label": "artisttoptrack",
-      "source_file": "apps/frontend/src/types.ts",
-      "source_location": "L135"
-    },
-    {
       "id": "apps_frontend_src_types_audioformat",
       "label": "AudioFormat",
       "_callable": true,
       "_callable_class": true,
       "_origin": "ast",
       "community": 5,
-      "community_name": "types.ts",
+      "community_name": "RecentlyAddedRail.tsx",
       "file_type": "code",
       "norm_label": "audioformat",
       "source_file": "apps/frontend/src/types.ts",
       "source_location": "L65"
-    },
-    {
-      "id": "apps_frontend_src_types_continuelisteningrailprops",
-      "label": "ContinueListeningRailProps",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 5,
-      "community_name": "types.ts",
-      "file_type": "code",
-      "norm_label": "continuelisteningrailprops",
-      "source_file": "apps/frontend/src/types.ts",
-      "source_location": "L57"
-    },
-    {
-      "id": "apps_frontend_src_types_continuelisteningtype",
-      "label": "ContinueListeningType",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 5,
-      "community_name": "types.ts",
-      "file_type": "code",
-      "norm_label": "continuelisteningtype",
-      "source_file": "apps/frontend/src/types.ts",
-      "source_location": "L43"
-    },
-    {
-      "id": "apps_frontend_src_types_librarysubtab",
-      "label": "LibrarySubTab",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 5,
-      "community_name": "types.ts",
-      "file_type": "code",
-      "norm_label": "librarysubtab",
-      "source_file": "apps/frontend/src/types.ts",
-      "source_location": "L114"
-    },
-    {
-      "id": "apps_frontend_src_types_metriccarddata",
-      "label": "MetricCardData",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 5,
-      "community_name": "types.ts",
-      "file_type": "code",
-      "norm_label": "metriccarddata",
-      "source_file": "apps/frontend/src/types.ts",
-      "source_location": "L13"
     },
     {
       "id": "apps_frontend_src_types_recentlyaddeditem",
@@ -816,7 +855,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 5,
-      "community_name": "types.ts",
+      "community_name": "RecentlyAddedRail.tsx",
       "file_type": "code",
       "norm_label": "recentlyaddeditem",
       "source_file": "apps/frontend/src/types.ts",
@@ -829,50 +868,11 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 5,
-      "community_name": "types.ts",
+      "community_name": "RecentlyAddedRail.tsx",
       "file_type": "code",
       "norm_label": "recentlyaddedrailprops",
       "source_file": "apps/frontend/src/types.ts",
       "source_location": "L82"
-    },
-    {
-      "id": "apps_frontend_src_types_rediscoveritem",
-      "label": "RediscoverItem",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 5,
-      "community_name": "types.ts",
-      "file_type": "code",
-      "norm_label": "rediscoveritem",
-      "source_file": "apps/frontend/src/types.ts",
-      "source_location": "L92"
-    },
-    {
-      "id": "apps_frontend_src_types_rediscoverrailprops",
-      "label": "RediscoverRailProps",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 5,
-      "community_name": "types.ts",
-      "file_type": "code",
-      "norm_label": "rediscoverrailprops",
-      "source_file": "apps/frontend/src/types.ts",
-      "source_location": "L106"
-    },
-    {
-      "id": "apps_frontend_src_types_rediscovertype",
-      "label": "RediscoverType",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 5,
-      "community_name": "types.ts",
-      "file_type": "code",
-      "norm_label": "rediscovertype",
-      "source_file": "apps/frontend/src/types.ts",
-      "source_location": "L90"
     },
     {
       "id": "apps_frontend_src_services_realaudioengine_realaudioengine",
@@ -886,6 +886,18 @@
       "norm_label": "realaudioengine",
       "source_file": "apps/frontend/src/services/realAudioEngine.ts",
       "source_location": "L10"
+    },
+    {
+      "id": "apps_frontend_src_components_molecules_rediscoverrail_rediscoverrail",
+      "label": "RediscoverRail()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 1,
+      "community_name": "useTheme",
+      "file_type": "code",
+      "norm_label": "rediscoverrail()",
+      "source_file": "apps/frontend/src/components/molecules/RediscoverRail.tsx",
+      "source_location": "L16"
     },
     {
       "id": "apps_frontend_src_components_organisms_albumdetailpage_albumdetailpage",
@@ -934,18 +946,6 @@
       "norm_label": "themeselectormodal()",
       "source_file": "apps/frontend/src/components/organisms/ThemeSelectorModal.tsx",
       "source_location": "L18"
-    },
-    {
-      "id": "apps_frontend_src_pages_musicplayerpage_demomusicplayer",
-      "label": "DemoMusicPlayer()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 1,
-      "community_name": "useTheme",
-      "file_type": "code",
-      "norm_label": "demomusicplayer()",
-      "source_file": "apps/frontend/src/pages/MusicPlayerPage.tsx",
-      "source_location": "L50"
     },
     {
       "id": "apps_frontend_src_services_themeservice_themeprovider",
@@ -1349,7 +1349,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 37,
-      "community_name": "antraEngineService.tsx",
+      "community_name": "types.ts",
       "file_type": "code",
       "norm_label": "topnavrail()",
       "source_file": "apps/frontend/src/components/molecules/TopNavRail.tsx",
@@ -1361,7 +1361,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 37,
-      "community_name": "antraEngineService.tsx",
+      "community_name": "types.ts",
       "file_type": "code",
       "norm_label": "antraqueuedrawer()",
       "source_file": "apps/frontend/src/components/organisms/AntraQueueDrawer.tsx",
@@ -1373,7 +1373,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 37,
-      "community_name": "antraEngineService.tsx",
+      "community_name": "types.ts",
       "file_type": "code",
       "norm_label": "artistdetailpage()",
       "source_file": "apps/frontend/src/components/organisms/ArtistDetailPage.tsx",
@@ -1385,7 +1385,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 37,
-      "community_name": "antraEngineService.tsx",
+      "community_name": "types.ts",
       "file_type": "code",
       "norm_label": "antraengineprovider()",
       "source_file": "apps/frontend/src/services/antraEngineService.tsx",
@@ -1397,7 +1397,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 37,
-      "community_name": "antraEngineService.tsx",
+      "community_name": "types.ts",
       "file_type": "code",
       "norm_label": "useantraengine()",
       "source_file": "apps/frontend/src/services/antraEngineService.tsx",
@@ -1438,6 +1438,18 @@
       "norm_label": "usedemomode()",
       "source_file": "apps/frontend/src/hooks/useDemoMode.ts",
       "source_location": "L4"
+    },
+    {
+      "id": "apps_frontend_src_pages_musicplayerpage_demomusicplayer",
+      "label": "DemoMusicPlayer()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 38,
+      "community_name": "MusicPlayerPage.tsx",
+      "file_type": "code",
+      "norm_label": "demomusicplayer()",
+      "source_file": "apps/frontend/src/pages/MusicPlayerPage.tsx",
+      "source_location": "L50"
     },
     {
       "id": "apps_frontend_src_pages_musicplayerpage_musicplayerpage",
@@ -1577,23 +1589,11 @@
       "_callable": true,
       "_origin": "ast",
       "community": 5,
-      "community_name": "types.ts",
+      "community_name": "RecentlyAddedRail.tsx",
       "file_type": "code",
       "norm_label": "recentlyaddedrail()",
       "source_file": "apps/frontend/src/components/molecules/RecentlyAddedRail.tsx",
       "source_location": "L7"
-    },
-    {
-      "id": "apps_frontend_src_components_molecules_rediscoverrail_rediscoverrail",
-      "label": "RediscoverRail()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 5,
-      "community_name": "types.ts",
-      "file_type": "code",
-      "norm_label": "rediscoverrail()",
-      "source_file": "apps/frontend/src/components/molecules/RediscoverRail.tsx",
-      "source_location": "L16"
     },
     {
       "id": "apps_frontend_src_services_realaudioengine_realaudioengine_constructor",
@@ -2610,6 +2610,17 @@
       "norm_label": "signal_path_disclosure()",
       "source_file": "src-tauri/src/audio.rs",
       "source_location": "L191"
+    },
+    {
+      "id": "apps_frontend_src_components_molecules_rediscoverrail",
+      "label": "RediscoverRail.tsx",
+      "_origin": "ast",
+      "community": 1,
+      "community_name": "useTheme",
+      "file_type": "code",
+      "norm_label": "rediscoverrail.tsx",
+      "source_file": "apps/frontend/src/components/molecules/RediscoverRail.tsx",
+      "source_location": "L1"
     },
     {
       "id": "apps_frontend_src_components_organisms_settingsview",
@@ -5463,13 +5474,13 @@
     },
     {
       "id": "apps_frontend_readme",
-      "label": "README.md",
+      "label": "frontend/README.md",
       "_origin": "ast",
       "community": 32,
       "community_name": "README.md",
       "file_type": "document",
       "node_kind": "page",
-      "norm_label": "readme.md",
+      "norm_label": "frontend/readme.md",
       "source_file": "apps/frontend/README.md",
       "source_location": "L1"
     },
@@ -5483,7 +5494,7 @@
       "node_kind": "heading",
       "norm_label": "bebop frontend",
       "source_file": "apps/frontend/README.md",
-      "source_location": "L5"
+      "source_location": "L1"
     },
     {
       "id": "codex_skills_graphify_references_extraction_spec",
@@ -5624,7 +5635,7 @@
       "label": "TopNavRail.tsx",
       "_origin": "ast",
       "community": 37,
-      "community_name": "antraEngineService.tsx",
+      "community_name": "types.ts",
       "file_type": "code",
       "norm_label": "topnavrail.tsx",
       "source_file": "apps/frontend/src/components/molecules/TopNavRail.tsx",
@@ -5635,7 +5646,7 @@
       "label": "MAIN_NAV_ITEMS",
       "_origin": "ast",
       "community": 37,
-      "community_name": "antraEngineService.tsx",
+      "community_name": "types.ts",
       "file_type": "code",
       "norm_label": "main_nav_items",
       "source_file": "apps/frontend/src/components/molecules/TopNavRail.tsx",
@@ -5646,10 +5657,21 @@
       "label": "AntraQueueDrawer.tsx",
       "_origin": "ast",
       "community": 37,
-      "community_name": "antraEngineService.tsx",
+      "community_name": "types.ts",
       "file_type": "code",
       "norm_label": "antraqueuedrawer.tsx",
       "source_file": "apps/frontend/src/components/organisms/AntraQueueDrawer.tsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "apps_frontend_src_components_organisms_artistdetailpage",
+      "label": "ArtistDetailPage.tsx",
+      "_origin": "ast",
+      "community": 37,
+      "community_name": "types.ts",
+      "file_type": "code",
+      "norm_label": "artistdetailpage.tsx",
+      "source_file": "apps/frontend/src/components/organisms/ArtistDetailPage.tsx",
       "source_location": "L1"
     },
     {
@@ -5657,7 +5679,7 @@
       "label": "antraEngineService.tsx",
       "_origin": "ast",
       "community": 37,
-      "community_name": "antraEngineService.tsx",
+      "community_name": "types.ts",
       "file_type": "code",
       "norm_label": "antraengineservice.tsx",
       "source_file": "apps/frontend/src/services/antraEngineService.tsx",
@@ -5668,11 +5690,22 @@
       "label": "AntraEngineContext",
       "_origin": "ast",
       "community": 37,
-      "community_name": "antraEngineService.tsx",
+      "community_name": "types.ts",
       "file_type": "code",
       "norm_label": "antraenginecontext",
       "source_file": "apps/frontend/src/services/antraEngineService.tsx",
       "source_location": "L21"
+    },
+    {
+      "id": "apps_frontend_src_types",
+      "label": "types.ts",
+      "_origin": "ast",
+      "community": 37,
+      "community_name": "types.ts",
+      "file_type": "code",
+      "norm_label": "types.ts",
+      "source_file": "apps/frontend/src/types.ts",
+      "source_location": "L1"
     },
     {
       "id": "apps_frontend_src_app",
@@ -5708,6 +5741,17 @@
       "source_location": "L15"
     },
     {
+      "id": "apps_frontend_src_hooks_usedemomode",
+      "label": "useDemoMode.ts",
+      "_origin": "ast",
+      "community": 38,
+      "community_name": "MusicPlayerPage.tsx",
+      "file_type": "code",
+      "norm_label": "usedemomode.ts",
+      "source_file": "apps/frontend/src/hooks/useDemoMode.ts",
+      "source_location": "L1"
+    },
+    {
       "id": "apps_frontend_src_main",
       "label": "main.tsx",
       "_origin": "ast",
@@ -5727,6 +5771,17 @@
       "file_type": "code",
       "norm_label": "musicplayerpage.tsx",
       "source_file": "apps/frontend/src/pages/MusicPlayerPage.tsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "apps_frontend_src_services_realaudioengine",
+      "label": "realAudioEngine.ts",
+      "_origin": "ast",
+      "community": 38,
+      "community_name": "MusicPlayerPage.tsx",
+      "file_type": "code",
+      "norm_label": "realaudioengine.ts",
+      "source_file": "apps/frontend/src/services/realAudioEngine.ts",
       "source_location": "L1"
     },
     {
@@ -5804,17 +5859,6 @@
       "file_type": "code",
       "norm_label": "albumslistview.tsx",
       "source_file": "apps/frontend/src/components/organisms/AlbumsListView.tsx",
-      "source_location": "L1"
-    },
-    {
-      "id": "apps_frontend_src_components_organisms_artistdetailpage",
-      "label": "ArtistDetailPage.tsx",
-      "_origin": "ast",
-      "community": 4,
-      "community_name": "TrackItem",
-      "file_type": "code",
-      "norm_label": "artistdetailpage.tsx",
-      "source_file": "apps/frontend/src/components/organisms/ArtistDetailPage.tsx",
       "source_location": "L1"
     },
     {
@@ -5961,6 +6005,61 @@
       "source_location": "L1263"
     },
     {
+      "id": "apps_frontend_src_demo_library",
+      "label": "library.ts",
+      "_origin": "ast",
+      "community": 4,
+      "community_name": "TrackItem",
+      "file_type": "code",
+      "norm_label": "library.ts",
+      "source_file": "apps/frontend/src/demo/library.ts",
+      "source_location": "L1"
+    },
+    {
+      "id": "apps_frontend_src_demo_library_demo_recently_added",
+      "label": "DEMO_RECENTLY_ADDED",
+      "_origin": "ast",
+      "community": 4,
+      "community_name": "TrackItem",
+      "file_type": "code",
+      "norm_label": "demo_recently_added",
+      "source_file": "apps/frontend/src/demo/library.ts",
+      "source_location": "L10"
+    },
+    {
+      "id": "apps_frontend_src_demo_library_demo_rediscover_items",
+      "label": "DEMO_REDISCOVER_ITEMS",
+      "_origin": "ast",
+      "community": 4,
+      "community_name": "TrackItem",
+      "file_type": "code",
+      "norm_label": "demo_rediscover_items",
+      "source_file": "apps/frontend/src/demo/library.ts",
+      "source_location": "L97"
+    },
+    {
+      "id": "apps_frontend_src_demo_library_local_recently_added",
+      "label": "LOCAL_RECENTLY_ADDED",
+      "_origin": "ast",
+      "community": 4,
+      "community_name": "TrackItem",
+      "file_type": "code",
+      "norm_label": "local_recently_added",
+      "source_file": "apps/frontend/src/demo/library.ts",
+      "source_location": "L167"
+    },
+    {
+      "id": "apps_frontend_src_demo_library_local_rediscover_items",
+      "label": "LOCAL_REDISCOVER_ITEMS",
+      "_origin": "ast",
+      "community": 4,
+      "community_name": "TrackItem",
+      "file_type": "code",
+      "norm_label": "local_rediscover_items",
+      "source_file": "apps/frontend/src/demo/library.ts",
+      "source_location": "L168"
+    },
+    {
       "id": "apps_frontend_src_demo_mode",
       "label": "mode.ts",
       "_origin": "ast",
@@ -5994,28 +6093,6 @@
       "source_location": "L1"
     },
     {
-      "id": "apps_frontend_src_hooks_usedemomode",
-      "label": "useDemoMode.ts",
-      "_origin": "ast",
-      "community": 4,
-      "community_name": "TrackItem",
-      "file_type": "code",
-      "norm_label": "usedemomode.ts",
-      "source_file": "apps/frontend/src/hooks/useDemoMode.ts",
-      "source_location": "L1"
-    },
-    {
-      "id": "apps_frontend_src_services_realaudioengine",
-      "label": "realAudioEngine.ts",
-      "_origin": "ast",
-      "community": 4,
-      "community_name": "TrackItem",
-      "file_type": "code",
-      "norm_label": "realaudioengine.ts",
-      "source_file": "apps/frontend/src/services/realAudioEngine.ts",
-      "source_location": "L1"
-    },
-    {
       "id": "apps_frontend_src_components_molecules_listeningstats",
       "label": "ListeningStats.tsx",
       "_origin": "ast",
@@ -6038,91 +6115,206 @@
       "source_location": "L21"
     },
     {
+      "id": "docs_architecture",
+      "label": "ARCHITECTURE.md",
+      "_origin": "ast",
+      "community": 41,
+      "community_name": "Bebop vertical-slice architecture",
+      "file_type": "document",
+      "node_kind": "page",
+      "norm_label": "architecture.md",
+      "source_file": "docs/ARCHITECTURE.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "docs_architecture_audio_signal_path",
+      "label": "Audio signal path",
+      "_origin": "ast",
+      "community": 41,
+      "community_name": "Bebop vertical-slice architecture",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "audio signal path",
+      "source_file": "docs/ARCHITECTURE.md",
+      "source_location": "L48"
+    },
+    {
+      "id": "docs_architecture_bebop_vertical_slice_architecture",
+      "label": "Bebop vertical-slice architecture",
+      "_origin": "ast",
+      "community": 41,
+      "community_name": "Bebop vertical-slice architecture",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "bebop vertical-slice architecture",
+      "source_file": "docs/ARCHITECTURE.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "docs_architecture_deferred_work",
+      "label": "Deferred work",
+      "_origin": "ast",
+      "community": 41,
+      "community_name": "Bebop vertical-slice architecture",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "deferred work",
+      "source_file": "docs/ARCHITECTURE.md",
+      "source_location": "L91"
+    },
+    {
+      "id": "docs_architecture_hardware_audio_smoke_tests",
+      "label": "Hardware-audio smoke tests",
+      "_origin": "ast",
+      "community": 41,
+      "community_name": "Bebop vertical-slice architecture",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "hardware-audio smoke tests",
+      "source_file": "docs/ARCHITECTURE.md",
+      "source_location": "L62"
+    },
+    {
+      "id": "docs_architecture_ipc_contracts",
+      "label": "IPC contracts",
+      "_origin": "ast",
+      "community": 41,
+      "community_name": "Bebop vertical-slice architecture",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "ipc contracts",
+      "source_file": "docs/ARCHITECTURE.md",
+      "source_location": "L31"
+    },
+    {
+      "id": "docs_architecture_library_boundaries",
+      "label": "Library boundaries",
+      "_origin": "ast",
+      "community": 41,
+      "community_name": "Bebop vertical-slice architecture",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "library boundaries",
+      "source_file": "docs/ARCHITECTURE.md",
+      "source_location": "L21"
+    },
+    {
+      "id": "docs_architecture_omarchy_linux_pipewire",
+      "label": "Omarchy Linux / PipeWire",
+      "_origin": "ast",
+      "community": 41,
+      "community_name": "Bebop vertical-slice architecture",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "omarchy linux / pipewire",
+      "source_file": "docs/ARCHITECTURE.md",
+      "source_location": "L67"
+    },
+    {
+      "id": "docs_architecture_scope",
+      "label": "Scope",
+      "_origin": "ast",
+      "community": 41,
+      "community_name": "Bebop vertical-slice architecture",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "scope",
+      "source_file": "docs/ARCHITECTURE.md",
+      "source_location": "L3"
+    },
+    {
+      "id": "docs_architecture_validation",
+      "label": "Validation",
+      "_origin": "ast",
+      "community": 41,
+      "community_name": "Bebop vertical-slice architecture",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "validation",
+      "source_file": "docs/ARCHITECTURE.md",
+      "source_location": "L85"
+    },
+    {
+      "id": "docs_architecture_windows",
+      "label": "Windows",
+      "_origin": "ast",
+      "community": 41,
+      "community_name": "Bebop vertical-slice architecture",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "windows",
+      "source_file": "docs/ARCHITECTURE.md",
+      "source_location": "L77"
+    },
+    {
+      "id": "readme",
+      "label": "README.md",
+      "_origin": "ast",
+      "community": 41,
+      "community_name": "Bebop vertical-slice architecture",
+      "file_type": "document",
+      "node_kind": "page",
+      "norm_label": "readme.md",
+      "source_file": "README.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "readme_bebop",
+      "label": "Bebop",
+      "_origin": "ast",
+      "community": 41,
+      "community_name": "Bebop vertical-slice architecture",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "bebop",
+      "source_file": "README.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "readme_demo_mode",
+      "label": "Demo mode",
+      "_origin": "ast",
+      "community": 41,
+      "community_name": "Bebop vertical-slice architecture",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "demo mode",
+      "source_file": "README.md",
+      "source_location": "L36"
+    },
+    {
+      "id": "readme_playback_and_hi_fi_behavior",
+      "label": "Playback and hi-fi behavior",
+      "_origin": "ast",
+      "community": 41,
+      "community_name": "Bebop vertical-slice architecture",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "playback and hi-fi behavior",
+      "source_file": "README.md",
+      "source_location": "L47"
+    },
+    {
+      "id": "readme_quick_start",
+      "label": "Quick start",
+      "_origin": "ast",
+      "community": 41,
+      "community_name": "Bebop vertical-slice architecture",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "quick start",
+      "source_file": "README.md",
+      "source_location": "L7"
+    },
+    {
       "id": "apps_frontend_src_components_molecules_recentlyaddedrail",
       "label": "RecentlyAddedRail.tsx",
       "_origin": "ast",
       "community": 5,
-      "community_name": "types.ts",
+      "community_name": "RecentlyAddedRail.tsx",
       "file_type": "code",
       "norm_label": "recentlyaddedrail.tsx",
       "source_file": "apps/frontend/src/components/molecules/RecentlyAddedRail.tsx",
-      "source_location": "L1"
-    },
-    {
-      "id": "apps_frontend_src_components_molecules_rediscoverrail",
-      "label": "RediscoverRail.tsx",
-      "_origin": "ast",
-      "community": 5,
-      "community_name": "types.ts",
-      "file_type": "code",
-      "norm_label": "rediscoverrail.tsx",
-      "source_file": "apps/frontend/src/components/molecules/RediscoverRail.tsx",
-      "source_location": "L1"
-    },
-    {
-      "id": "apps_frontend_src_demo_library",
-      "label": "library.ts",
-      "_origin": "ast",
-      "community": 5,
-      "community_name": "types.ts",
-      "file_type": "code",
-      "norm_label": "library.ts",
-      "source_file": "apps/frontend/src/demo/library.ts",
-      "source_location": "L1"
-    },
-    {
-      "id": "apps_frontend_src_demo_library_demo_recently_added",
-      "label": "DEMO_RECENTLY_ADDED",
-      "_origin": "ast",
-      "community": 5,
-      "community_name": "types.ts",
-      "file_type": "code",
-      "norm_label": "demo_recently_added",
-      "source_file": "apps/frontend/src/demo/library.ts",
-      "source_location": "L10"
-    },
-    {
-      "id": "apps_frontend_src_demo_library_demo_rediscover_items",
-      "label": "DEMO_REDISCOVER_ITEMS",
-      "_origin": "ast",
-      "community": 5,
-      "community_name": "types.ts",
-      "file_type": "code",
-      "norm_label": "demo_rediscover_items",
-      "source_file": "apps/frontend/src/demo/library.ts",
-      "source_location": "L97"
-    },
-    {
-      "id": "apps_frontend_src_demo_library_local_recently_added",
-      "label": "LOCAL_RECENTLY_ADDED",
-      "_origin": "ast",
-      "community": 5,
-      "community_name": "types.ts",
-      "file_type": "code",
-      "norm_label": "local_recently_added",
-      "source_file": "apps/frontend/src/demo/library.ts",
-      "source_location": "L167"
-    },
-    {
-      "id": "apps_frontend_src_demo_library_local_rediscover_items",
-      "label": "LOCAL_REDISCOVER_ITEMS",
-      "_origin": "ast",
-      "community": 5,
-      "community_name": "types.ts",
-      "file_type": "code",
-      "norm_label": "local_rediscover_items",
-      "source_file": "apps/frontend/src/demo/library.ts",
-      "source_location": "L168"
-    },
-    {
-      "id": "apps_frontend_src_types",
-      "label": "types.ts",
-      "_origin": "ast",
-      "community": 5,
-      "community_name": "types.ts",
-      "file_type": "code",
-      "norm_label": "types.ts",
-      "source_file": "apps/frontend/src/types.ts",
       "source_location": "L1"
     },
     {
@@ -16950,7 +17142,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/frontend/README.md",
-      "source_location": "L5",
+      "source_location": "L1",
       "weight": 1.0
     },
     {
@@ -19396,6 +19588,116 @@
       "weight": 1.0
     },
     {
+      "source": "docs_architecture",
+      "target": "docs_architecture_bebop_vertical_slice_architecture",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/ARCHITECTURE.md",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_architecture_bebop_vertical_slice_architecture",
+      "target": "docs_architecture_library_boundaries",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/ARCHITECTURE.md",
+      "source_location": "L21",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_architecture_bebop_vertical_slice_architecture",
+      "target": "docs_architecture_scope",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/ARCHITECTURE.md",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_architecture_bebop_vertical_slice_architecture",
+      "target": "docs_architecture_ipc_contracts",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/ARCHITECTURE.md",
+      "source_location": "L31",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_architecture_bebop_vertical_slice_architecture",
+      "target": "docs_architecture_audio_signal_path",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/ARCHITECTURE.md",
+      "source_location": "L48",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_architecture_bebop_vertical_slice_architecture",
+      "target": "docs_architecture_hardware_audio_smoke_tests",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/ARCHITECTURE.md",
+      "source_location": "L62",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_architecture_bebop_vertical_slice_architecture",
+      "target": "docs_architecture_validation",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/ARCHITECTURE.md",
+      "source_location": "L85",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_architecture_bebop_vertical_slice_architecture",
+      "target": "docs_architecture_deferred_work",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/ARCHITECTURE.md",
+      "source_location": "L91",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_architecture_hardware_audio_smoke_tests",
+      "target": "docs_architecture_omarchy_linux_pipewire",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/ARCHITECTURE.md",
+      "source_location": "L67",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_architecture_hardware_audio_smoke_tests",
+      "target": "docs_architecture_windows",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/ARCHITECTURE.md",
+      "source_location": "L77",
+      "weight": 1.0
+    },
+    {
       "source": "docs_implementation_plan",
       "target": "docs_implementation_plan_bebop_clean_rebuild_and_vertical_slice_plan",
       "relation": "contains",
@@ -19712,6 +20014,50 @@
       "confidence_score": 1.0,
       "source_file": "package.json",
       "source_location": "L9",
+      "weight": 1.0
+    },
+    {
+      "source": "readme",
+      "target": "readme_bebop",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "readme_bebop",
+      "target": "readme_demo_mode",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": "L36",
+      "weight": 1.0
+    },
+    {
+      "source": "readme_bebop",
+      "target": "readme_playback_and_hi_fi_behavior",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": "L47",
+      "weight": 1.0
+    },
+    {
+      "source": "readme_bebop",
+      "target": "readme_quick_start",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": "L7",
       "weight": 1.0
     },
     {
@@ -21385,6 +21731,17 @@
       "weight": 1.0
     },
     {
+      "source": "readme",
+      "target": "docs_architecture",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": "L58",
+      "weight": 1.0
+    },
+    {
       "source": "apps_frontend_src_hooks_usenativeplayback_usenativeplayback",
       "target": "apps_frontend_src_services_playbackservice_stopplayback",
       "relation": "indirect_call",
@@ -21410,5 +21767,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "2b113ebd93c3dd424f6269ac9d4db9ec7389c817"
+  "built_at_commit": "0d96feaffb7157f38b2d886b49928fac283a498a"
 }
