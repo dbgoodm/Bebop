@@ -40,9 +40,13 @@ export default function MusicPlayerPage() {
 
   return (
     <ThemeProvider>
-      <AntraEngineProvider>
-        {demoMode ? <DemoMusicPlayer /> : <DesktopLibraryPage />}
-      </AntraEngineProvider>
+      {demoMode ? (
+        <AntraEngineProvider>
+          <DemoMusicPlayer />
+        </AntraEngineProvider>
+      ) : (
+        <DesktopLibraryPage />
+      )}
     </ThemeProvider>
   );
 }

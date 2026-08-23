@@ -10,6 +10,8 @@ interface TracksTableViewProps {
   onSelectArtist?: (artistName: string) => void;
   onSelectAlbum?: (albumName: string) => void;
   onEditTrack?: (track: TrackItem) => void;
+  favoriteTrackIds?: ReadonlySet<string>;
+  onFavoriteChange?: (trackId: string, favorite: boolean) => void;
   columnVisibility?: ColumnVisibility;
   onToggleColumn?: (column: keyof ColumnVisibility) => void;
 }
@@ -22,6 +24,8 @@ export const TracksTableView: React.FC<TracksTableViewProps> = ({
   onSelectArtist,
   onSelectAlbum,
   onEditTrack,
+  favoriteTrackIds,
+  onFavoriteChange,
 }) => {
   return (
     <UniversalTracklist
@@ -33,6 +37,8 @@ export const TracksTableView: React.FC<TracksTableViewProps> = ({
       onSelectArtist={onSelectArtist}
       onSelectAlbum={onSelectAlbum}
       onEditTrack={onEditTrack}
+      favoriteTrackIds={favoriteTrackIds}
+      onFavoriteChange={onFavoriteChange}
       storageKey="library_tracks_columns"
       defaultVisibleColumns={[
         'trackNumber',

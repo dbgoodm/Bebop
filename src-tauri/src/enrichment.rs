@@ -450,6 +450,7 @@ mod tests {
             sample_rate: Some(44_100),
             channels: Some(2),
             bit_depth: Some(16),
+            play_count: 0,
             available: true,
         }
     }

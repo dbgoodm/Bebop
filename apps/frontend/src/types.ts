@@ -68,7 +68,18 @@ export interface ContinueListeningRailProps {
 }
 
 export type AudioFormat =
-  'FLAC 24/96' | 'FLAC 24/192' | 'DSD256' | 'FLAC 16/44.1' | 'ALAC' | 'WAV' | 'MP3 320';
+  | 'FLAC 24/96'
+  | 'FLAC 24/192'
+  | 'DSD256'
+  | 'DSD64'
+  | 'FLAC 16/44.1'
+  | 'ALAC'
+  | 'WAV'
+  | 'MP3 320'
+  | 'OGG'
+  | 'AAC'
+  | 'AIFF'
+  | 'M4A';
 
 export interface RecentlyAddedItem {
   id: string;
@@ -138,6 +149,7 @@ export interface TrackItem {
   artistIds?: string[];
   albumId?: string;
   genres?: string[];
+  playCount?: number;
 }
 
 export interface ArtistTopTrack {

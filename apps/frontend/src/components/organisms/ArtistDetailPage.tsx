@@ -202,7 +202,7 @@ export const ArtistDetailPage: React.FC<ArtistDetailPageProps> = ({
 
               <div className="bg-[#121620]/80 backdrop-blur-md border border-neutral-700/60 rounded-lg py-2.5 px-3 sm:px-4 flex flex-col items-center justify-center text-center shadow-lg min-w-[68px] sm:min-w-[80px]">
                 <span className="text-base sm:text-lg font-bold text-white font-mono leading-none">
-                  {artist.losslessPercentage || '100%'}
+                  {artist.losslessPercentage || '—'}
                 </span>
                 <span className="text-[10px] sm:text-[11px] text-neutral-400 font-sans mt-1">
                   Lossless
@@ -211,7 +211,7 @@ export const ArtistDetailPage: React.FC<ArtistDetailPageProps> = ({
 
               <div className="bg-[#121620]/80 backdrop-blur-md border border-neutral-700/60 rounded-lg py-2.5 px-3 sm:px-4 flex flex-col items-center justify-center text-center shadow-lg min-w-[74px] sm:min-w-[88px]">
                 <span className="text-base sm:text-lg font-bold text-white font-mono leading-none">
-                  {artist.localStorageSize || '8.4 GB'}
+                  {artist.localStorageSize || '—'}
                 </span>
                 <span className="text-[10px] sm:text-[11px] text-neutral-400 font-sans mt-1 truncate max-w-[74px]">
                   Local Storage
@@ -431,7 +431,7 @@ export const ArtistDetailPage: React.FC<ArtistDetailPageProps> = ({
                 replayGain: '-1.5dB',
                 year: 2023,
                 catalogNumber: 'CAT-LOCAL',
-                duration: topTrack.duration || '3:30',
+                duration: topTrack.duration || '—',
                 durationSeconds: topTrack.durationSeconds || 210,
                 coverUrl: artist.featuredCoverUrl || artist.avatarUrl,
               } as TrackItem;

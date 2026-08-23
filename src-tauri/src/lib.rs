@@ -6,7 +6,7 @@ use std::{
         atomic::{AtomicBool, Ordering},
     },
     thread,
-    time::Duration,
+    time::{Duration, Instant},
 };
 
 mod audio;
@@ -14,6 +14,7 @@ mod catalog;
 mod enrichment;
 mod metadata;
 mod persistence;
+mod user_state;
 mod watcher;
 
 use serde::{Deserialize, Serialize};
@@ -22,6 +23,7 @@ use specta::Type;
 use specta_typescript::Typescript;
 use tauri::{AppHandle, Emitter, Manager, State, WindowEvent};
 use tauri_specta::{Builder, collect_commands};
+use uuid::Uuid;
 
 use audio::{AudioBackendError, PlaybackEngine};
 pub use catalog::{
@@ -35,6 +37,9 @@ use enrichment::{MusicBrainzClient, enrich_track, patch_from_candidate};
 pub use metadata::{MetadataPatch, MetadataWriteResult};
 use metadata::{cache_external_artwork, restore_backup, write_patch_atomically};
 use persistence::DatabaseWorker;
+pub use user_state::{
+    FavoriteReference, HomeSnapshot, PersistentPlayerState, PlayerPreferences, PlaylistSummary,
+};
 use watcher::LibraryWatcher;
 
 const SCAN_PROGRESS_EVENT: &str = "library://scan-progress";
@@ -200,18 +205,38 @@ pub struct AppState {
     artwork_cache: PathBuf,
     musicbrainz: Arc<MusicBrainzClient>,
     watcher: LibraryWatcher,
+    listening: Arc<Mutex<Option<ActiveListeningSession>>>,
     playback: Arc<Mutex<PlaybackEngine>>,
     running: Arc<AtomicBool>,
 }
 
+struct ActiveListeningSession {
+    id: String,
+    played_ms: u64,
+    last_tick: Instant,
+    last_persisted: Instant,
+}
+
 impl AppState {
-    fn new(database: DatabaseWorker, artwork_cache: PathBuf, watcher: LibraryWatcher) -> Self {
+    fn new(
+        database: DatabaseWorker,
+        artwork_cache: PathBuf,
+        watcher: LibraryWatcher,
+        preferences: &PlayerPreferences,
+    ) -> Self {
+        let mut playback = PlaybackEngine::default();
+        playback.restore_preferences(
+            preferences.volume,
+            preferences.hifi_mode,
+            preferences.selected_output_device_id.clone(),
+        );
         Self {
             database,
             artwork_cache,
             musicbrainz: Arc::new(MusicBrainzClient::default()),
             watcher,
-            playback: Arc::new(Mutex::new(PlaybackEngine::default())),
+            listening: Arc::new(Mutex::new(None)),
+            playback: Arc::new(Mutex::new(playback)),
             running: Arc::new(AtomicBool::new(true)),
         }
     }
@@ -347,6 +372,158 @@ fn cleanup_missing_tracks(
     let removed = state.database.cleanup_missing_tracks(root_id.clone())?;
     emit_library_changed(&app, "missing-tracks-cleaned", root_id, Vec::new());
     Ok(removed)
+}
+
+#[tauri::command]
+#[specta::specta]
+fn get_persistent_player_state(
+    state: State<'_, AppState>,
+) -> Result<PersistentPlayerState, AppError> {
+    state.database.load_player_state()
+}
+
+#[tauri::command]
+#[specta::specta]
+fn save_player_queue(state: State<'_, AppState>, track_ids: Vec<String>) -> Result<(), AppError> {
+    state.database.save_queue(track_ids)
+}
+
+#[tauri::command]
+#[specta::specta]
+fn save_player_preferences(
+    state: State<'_, AppState>,
+    preferences: PlayerPreferences,
+) -> Result<PlayerPreferences, AppError> {
+    state.database.save_preferences(preferences)
+}
+
+#[tauri::command]
+#[specta::specta]
+fn set_theme_preference(
+    state: State<'_, AppState>,
+    theme_id: String,
+) -> Result<PlayerPreferences, AppError> {
+    let mut preferences = state.database.load_player_state()?.preferences;
+    preferences.theme_id = theme_id;
+    state.database.save_preferences(preferences)
+}
+
+#[tauri::command]
+#[specta::specta]
+fn set_library_view_preference(
+    state: State<'_, AppState>,
+    library_view: String,
+) -> Result<PlayerPreferences, AppError> {
+    if !matches!(
+        library_view.as_str(),
+        "artists" | "albums" | "genres" | "tracks"
+    ) {
+        return Err(AppError::new(
+            "library-view-invalid",
+            "The selected library view is not supported.",
+        ));
+    }
+    let mut preferences = state.database.load_player_state()?.preferences;
+    preferences.library_view = library_view;
+    state.database.save_preferences(preferences)
+}
+
+#[tauri::command]
+#[specta::specta]
+fn set_favorite(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    entity_type: String,
+    entity_id: String,
+    favorite: bool,
+) -> Result<bool, AppError> {
+    let result = state
+        .database
+        .set_favorite(entity_type, entity_id, favorite)?;
+    emit_library_changed(&app, "favorites-changed", None, Vec::new());
+    Ok(result)
+}
+
+#[tauri::command]
+#[specta::specta]
+fn list_favorites(state: State<'_, AppState>) -> Result<Vec<FavoriteReference>, AppError> {
+    state.database.list_favorites()
+}
+
+#[tauri::command]
+#[specta::specta]
+fn create_playlist(state: State<'_, AppState>, name: String) -> Result<PlaylistSummary, AppError> {
+    state.database.create_playlist(name)
+}
+
+#[tauri::command]
+#[specta::specta]
+fn list_playlists(state: State<'_, AppState>) -> Result<Vec<PlaylistSummary>, AppError> {
+    state.database.list_playlists()
+}
+
+#[tauri::command]
+#[specta::specta]
+fn get_playlist_tracks(
+    state: State<'_, AppState>,
+    playlist_id: String,
+) -> Result<Vec<TrackSummary>, AppError> {
+    state.database.get_playlist_tracks(playlist_id)
+}
+
+#[tauri::command]
+#[specta::specta]
+fn set_playlist_tracks(
+    state: State<'_, AppState>,
+    playlist_id: String,
+    track_ids: Vec<String>,
+) -> Result<(), AppError> {
+    state.database.set_playlist_tracks(playlist_id, track_ids)
+}
+
+#[tauri::command]
+#[specta::specta]
+fn get_home_snapshot(state: State<'_, AppState>) -> Result<HomeSnapshot, AppError> {
+    state.database.get_home_snapshot()
+}
+
+fn validate_ui_preference_key(key: &str) -> Result<(), AppError> {
+    if key.is_empty()
+        || key.len() > 120
+        || !key
+            .chars()
+            .all(|character| character.is_ascii_alphanumeric() || matches!(character, '-' | '_'))
+    {
+        return Err(AppError::new(
+            "ui-preference-key-invalid",
+            "The UI preference key is invalid.",
+        ));
+    }
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+fn get_ui_preference(state: State<'_, AppState>, key: String) -> Result<Option<String>, AppError> {
+    validate_ui_preference_key(&key)?;
+    state.database.get_ui_preference(key)
+}
+
+#[tauri::command]
+#[specta::specta]
+fn set_ui_preference(
+    state: State<'_, AppState>,
+    key: String,
+    value: String,
+) -> Result<(), AppError> {
+    validate_ui_preference_key(&key)?;
+    if value.len() > 64 * 1_024 {
+        return Err(AppError::new(
+            "ui-preference-value-too-large",
+            "The UI preference value is too large.",
+        ));
+    }
+    state.database.set_ui_preference(key, value)
 }
 
 #[tauri::command]
@@ -726,6 +903,82 @@ fn emit_playback_error(app: &AppHandle, error: &AppError) {
     let _ = app.emit(PLAYBACK_ERROR_EVENT, error);
 }
 
+fn update_active_session(
+    listening: &Mutex<Option<ActiveListeningSession>>,
+    database: &DatabaseWorker,
+    was_playing: bool,
+    finish: Option<(bool, bool)>,
+) {
+    let Ok(mut active) = listening.lock() else {
+        return;
+    };
+    let Some(session) = active.as_mut() else {
+        return;
+    };
+    let now = Instant::now();
+    if was_playing {
+        session.played_ms = session
+            .played_ms
+            .saturating_add(now.duration_since(session.last_tick).as_millis() as u64);
+    }
+    session.last_tick = now;
+    let should_persist =
+        finish.is_some() || now.duration_since(session.last_persisted) >= Duration::from_secs(5);
+    if should_persist {
+        let (completed, skipped) = finish.unwrap_or((false, false));
+        let _ = database.update_listening_session(
+            session.id.clone(),
+            session.played_ms,
+            completed,
+            skipped,
+            finish.is_some(),
+        );
+        session.last_persisted = now;
+    }
+    if finish.is_some() {
+        *active = None;
+    }
+}
+
+fn start_active_session(state: &AppState, track_id: String, previous_was_playing: bool) {
+    update_active_session(
+        &state.listening,
+        &state.database,
+        previous_was_playing,
+        Some((false, true)),
+    );
+    let id = Uuid::new_v4().to_string();
+    if state
+        .database
+        .start_listening_session(id.clone(), track_id)
+        .is_ok()
+    {
+        let now = Instant::now();
+        if let Ok(mut active) = state.listening.lock() {
+            *active = Some(ActiveListeningSession {
+                id,
+                played_ms: 0,
+                last_tick: now,
+                last_persisted: now,
+            });
+        }
+    }
+}
+
+fn persist_audio_preferences(state: &AppState, engine: &PlaybackEngine) {
+    let (volume, hifi_mode, selected_output_device_id) = engine.preferences();
+    if let Ok(mut preferences) = state
+        .database
+        .load_player_state()
+        .map(|value| value.preferences)
+    {
+        preferences.volume = volume;
+        preferences.hifi_mode = hifi_mode;
+        preferences.selected_output_device_id = selected_output_device_id;
+        let _ = state.database.save_preferences(preferences);
+    }
+}
+
 #[tauri::command]
 #[specta::specta]
 fn play_track(
@@ -763,16 +1016,30 @@ fn play_track(
         .playback
         .lock()
         .map_err(|_| AppError::state_unavailable("playback-engine"))?;
-    engine.prepare_track(&path, track_id);
+    let previous_was_playing = matches!(engine.state.status, PlaybackStatus::Playing);
+    engine.prepare_track(&path, track_id.clone());
     emit_playback_state(&app, &engine.state);
     if let Err(error) = engine.start_prepared_track(&path, source_bit_depth) {
         let error = AppError::from_audio(error, Some(&path));
         emit_playback_state(&app, &engine.state);
         emit_playback_error(&app, &error);
+        drop(engine);
+        update_active_session(
+            &state.listening,
+            &state.database,
+            previous_was_playing,
+            Some((false, true)),
+        );
         return Err(error);
     }
     emit_playback_state(&app, &engine.state);
-    Ok(engine.state.clone())
+    let snapshot = engine.state.clone();
+    drop(engine);
+    start_active_session(&state, track_id.clone(), previous_was_playing);
+    let _ = state
+        .database
+        .save_playback_checkpoint(Some(track_id), snapshot.position_ms);
+    Ok(snapshot)
 }
 
 #[tauri::command]
@@ -782,9 +1049,16 @@ fn pause_playback(app: AppHandle, state: State<'_, AppState>) -> Result<Playback
         .playback
         .lock()
         .map_err(|_| AppError::state_unavailable("playback-engine"))?;
+    let was_playing = matches!(engine.state.status, PlaybackStatus::Playing);
     engine.pause();
     emit_playback_state(&app, &engine.state);
-    Ok(engine.state.clone())
+    let snapshot = engine.state.clone();
+    drop(engine);
+    update_active_session(&state.listening, &state.database, was_playing, None);
+    let _ = state
+        .database
+        .save_playback_checkpoint(snapshot.track_id.clone(), snapshot.position_ms);
+    Ok(snapshot)
 }
 
 #[tauri::command]
@@ -796,7 +1070,10 @@ fn resume_playback(app: AppHandle, state: State<'_, AppState>) -> Result<Playbac
         .map_err(|_| AppError::state_unavailable("playback-engine"))?;
     engine.resume();
     emit_playback_state(&app, &engine.state);
-    Ok(engine.state.clone())
+    let snapshot = engine.state.clone();
+    drop(engine);
+    update_active_session(&state.listening, &state.database, false, None);
+    Ok(snapshot)
 }
 
 #[tauri::command]
@@ -806,9 +1083,23 @@ fn stop_playback(app: AppHandle, state: State<'_, AppState>) -> Result<PlaybackS
         .playback
         .lock()
         .map_err(|_| AppError::state_unavailable("playback-engine"))?;
+    let was_playing = matches!(engine.state.status, PlaybackStatus::Playing);
+    let checkpoint_track = engine.state.track_id.clone();
+    let checkpoint_position = engine.state.position_ms;
     engine.stop();
     emit_playback_state(&app, &engine.state);
-    Ok(engine.state.clone())
+    let snapshot = engine.state.clone();
+    drop(engine);
+    update_active_session(
+        &state.listening,
+        &state.database,
+        was_playing,
+        Some((false, true)),
+    );
+    let _ = state
+        .database
+        .save_playback_checkpoint(checkpoint_track, checkpoint_position);
+    Ok(snapshot)
 }
 
 #[tauri::command]
@@ -828,7 +1119,12 @@ fn seek_playback(
         return Err(error);
     }
     emit_playback_state(&app, &engine.state);
-    Ok(engine.state.clone())
+    let snapshot = engine.state.clone();
+    drop(engine);
+    let _ = state
+        .database
+        .save_playback_checkpoint(snapshot.track_id.clone(), snapshot.position_ms);
+    Ok(snapshot)
 }
 
 #[tauri::command]
@@ -848,7 +1144,9 @@ fn set_volume(
         return Err(error);
     }
     emit_playback_state(&app, &engine.state);
-    Ok(engine.state.clone())
+    let snapshot = engine.state.clone();
+    persist_audio_preferences(&state, &engine);
+    Ok(snapshot)
 }
 
 #[tauri::command]
@@ -881,6 +1179,7 @@ fn select_audio_output_device(
         return Err(error);
     }
     emit_playback_state(&app, &engine.state);
+    persist_audio_preferences(&state, &engine);
     engine
         .output_devices()
         .map_err(|error| AppError::from_audio(error, None))
@@ -899,7 +1198,9 @@ fn set_hifi_mode(
         .map_err(|_| AppError::state_unavailable("playback-engine"))?;
     engine.set_hifi_mode(enabled);
     emit_playback_state(&app, &engine.state);
-    Ok(engine.state.clone())
+    let snapshot = engine.state.clone();
+    persist_audio_preferences(&state, &engine);
+    Ok(snapshot)
 }
 
 #[tauri::command]
@@ -937,7 +1238,10 @@ fn get_desktop_state(state: State<'_, AppState>) -> Result<DesktopState, AppErro
 fn spawn_playback_monitor(app: AppHandle, state: &AppState) {
     let playback = Arc::clone(&state.playback);
     let running = Arc::clone(&state.running);
+    let listening = Arc::clone(&state.listening);
+    let database = state.database.clone();
     thread::spawn(move || {
+        let mut last_checkpoint = Instant::now();
         while running.load(Ordering::Acquire) {
             thread::sleep(POSITION_INTERVAL);
             let Ok(mut engine) = playback.lock() else {
@@ -950,6 +1254,21 @@ fn spawn_playback_monitor(app: AppHandle, state: &AppState) {
             let ended = engine.synchronize();
             let snapshot = engine.state.clone();
             drop(engine);
+            if ended {
+                update_active_session(&listening, &database, true, Some((true, false)));
+            } else {
+                update_active_session(
+                    &listening,
+                    &database,
+                    matches!(snapshot.status, PlaybackStatus::Playing),
+                    None,
+                );
+            }
+            if last_checkpoint.elapsed() >= Duration::from_secs(5) {
+                let _ = database
+                    .save_playback_checkpoint(snapshot.track_id.clone(), snapshot.position_ms);
+                last_checkpoint = Instant::now();
+            }
             if active {
                 let _ = app.emit(PLAYBACK_POSITION_EVENT, &snapshot);
             }
@@ -964,6 +1283,16 @@ fn spawn_playback_monitor(app: AppHandle, state: &AppState) {
 fn shutdown_playback(state: &AppState) {
     state.running.store(false, Ordering::Release);
     if let Ok(mut engine) = state.playback.lock() {
+        let was_playing = matches!(engine.state.status, PlaybackStatus::Playing);
+        let _ = state
+            .database
+            .save_playback_checkpoint(engine.state.track_id.clone(), engine.state.position_ms);
+        update_active_session(
+            &state.listening,
+            &state.database,
+            was_playing,
+            Some((false, false)),
+        );
         engine.shutdown();
     }
 }
@@ -974,14 +1303,21 @@ fn ipc_bindings() -> Builder<tauri::Wry> {
             add_library_root,
             apply_musicbrainz_candidate,
             cleanup_missing_tracks,
+            create_playlist,
             get_album_detail,
             get_artist_detail,
             get_desktop_state,
             get_metadata_draft,
+            get_home_snapshot,
+            get_persistent_player_state,
+            get_playlist_tracks,
             get_musicbrainz_enabled,
             get_playback_state,
             get_track_metadata,
+            get_ui_preference,
             list_library_roots,
+            list_favorites,
+            list_playlists,
             list_audio_output_devices,
             pause_playback,
             play_track,
@@ -995,12 +1331,19 @@ fn ipc_bindings() -> Builder<tauri::Wry> {
             run_musicbrainz_enrichment,
             save_metadata_draft,
             save_metadata_drafts,
+            save_player_preferences,
+            save_player_queue,
             scan_library,
             select_audio_output_device,
             seek_playback,
             set_hifi_mode,
             set_library_root_enabled,
+            set_library_view_preference,
             set_musicbrainz_enabled,
+            set_favorite,
+            set_playlist_tracks,
+            set_theme_preference,
+            set_ui_preference,
             set_volume,
             stop_playback,
             write_metadata_to_file
@@ -1017,13 +1360,18 @@ fn ipc_bindings() -> Builder<tauri::Wry> {
         .typ::<DiscoveryQuery>()
         .typ::<EnrichmentCandidate>()
         .typ::<EnrichmentJob>()
+        .typ::<FavoriteReference>()
         .typ::<GenreSummary>()
         .typ::<LibraryChanged>()
         .typ::<LibraryRoot>()
         .typ::<LibraryScan>()
+        .typ::<HomeSnapshot>()
         .typ::<MetadataPatch>()
         .typ::<MetadataWriteResult>()
+        .typ::<PersistentPlayerState>()
         .typ::<PlaybackState>()
+        .typ::<PlayerPreferences>()
+        .typ::<PlaylistSummary>()
         .typ::<ScanProgress>()
         .typ::<SortDirection>()
         .typ::<TrackPage>()
@@ -1065,6 +1413,9 @@ pub fn run() {
             let roots = database
                 .list_roots()
                 .map_err(|error| std::io::Error::other(error.message))?;
+            let restored_player = database
+                .load_player_state()
+                .map_err(|error| std::io::Error::other(error.message))?;
             for root in &roots {
                 watcher
                     .watch_root(root)
@@ -1074,6 +1425,7 @@ pub fn run() {
                 database.clone(),
                 artwork_cache.clone(),
                 watcher,
+                &restored_player.preferences,
             ));
             let state = app.state::<AppState>();
             spawn_playback_monitor(app.handle().clone(), &state);
@@ -1275,6 +1627,78 @@ mod tests {
             .expect("query override");
         assert_eq!(overridden.items[0].title, "Database override");
         fs::remove_dir_all(root).expect("remove fixture");
+    }
+
+    #[test]
+    fn player_collections_and_home_statistics_are_sqlite_backed() {
+        let root = temporary_directory("player-state");
+        let fixture = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/tone.flac");
+        fs::copy(fixture, root.join("track.flac")).expect("copy fixture");
+        let database = DatabaseWorker::in_memory().expect("database starts");
+        let library_root = database
+            .add_root(
+                root.canonicalize()
+                    .expect("canonical root")
+                    .to_string_lossy()
+                    .into_owned(),
+                "Music".into(),
+            )
+            .expect("root added");
+        let track = database
+            .reconcile(
+                library_root.id,
+                scan_library_at(&root, &root.join(".artwork-cache"), |_| {}).expect("scan"),
+            )
+            .expect("reconcile")
+            .tracks
+            .remove(0);
+        database
+            .save_queue(vec![track.id.clone()])
+            .expect("save queue");
+        database
+            .save_preferences(PlayerPreferences {
+                volume: 0.4,
+                hifi_mode: false,
+                theme_id: "oled".into(),
+                ..PlayerPreferences::default()
+            })
+            .expect("save preferences");
+        database
+            .set_favorite("track".into(), track.id.clone(), true)
+            .expect("favorite track");
+        let playlist = database
+            .create_playlist("Fixture playlist".into())
+            .expect("create playlist");
+        database
+            .set_playlist_tracks(playlist.id.clone(), vec![track.id.clone()])
+            .expect("save playlist tracks");
+        database
+            .start_listening_session("session".into(), track.id.clone())
+            .expect("start session");
+        database
+            .update_listening_session("session".into(), 30_000, true, false, true)
+            .expect("finish session");
+
+        let restored = database.load_player_state().expect("restore player state");
+        assert_eq!(restored.queue[0].id, track.id);
+        assert_eq!(restored.preferences.volume, 0.4);
+        assert_eq!(database.list_favorites().expect("favorites").len(), 1);
+        assert_eq!(
+            database.list_playlists().expect("playlists")[0].track_count,
+            1
+        );
+        assert_eq!(
+            database
+                .get_playlist_tracks(playlist.id)
+                .expect("playlist tracks")[0]
+                .id,
+            track.id
+        );
+        let home = database.get_home_snapshot().expect("home snapshot");
+        assert_eq!(home.total_tracks, 1);
+        assert_eq!(home.total_listened_ms, 30_000);
+        assert_eq!(home.top_artist.as_deref(), Some("Fixture Artist"));
+        fs::remove_dir_all(root).expect("remove player fixture");
     }
 
     #[test]

@@ -79,7 +79,7 @@ export async function loadArtistDetail(artistId: string): Promise<ArtistItem> {
       album: track.album,
       dynamicRange: track.dynamicRange,
       format: track.sampleRate,
-      playCount: 0,
+      playCount: track.playCount ?? 0,
       duration: track.duration,
       durationSeconds: track.durationSeconds,
     })),

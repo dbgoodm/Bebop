@@ -461,7 +461,7 @@ export const FullscreenNowPlaying: React.FC<FullscreenNowPlayingProps> = ({
         <div className="flex items-center justify-between text-neutral-400 pt-2">
           {/* Left spacer / format badges */}
           <div className="w-1/4 hidden sm:flex items-center gap-3 text-xs font-mono text-neutral-500">
-            <span>DR: {currentTrack.dynamicRange || '14'}</span>
+            <span>DR: {currentTrack.dynamicRange || '—'}</span>
             <span>•</span>
             <span>{currentTrack.catalogNumber || 'BEBOP-HRA-001'}</span>
           </div>

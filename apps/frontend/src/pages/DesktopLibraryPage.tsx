@@ -3,6 +3,8 @@ import { Disc3, FolderOpen, Play, RefreshCw, Square, TriangleAlert } from 'lucid
 import { EmptyState } from '@/components/atoms/EmptyState';
 import { ContinueListeningRail } from '@/components/molecules/ContinueListeningRail';
 import { ListeningStats } from '@/components/molecules/ListeningStats';
+import { RecentlyAddedRail } from '@/components/molecules/RecentlyAddedRail';
+import { RediscoverRail } from '@/components/molecules/RediscoverRail';
 import { TopNavRail } from '@/components/molecules/TopNavRail';
 import { LibraryView } from '@/components/organisms/LibraryView';
 import { ArtistDetailPage } from '@/components/organisms/ArtistDetailPage';
@@ -18,12 +20,28 @@ import { useNativePlayback } from '@/hooks/useNativePlayback';
 import { useTheme } from '@/services/themeService';
 import { ThemeSelectorModal } from '@/components/organisms/ThemeSelectorModal';
 import { loadAlbumDetail, loadArtistDetail } from '@/services/catalogService';
+import { toTrackItem } from '@/services/libraryService';
+import {
+  loadFavoriteTrackIds,
+  loadHomeSnapshot,
+  loadPlaylistTracks,
+  loadPlaylists,
+  loadPersistentPlayerState,
+  createPlaylistFromQueue,
+  savePlayerQueue,
+  saveLibraryViewPreference,
+  setTrackFavorite,
+} from '@/services/playerStateService';
+import type { HomeSnapshot, PlaylistSummary } from '@/services/tauri-bindings';
 import type {
   AlbumItem,
   ArtistItem,
   ContinueListeningItem,
   ListeningStatsData,
   NavTab,
+  RecentlyAddedItem,
+  RediscoverItem,
+  LibrarySubTab,
   TrackItem,
 } from '@/types';
 
@@ -37,6 +55,13 @@ function formatDuration(seconds: number, zeroLabel = '0m') {
   return hours > 0 ? `${hours}h ${minutes}m` : `${totalMinutes}m`;
 }
 
+function formatBytes(bytes: number) {
+  if (bytes <= 0) return '0 B';
+  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const index = Math.min(Math.floor(Math.log(bytes) / Math.log(1_024)), units.length - 1);
+  return `${(bytes / 1_024 ** index).toFixed(index < 2 ? 0 : 1)} ${units[index]}`;
+}
+
 export function DesktopLibraryPage() {
   const { currentTheme } = useTheme();
   const [activeTab, setActiveTab] = useState<NavTab>('HOME');
@@ -46,6 +71,16 @@ export function DesktopLibraryPage() {
   const discovery = useCatalogDiscovery(searchQuery);
   const nativePlayback = useNativePlayback();
   const [queue, setQueue] = useState<TrackItem[]>([]);
+  const [playerStateLoaded, setPlayerStateLoaded] = useState(false);
+  const [home, setHome] = useState<HomeSnapshot | null>(null);
+  const [favoriteTrackIds, setFavoriteTrackIds] = useState<ReadonlySet<string>>(new Set());
+  const [playlists, setPlaylists] = useState<PlaylistSummary[]>([]);
+  const [playlistName, setPlaylistName] = useState('');
+  const [librarySubTab, setLibrarySubTab] = useState<LibrarySubTab>('tracks');
+  const resumeRef = useRef<{ trackId: string | null; positionMs: number }>({
+    trackId: null,
+    positionMs: 0,
+  });
   const [selectedTrack, setSelectedTrack] = useState<TrackItem | null>(null);
   const [selectedArtist, setSelectedArtist] = useState<ArtistItem | null>(null);
   const [selectedAlbum, setSelectedAlbum] = useState<AlbumItem | null>(null);
@@ -69,55 +104,164 @@ export function DesktopLibraryPage() {
       ),
     );
   }, [library.tracks, searchQuery]);
-  const libraryStats = useMemo<Partial<ListeningStatsData>>(() => {
-    const knownDurationTracks = library.tracks.filter((track) => track.durationSeconds > 0).length;
-    const totalDurationSeconds = library.tracks.reduce(
-      (total, track) => total + track.durationSeconds,
-      0,
-    );
-    const sessionSeconds = nativePlayback.playback.positionMs / 1_000;
-
-    return {
-      timeListened: formatDuration(sessionSeconds),
-      timeListenedGrowth: currentTrack ? 'Current session' : 'No session yet',
-      totalTracks: library.tracks.length.toLocaleString(),
-      verifiedLocal: library.root ? 'Scanned local files' : 'Select a folder',
-      totalArtists: '—',
-      artistsCachedStatus: 'Tags not indexed',
-      totalAlbums: '—',
-      albumsMastering: 'Tags not indexed',
-      libraryDuration: formatDuration(totalDurationSeconds, 'No duration yet'),
-      libraryDurationSub:
-        knownDurationTracks > 0
-          ? `${knownDurationTracks.toLocaleString()} file durations read`
-          : 'Duration unavailable',
-      mostListenedArtist: 'History not saved yet',
-      artistLosslessHours: 'Native playback session only',
-      topGenre: 'Metadata pending',
-      topGenrePercentage: 'Genre indexing is deferred',
-      favoriteEra: 'Metadata pending',
-      dynamicRange: 'Analysis is deferred',
-      libraryDiskSize: 'Not reported',
-      losslessPercentage: 'Inspect individual tracks',
-    };
-  }, [currentTrack, library.root, library.tracks, nativePlayback.playback.positionMs]);
-  const sessionItems = useMemo<ContinueListeningItem[]>(() => {
-    if (!currentTrack) return [];
-    const status = nativePlayback.playback.status;
-    return [
-      {
-        id: `session-${currentTrack.id}`,
-        type: 'playlist',
-        title: currentTrack.title,
-        subtitle: `Local track • ${currentTrack.codec} · ${currentTrack.sampleRate}`,
-        accentGradient: 'from-amber-500/35 to-neutral-950',
-        lastPlayedText: status === 'playing' ? 'Playing now' : 'Current session',
-        lastPlayedTrackName: currentTrack.title,
-        totalTracksCount: Math.max(queue.length, 1),
-      },
-    ];
-  }, [currentTrack, nativePlayback.playback.status, queue.length]);
+  const libraryStats = useMemo<Partial<ListeningStatsData>>(
+    () => ({
+      timeListened: formatDuration((home?.totalListenedMs ?? 0) / 1_000),
+      timeListenedGrowth: 'Recorded by the native player',
+      totalTracks: (home?.totalTracks ?? 0).toLocaleString(),
+      verifiedLocal: `${library.roots.filter((root) => root.availability === 'online').length} roots online`,
+      totalArtists: (home?.totalArtists ?? 0).toLocaleString(),
+      artistsCachedStatus: 'Indexed from local metadata',
+      totalAlbums: (home?.totalAlbums ?? 0).toLocaleString(),
+      albumsMastering: 'SQLite catalog entities',
+      libraryDuration: formatDuration((home?.totalDurationMs ?? 0) / 1_000, '0m'),
+      libraryDurationSub: `${formatBytes(home?.totalFileSize ?? 0)} indexed`,
+      mostListenedArtist: home?.topArtist ?? 'No listening history',
+      artistLosslessHours: formatDuration((home?.totalListenedMs ?? 0) / 1_000),
+      topGenre: home?.topGenre ?? 'No listening history',
+      topGenrePercentage: 'Ranked by played duration',
+      favoriteEra: home?.favoriteEra ? `${home.favoriteEra}s` : 'No listening history',
+      dynamicRange: 'Ranked by played duration',
+      libraryDiskSize: formatBytes(home?.totalFileSize ?? 0),
+      losslessPercentage: `${(home?.totalTracks ?? 0).toLocaleString()} local tracks`,
+    }),
+    [home, library.roots],
+  );
+  const sessionItems = useMemo<ContinueListeningItem[]>(
+    () =>
+      (home?.continueListening ?? []).map((track, index) => {
+        const item = toTrackItem(track, index);
+        return {
+          id: item.id,
+          type: 'playlist',
+          title: item.title,
+          subtitle: `${item.artist} • ${item.album}`,
+          accentGradient: 'from-amber-500/35 to-neutral-950',
+          lastPlayedText: 'Saved listening session',
+          lastPlayedTrackName: item.title,
+          totalTracksCount: 1,
+        };
+      }),
+    [home],
+  );
+  const recentlyAddedItems = useMemo<RecentlyAddedItem[]>(
+    () =>
+      (home?.recentlyAdded ?? []).map((track, index) => {
+        const item = toTrackItem(track, index);
+        const format =
+          item.codec === 'FLAC' ? 'FLAC 16/44.1' : item.codec === 'MP3' ? 'MP3 320' : item.codec;
+        return {
+          id: item.id,
+          title: item.title,
+          artist: item.artist,
+          format,
+          dateAddedText: 'Recently indexed',
+          addedTimestamp: 0,
+          trackCount: 1,
+          genre: item.genres?.[0] ?? 'Unknown Genre',
+          year: item.year || undefined,
+        };
+      }),
+    [home],
+  );
+  const rediscoverItems = useMemo<RediscoverItem[]>(
+    () =>
+      (home?.rediscover ?? []).map((track, index) => {
+        const item = toTrackItem(track, index);
+        return {
+          id: item.id,
+          type: 'playlist',
+          title: item.title,
+          subtitle: `${item.artist} • ${item.album}`,
+          lastPlayedText: item.playCount ? `${item.playCount} completed plays` : 'Not played yet',
+          lastPlayedTimestamp: 0,
+          totalPlayCount: item.playCount ?? 0,
+          highlightReason: item.playCount ? 'Least recently heard' : 'Unplayed local track',
+          trackCount: 1,
+          format: item.codec,
+        };
+      }),
+    [home],
+  );
   const previewTracks = useMemo(() => library.tracks.slice(0, 6), [library.tracks]);
+  const listeningRefreshBucket = Math.floor(nativePlayback.playback.positionMs / 5_000);
+
+  useEffect(() => {
+    let active = true;
+    void Promise.all([
+      loadPersistentPlayerState(),
+      loadHomeSnapshot(),
+      loadFavoriteTrackIds(),
+      loadPlaylists(),
+    ])
+      .then(([player, snapshot, favorites, savedPlaylists]) => {
+        if (!active) return;
+        setQueue(player.queue);
+        setSelectedTrack(player.queue.find((track) => track.id === player.currentTrackId) ?? null);
+        resumeRef.current = {
+          trackId: player.currentTrackId,
+          positionMs: player.resumePositionMs,
+        };
+        setHome(snapshot);
+        setFavoriteTrackIds(favorites);
+        setPlaylists(savedPlaylists);
+        if (['artists', 'albums', 'genres', 'tracks'].includes(player.preferences.libraryView)) {
+          setLibrarySubTab(player.preferences.libraryView as LibrarySubTab);
+        }
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (active) setPlayerStateLoaded(true);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!playerStateLoaded) return;
+    void savePlayerQueue(queue.map((track) => track.id));
+  }, [playerStateLoaded, queue]);
+
+  useEffect(() => {
+    if (!playerStateLoaded) return;
+    void loadHomeSnapshot().then(setHome);
+  }, [library.totalTracks, listeningRefreshBucket, nativePlayback.endedCount, playerStateLoaded]);
+
+  const changeTrackFavorite = useCallback((trackId: string, favorite: boolean) => {
+    setFavoriteTrackIds((current) => {
+      const next = new Set(current);
+      if (favorite) next.add(trackId);
+      else next.delete(trackId);
+      return next;
+    });
+    void setTrackFavorite(trackId, favorite).catch(() => {
+      void loadFavoriteTrackIds().then(setFavoriteTrackIds);
+    });
+  }, []);
+
+  const saveQueueAsPlaylist = useCallback(async () => {
+    const name = playlistName.trim();
+    if (!name || queue.length === 0) return;
+    const playlist = await createPlaylistFromQueue(
+      name,
+      queue.map((track) => track.id),
+    );
+    setPlaylists((current) => [...current, playlist]);
+    setPlaylistName('');
+  }, [playlistName, queue]);
+
+  const restorePlaylistQueue = useCallback(async (playlistId: string) => {
+    const tracks = await loadPlaylistTracks(playlistId);
+    setQueue(tracks);
+    setSelectedTrack(tracks[0] ?? null);
+    resumeRef.current = { trackId: null, positionMs: 0 };
+  }, []);
+
+  const changeLibrarySubTab = useCallback((tab: LibrarySubTab) => {
+    setLibrarySubTab(tab);
+    void saveLibraryViewPreference(tab);
+  }, []);
 
   const selectLibrary = useCallback(async () => {
     setActiveTab('LIBRARY');
@@ -162,7 +306,11 @@ export function DesktopLibraryPage() {
       setQueue((current) =>
         current.some((item) => item.id === track.id) ? current : [...current, track],
       );
-      await nativePlayback.playTrack(track);
+      const started = await nativePlayback.playTrack(track);
+      if (started && resumeRef.current.trackId === track.id && resumeRef.current.positionMs > 0) {
+        await nativePlayback.seek(resumeRef.current.positionMs / 1_000);
+        resumeRef.current = { trackId: null, positionMs: 0 };
+      }
     },
     [nativePlayback],
   );
@@ -200,23 +348,32 @@ export function DesktopLibraryPage() {
     [currentTrack?.id, playTrack, queue],
   );
 
-  const resumeCurrentSession = useCallback(() => {
-    if (!currentTrack) {
-      setActiveTab('LIBRARY');
-      return;
-    }
-    if (nativePlayback.playback.status === 'paused') {
-      void nativePlayback.togglePlayback();
-      return;
-    }
-    if (nativePlayback.playback.status !== 'playing') void playTrack(currentTrack);
-  }, [currentTrack, nativePlayback, playTrack]);
+  const playHomeTrack = useCallback(
+    (trackId: string) => {
+      const tracks = [
+        ...(home?.continueListening ?? []),
+        ...(home?.recentlyAdded ?? []),
+        ...(home?.rediscover ?? []),
+      ];
+      const track = tracks.find((candidate) => candidate.id === trackId);
+      if (track) void playTrack(toTrackItem(track, 0));
+    },
+    [home, playTrack],
+  );
 
   useEffect(() => {
     if (nativePlayback.endedCount === completedEnds.current) return;
     completedEnds.current = nativePlayback.endedCount;
     playRelativeTrack(1);
   }, [nativePlayback.endedCount, playRelativeTrack]);
+
+  const toggleCurrentPlayback = useCallback(() => {
+    if (currentTrack && !matchesActivePlayback(nativePlayback.playback.status)) {
+      void playTrack(currentTrack);
+      return;
+    }
+    void nativePlayback.togglePlayback();
+  }, [currentTrack, nativePlayback, playTrack]);
 
   const removeQueueTrack = useCallback((index: number) => {
     setQueue((current) => current.filter((_, itemIndex) => itemIndex !== index));
@@ -289,15 +446,35 @@ export function DesktopLibraryPage() {
 
             <ContinueListeningRail
               items={sessionItems}
-              onResumeItem={resumeCurrentSession}
-              onItemClick={resumeCurrentSession}
-              emptyMessage="Playback history is not persisted yet. Start a scanned local track to create this session."
+              onResumeItem={(item) => playHomeTrack(item.id)}
+              onItemClick={(item) => playHomeTrack(item.id)}
+              emptyMessage="Start a local track and Bebop will retain its real listening session here."
               emptyActionLabel={library.root ? 'Browse indexed tracks' : 'Select a music folder'}
               onEmptyAction={() => {
                 if (library.root) setActiveTab('LIBRARY');
                 else void selectLibrary();
               }}
             />
+
+            {recentlyAddedItems.length > 0 && (
+              <RecentlyAddedRail
+                items={recentlyAddedItems}
+                onPlayItem={(item) => playHomeTrack(item.id)}
+                onItemClick={(item) => playHomeTrack(item.id)}
+                onSelectArtist={(artist) => void selectArtist(artist)}
+                onSelectAlbum={(album) => void selectAlbum(album)}
+              />
+            )}
+
+            {rediscoverItems.length > 0 && (
+              <RediscoverRail
+                items={rediscoverItems}
+                onPlayItem={(item) => playHomeTrack(item.id)}
+                onItemClick={(item) => playHomeTrack(item.id)}
+                onSelectArtist={(artist) => void selectArtist(artist)}
+                onSelectAlbum={(album) => void selectAlbum(album)}
+              />
+            )}
 
             {previewTracks.length > 0 && (
               <section className="flex flex-col gap-3">
@@ -399,6 +576,10 @@ export function DesktopLibraryPage() {
                 onSelectArtist={(artist) => void selectArtist(artist)}
                 onSelectAlbum={(album) => void selectAlbum(album)}
                 onEditTrack={setEditingTrack}
+                favoriteTrackIds={favoriteTrackIds}
+                onFavoriteChange={changeTrackFavorite}
+                selectedSubTab={librarySubTab}
+                onSubTabChange={changeLibrarySubTab}
               />
             )}
           </div>
@@ -407,8 +588,8 @@ export function DesktopLibraryPage() {
         {activeTab === 'SETTINGS' && (
           <div className="flex max-w-3xl flex-col gap-5 py-8 animate-fadeIn">
             <EmptyState title="Native audio settings">
-              Bebop currently reports the real output signal path. Device selection and persisted
-              audio preferences are planned for a later milestone.
+              Volume, hi-fi mode, selected output, theme, queue, and resume position are stored in
+              Bebop's local SQLite database. Playback never starts automatically after launch.
             </EmptyState>
             <div className="rounded border border-neutral-800 bg-neutral-950/50 p-5 text-sm text-neutral-300">
               {nativePlayback.playback.output ? (
@@ -430,6 +611,44 @@ export function DesktopLibraryPage() {
                   ? 'Allow software volume'
                   : 'Enable hi-fi unity gain'}
               </button>
+            </div>
+            <div className="rounded border border-neutral-800 bg-neutral-950/50 p-5">
+              <h2 className="text-sm font-semibold text-white">Manual playlists</h2>
+              <p className="mt-1 text-xs text-neutral-500">
+                Save the current {queue.length}-track queue as a persistent playlist.
+              </p>
+              <div className="mt-3 flex gap-2">
+                <input
+                  value={playlistName}
+                  onChange={(event) => setPlaylistName(event.target.value)}
+                  placeholder="Playlist name"
+                  className="min-w-0 flex-1 rounded border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white"
+                />
+                <button
+                  type="button"
+                  disabled={!playlistName.trim() || queue.length === 0}
+                  onClick={() => void saveQueueAsPlaylist()}
+                  className="rounded border border-amber-500/50 px-3 py-2 text-sm font-semibold text-amber-300 disabled:opacity-40"
+                >
+                  Save queue
+                </button>
+              </div>
+              {playlists.length === 0 ? (
+                <p className="mt-3 text-xs text-neutral-400">No playlists saved.</p>
+              ) : (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {playlists.map((playlist) => (
+                    <button
+                      key={playlist.id}
+                      type="button"
+                      onClick={() => void restorePlaylistQueue(playlist.id)}
+                      className="rounded border border-neutral-700 px-2 py-1 text-xs text-neutral-300 hover:border-amber-500/50 hover:text-amber-300"
+                    >
+                      Load {playlist.name} ({playlist.trackCount})
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -634,6 +853,10 @@ export function DesktopLibraryPage() {
                 onSelectArtist={(artist) => void selectArtist(artist)}
                 onSelectAlbum={(album) => void selectAlbum(album)}
                 onEditTrack={setEditingTrack}
+                favoriteTrackIds={favoriteTrackIds}
+                onFavoriteChange={changeTrackFavorite}
+                selectedSubTab={librarySubTab}
+                onSubTabChange={changeLibrarySubTab}
               />
             )}
           </div>
@@ -644,7 +867,7 @@ export function DesktopLibraryPage() {
         currentTrack={currentTrack}
         isPlaying={isPlaying}
         currentTimeSeconds={nativePlayback.playback.positionMs / 1_000}
-        onPlayPause={() => void nativePlayback.togglePlayback()}
+        onPlayPause={toggleCurrentPlayback}
         onNext={() => playRelativeTrack(1)}
         onPrev={() => playRelativeTrack(-1)}
         onSeek={(seconds) => void nativePlayback.seek(seconds)}
@@ -683,7 +906,7 @@ export function DesktopLibraryPage() {
         currentTrack={currentTrack}
         isPlaying={isPlaying}
         currentTimeSeconds={nativePlayback.playback.positionMs / 1_000}
-        onPlayPause={() => void nativePlayback.togglePlayback()}
+        onPlayPause={toggleCurrentPlayback}
         onNext={() => playRelativeTrack(1)}
         onPrev={() => playRelativeTrack(-1)}
         onSeek={(seconds) => void nativePlayback.seek(seconds)}
@@ -705,4 +928,8 @@ export function DesktopLibraryPage() {
       )}
     </AppShell>
   );
+}
+
+function matchesActivePlayback(status: string) {
+  return status === 'playing' || status === 'paused';
 }

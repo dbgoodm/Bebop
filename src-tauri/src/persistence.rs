@@ -18,12 +18,16 @@ use crate::{
         ScannedLibrary, SortDirection, TrackPage, TrackSort, TrackSummary, WatchMode,
     },
     metadata::{CachedArtwork, MetadataPatch},
+    user_state::{
+        FavoriteReference, HomeSnapshot, PersistentPlayerState, PlayerPreferences, PlaylistSummary,
+    },
 };
 
-const SCHEMA_VERSION: i64 = 2;
+const SCHEMA_VERSION: i64 = 3;
 const MIGRATIONS: &[(i64, &str)] = &[
     (1, include_str!("migrations/0001_catalog.sql")),
     (2, include_str!("migrations/0002_live_indexing.sql")),
+    (3, include_str!("migrations/0003_player_state.sql")),
 ];
 type CatalogSignatures = HashMap<String, (String, u64, Option<i64>, bool)>;
 
@@ -128,6 +132,64 @@ enum Request {
         scanned: Vec<crate::catalog::ScannedTrack>,
         missing_relative_paths: Vec<String>,
         reply: Sender<Result<Vec<String>, AppError>>,
+    },
+    LoadPlayerState(Sender<Result<PersistentPlayerState, AppError>>),
+    SaveQueue {
+        track_ids: Vec<String>,
+        reply: Sender<Result<(), AppError>>,
+    },
+    SavePreferences {
+        preferences: PlayerPreferences,
+        reply: Sender<Result<PlayerPreferences, AppError>>,
+    },
+    SavePlaybackCheckpoint {
+        track_id: Option<String>,
+        position_ms: u64,
+        reply: Sender<Result<(), AppError>>,
+    },
+    SetFavorite {
+        entity_type: String,
+        entity_id: String,
+        favorite: bool,
+        reply: Sender<Result<bool, AppError>>,
+    },
+    ListFavorites(Sender<Result<Vec<FavoriteReference>, AppError>>),
+    CreatePlaylist {
+        name: String,
+        reply: Sender<Result<PlaylistSummary, AppError>>,
+    },
+    ListPlaylists(Sender<Result<Vec<PlaylistSummary>, AppError>>),
+    GetPlaylistTracks {
+        playlist_id: String,
+        reply: Sender<Result<Vec<TrackSummary>, AppError>>,
+    },
+    SetPlaylistTracks {
+        playlist_id: String,
+        track_ids: Vec<String>,
+        reply: Sender<Result<(), AppError>>,
+    },
+    StartListeningSession {
+        id: String,
+        track_id: String,
+        reply: Sender<Result<(), AppError>>,
+    },
+    UpdateListeningSession {
+        id: String,
+        played_ms: u64,
+        completed: bool,
+        skipped: bool,
+        ended: bool,
+        reply: Sender<Result<(), AppError>>,
+    },
+    GetHomeSnapshot(Sender<Result<HomeSnapshot, AppError>>),
+    GetUiPreference {
+        key: String,
+        reply: Sender<Result<Option<String>, AppError>>,
+    },
+    SetUiPreference {
+        key: String,
+        value: String,
+        reply: Sender<Result<(), AppError>>,
     },
 }
 
@@ -345,6 +407,120 @@ impl DatabaseWorker {
             reply,
         })
     }
+
+    pub(crate) fn load_player_state(&self) -> Result<PersistentPlayerState, AppError> {
+        self.request(Request::LoadPlayerState)
+    }
+
+    pub(crate) fn save_queue(&self, track_ids: Vec<String>) -> Result<(), AppError> {
+        self.request(|reply| Request::SaveQueue { track_ids, reply })
+    }
+
+    pub(crate) fn save_preferences(
+        &self,
+        preferences: PlayerPreferences,
+    ) -> Result<PlayerPreferences, AppError> {
+        self.request(|reply| Request::SavePreferences { preferences, reply })
+    }
+
+    pub(crate) fn save_playback_checkpoint(
+        &self,
+        track_id: Option<String>,
+        position_ms: u64,
+    ) -> Result<(), AppError> {
+        self.request(|reply| Request::SavePlaybackCheckpoint {
+            track_id,
+            position_ms,
+            reply,
+        })
+    }
+
+    pub(crate) fn set_favorite(
+        &self,
+        entity_type: String,
+        entity_id: String,
+        favorite: bool,
+    ) -> Result<bool, AppError> {
+        self.request(|reply| Request::SetFavorite {
+            entity_type,
+            entity_id,
+            favorite,
+            reply,
+        })
+    }
+
+    pub(crate) fn list_favorites(&self) -> Result<Vec<FavoriteReference>, AppError> {
+        self.request(Request::ListFavorites)
+    }
+
+    pub(crate) fn create_playlist(&self, name: String) -> Result<PlaylistSummary, AppError> {
+        self.request(|reply| Request::CreatePlaylist { name, reply })
+    }
+
+    pub(crate) fn list_playlists(&self) -> Result<Vec<PlaylistSummary>, AppError> {
+        self.request(Request::ListPlaylists)
+    }
+
+    pub(crate) fn get_playlist_tracks(
+        &self,
+        playlist_id: String,
+    ) -> Result<Vec<TrackSummary>, AppError> {
+        self.request(|reply| Request::GetPlaylistTracks { playlist_id, reply })
+    }
+
+    pub(crate) fn set_playlist_tracks(
+        &self,
+        playlist_id: String,
+        track_ids: Vec<String>,
+    ) -> Result<(), AppError> {
+        self.request(|reply| Request::SetPlaylistTracks {
+            playlist_id,
+            track_ids,
+            reply,
+        })
+    }
+
+    pub(crate) fn start_listening_session(
+        &self,
+        id: String,
+        track_id: String,
+    ) -> Result<(), AppError> {
+        self.request(|reply| Request::StartListeningSession {
+            id,
+            track_id,
+            reply,
+        })
+    }
+
+    pub(crate) fn update_listening_session(
+        &self,
+        id: String,
+        played_ms: u64,
+        completed: bool,
+        skipped: bool,
+        ended: bool,
+    ) -> Result<(), AppError> {
+        self.request(|reply| Request::UpdateListeningSession {
+            id,
+            played_ms,
+            completed,
+            skipped,
+            ended,
+            reply,
+        })
+    }
+
+    pub(crate) fn get_home_snapshot(&self) -> Result<HomeSnapshot, AppError> {
+        self.request(Request::GetHomeSnapshot)
+    }
+
+    pub(crate) fn get_ui_preference(&self, key: String) -> Result<Option<String>, AppError> {
+        self.request(|reply| Request::GetUiPreference { key, reply })
+    }
+
+    pub(crate) fn set_ui_preference(&self, key: String, value: String) -> Result<(), AppError> {
+        self.request(|reply| Request::SetUiPreference { key, value, reply })
+    }
 }
 
 fn backup_before_upgrade(database_path: &Path) -> Result<(), AppError> {
@@ -519,6 +695,70 @@ fn database_loop(mut connection: Connection, receiver: Receiver<Request>) {
             } => send(
                 reply,
                 reconcile_paths(&mut connection, &root_id, scanned, missing_relative_paths),
+            ),
+            Request::LoadPlayerState(reply) => send(reply, load_player_state(&connection)),
+            Request::SaveQueue { track_ids, reply } => {
+                send(reply, save_queue(&mut connection, &track_ids));
+            }
+            Request::SavePreferences { preferences, reply } => {
+                send(reply, save_preferences(&connection, preferences));
+            }
+            Request::SavePlaybackCheckpoint {
+                track_id,
+                position_ms,
+                reply,
+            } => send(
+                reply,
+                save_playback_checkpoint(&connection, track_id.as_deref(), position_ms),
+            ),
+            Request::SetFavorite {
+                entity_type,
+                entity_id,
+                favorite,
+                reply,
+            } => send(
+                reply,
+                set_favorite(&connection, &entity_type, &entity_id, favorite),
+            ),
+            Request::ListFavorites(reply) => send(reply, list_favorites(&connection)),
+            Request::CreatePlaylist { name, reply } => {
+                send(reply, create_playlist(&connection, &name));
+            }
+            Request::ListPlaylists(reply) => send(reply, list_playlists(&connection)),
+            Request::GetPlaylistTracks { playlist_id, reply } => {
+                send(reply, get_playlist_tracks(&connection, &playlist_id));
+            }
+            Request::SetPlaylistTracks {
+                playlist_id,
+                track_ids,
+                reply,
+            } => send(
+                reply,
+                set_playlist_tracks(&mut connection, &playlist_id, &track_ids),
+            ),
+            Request::StartListeningSession {
+                id,
+                track_id,
+                reply,
+            } => send(reply, start_listening_session(&connection, &id, &track_id)),
+            Request::UpdateListeningSession {
+                id,
+                played_ms,
+                completed,
+                skipped,
+                ended,
+                reply,
+            } => send(
+                reply,
+                update_listening_session(&connection, &id, played_ms, completed, skipped, ended),
+            ),
+            Request::GetHomeSnapshot(reply) => send(reply, get_home_snapshot(&connection)),
+            Request::GetUiPreference { key, reply } => {
+                send(reply, read_setting(&connection, &format!("ui.{key}")));
+            }
+            Request::SetUiPreference { key, value, reply } => send(
+                reply,
+                write_setting(&connection, &format!("ui.{key}"), &value),
             ),
         }
     }
@@ -1144,6 +1384,7 @@ fn track_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<TrackSummary> {
         sample_rate: row.get(10)?,
         channels: row.get(11)?,
         bit_depth: row.get(12)?,
+        play_count: 0,
         track_number: row.get(13)?,
         track_total: row.get(14)?,
         disc_number: row.get(15)?,
@@ -1235,6 +1476,13 @@ fn query_tracks(connection: &Connection, query: CatalogQuery) -> Result<TrackPag
 }
 
 fn hydrate_track(connection: &Connection, track: &mut TrackSummary) -> Result<(), AppError> {
+    track.play_count = connection
+        .query_row(
+            "SELECT COUNT(*) FROM listening_sessions WHERE track_id = ?1 AND completed = 1",
+            [&track.id],
+            |row| row.get(0),
+        )
+        .map_err(database_error("read-track-play-count"))?;
     track.artists = artist_references(connection, &track.id, "artist")?;
     track.album_artists = artist_references(connection, &track.id, "album-artist")?;
     if let Some(album_id) = &track.album_id {
@@ -1790,6 +2038,410 @@ fn cleanup_missing_tracks(connection: &Connection, root_id: Option<&str>) -> Res
     Ok(removed.try_into().unwrap_or(u64::MAX))
 }
 
+fn read_setting<T: serde::de::DeserializeOwned>(
+    connection: &Connection,
+    key: &str,
+) -> Result<Option<T>, AppError> {
+    let json: Option<String> = connection
+        .query_row(
+            "SELECT value_json FROM settings WHERE key = ?1",
+            [key],
+            |row| row.get(0),
+        )
+        .optional()
+        .map_err(database_error("read-setting"))?;
+    json.map(|json| {
+        serde_json::from_str(&json)
+            .map_err(|error| AppError::persistence("deserialize-setting", error.to_string()))
+    })
+    .transpose()
+}
+
+fn write_setting<T: serde::Serialize>(
+    connection: &Connection,
+    key: &str,
+    value: &T,
+) -> Result<(), AppError> {
+    let json = serde_json::to_string(value)
+        .map_err(|error| AppError::persistence("serialize-setting", error.to_string()))?;
+    connection
+        .execute(
+            "INSERT INTO settings (key, value_json, updated_at) VALUES (?1, ?2, ?3)
+             ON CONFLICT(key) DO UPDATE SET value_json = excluded.value_json,
+             updated_at = excluded.updated_at",
+            params![key, json, Utc::now().to_rfc3339()],
+        )
+        .map_err(database_error("save-setting"))?;
+    Ok(())
+}
+
+fn load_player_state(connection: &Connection) -> Result<PersistentPlayerState, AppError> {
+    let preferences = read_setting(connection, "player.preferences")?.unwrap_or_default();
+    let current_track_id = read_setting(connection, "player.current-track")?;
+    let resume_position_ms = read_setting(connection, "player.resume-position-ms")?.unwrap_or(0);
+    let mut statement = connection
+        .prepare("SELECT track_id FROM queue_entries ORDER BY position")
+        .map_err(database_error("prepare-restored-queue"))?;
+    let track_ids = statement
+        .query_map([], |row| row.get::<_, String>(0))
+        .map_err(database_error("query-restored-queue"))?
+        .collect::<rusqlite::Result<Vec<_>>>()
+        .map_err(database_error("read-restored-queue"))?;
+    Ok(PersistentPlayerState {
+        queue: hydrate_track_ids(connection, track_ids)?,
+        current_track_id,
+        resume_position_ms,
+        preferences,
+    })
+}
+
+fn save_queue(connection: &mut Connection, track_ids: &[String]) -> Result<(), AppError> {
+    let transaction = connection
+        .transaction()
+        .map_err(database_error("begin-save-queue"))?;
+    transaction
+        .execute("DELETE FROM queue_entries", [])
+        .map_err(database_error("clear-saved-queue"))?;
+    let now = Utc::now().to_rfc3339();
+    for (position, track_id) in track_ids.iter().enumerate() {
+        transaction
+            .execute(
+                "INSERT INTO queue_entries (position, track_id, created_at)
+                 SELECT ?1, id, ?3 FROM tracks WHERE id = ?2 AND available = 1",
+                params![position, track_id, now],
+            )
+            .map_err(database_error("insert-saved-queue-track"))?;
+    }
+    transaction
+        .commit()
+        .map_err(database_error("commit-save-queue"))
+}
+
+fn save_preferences(
+    connection: &Connection,
+    mut preferences: PlayerPreferences,
+) -> Result<PlayerPreferences, AppError> {
+    preferences.volume = if preferences.volume.is_finite() {
+        preferences.volume.clamp(0.0, 1.0)
+    } else {
+        1.0
+    };
+    if preferences.hifi_mode {
+        preferences.volume = 1.0;
+    }
+    write_setting(connection, "player.preferences", &preferences)?;
+    Ok(preferences)
+}
+
+fn save_playback_checkpoint(
+    connection: &Connection,
+    track_id: Option<&str>,
+    position_ms: u64,
+) -> Result<(), AppError> {
+    write_setting(connection, "player.current-track", &track_id)?;
+    write_setting(connection, "player.resume-position-ms", &position_ms)
+}
+
+fn set_favorite(
+    connection: &Connection,
+    entity_type: &str,
+    entity_id: &str,
+    favorite: bool,
+) -> Result<bool, AppError> {
+    if !matches!(entity_type, "track" | "album" | "artist") {
+        return Err(AppError::new(
+            "favorite-entity-invalid",
+            "Favorites support tracks, albums, and artists.",
+        ));
+    }
+    if favorite {
+        connection
+            .execute(
+                "INSERT OR IGNORE INTO favorites (entity_type, entity_id, created_at)
+                 VALUES (?1, ?2, ?3)",
+                params![entity_type, entity_id, Utc::now().to_rfc3339()],
+            )
+            .map_err(database_error("add-favorite"))?;
+    } else {
+        connection
+            .execute(
+                "DELETE FROM favorites WHERE entity_type = ?1 AND entity_id = ?2",
+                params![entity_type, entity_id],
+            )
+            .map_err(database_error("remove-favorite"))?;
+    }
+    Ok(favorite)
+}
+
+fn list_favorites(connection: &Connection) -> Result<Vec<FavoriteReference>, AppError> {
+    let mut statement = connection
+        .prepare(
+            "SELECT entity_type, entity_id FROM favorites
+             ORDER BY created_at DESC, entity_type, entity_id",
+        )
+        .map_err(database_error("prepare-favorites"))?;
+    statement
+        .query_map([], |row| {
+            Ok(FavoriteReference {
+                entity_type: row.get(0)?,
+                entity_id: row.get(1)?,
+            })
+        })
+        .map_err(database_error("query-favorites"))?
+        .collect::<rusqlite::Result<Vec<_>>>()
+        .map_err(database_error("read-favorites"))
+}
+
+fn create_playlist(connection: &Connection, name: &str) -> Result<PlaylistSummary, AppError> {
+    let name = name.trim();
+    if name.is_empty() {
+        return Err(AppError::new(
+            "playlist-name-empty",
+            "A playlist name is required.",
+        ));
+    }
+    let id = Uuid::new_v4().to_string();
+    let now = Utc::now().to_rfc3339();
+    connection
+        .execute(
+            "INSERT INTO playlists (id, name, created_at, updated_at) VALUES (?1, ?2, ?3, ?3)",
+            params![id, name, now],
+        )
+        .map_err(database_error("create-playlist"))?;
+    Ok(PlaylistSummary {
+        id,
+        name: name.into(),
+        track_count: 0,
+    })
+}
+
+fn list_playlists(connection: &Connection) -> Result<Vec<PlaylistSummary>, AppError> {
+    let mut statement = connection
+        .prepare(
+            "SELECT p.id, p.name, COUNT(pt.track_id) FROM playlists p
+             LEFT JOIN playlist_tracks pt ON pt.playlist_id = p.id
+             GROUP BY p.id ORDER BY p.name COLLATE NOCASE, p.id",
+        )
+        .map_err(database_error("prepare-playlists"))?;
+    statement
+        .query_map([], |row| {
+            Ok(PlaylistSummary {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                track_count: row.get(2)?,
+            })
+        })
+        .map_err(database_error("query-playlists"))?
+        .collect::<rusqlite::Result<Vec<_>>>()
+        .map_err(database_error("read-playlists"))
+}
+
+fn get_playlist_tracks(
+    connection: &Connection,
+    playlist_id: &str,
+) -> Result<Vec<TrackSummary>, AppError> {
+    let mut statement = connection
+        .prepare(
+            "SELECT pt.track_id FROM playlist_tracks pt
+             JOIN tracks t ON t.id = pt.track_id
+             WHERE pt.playlist_id = ?1 AND t.available = 1
+             ORDER BY pt.position",
+        )
+        .map_err(database_error("prepare-playlist-tracks"))?;
+    let ids = statement
+        .query_map([playlist_id], |row| row.get::<_, String>(0))
+        .map_err(database_error("query-playlist-tracks"))?
+        .collect::<rusqlite::Result<Vec<_>>>()
+        .map_err(database_error("read-playlist-tracks"))?;
+    hydrate_track_ids(connection, ids)
+}
+
+fn set_playlist_tracks(
+    connection: &mut Connection,
+    playlist_id: &str,
+    track_ids: &[String],
+) -> Result<(), AppError> {
+    let transaction = connection
+        .transaction()
+        .map_err(database_error("begin-save-playlist"))?;
+    transaction
+        .execute(
+            "DELETE FROM playlist_tracks WHERE playlist_id = ?1",
+            [playlist_id],
+        )
+        .map_err(database_error("clear-playlist-tracks"))?;
+    let now = Utc::now().to_rfc3339();
+    for (position, track_id) in track_ids.iter().enumerate() {
+        transaction
+            .execute(
+                "INSERT INTO playlist_tracks (playlist_id, track_id, position, added_at)
+                 VALUES (?1, ?2, ?3, ?4)",
+                params![playlist_id, track_id, position, now],
+            )
+            .map_err(database_error("save-playlist-track"))?;
+    }
+    transaction
+        .execute(
+            "UPDATE playlists SET updated_at = ?2 WHERE id = ?1",
+            params![playlist_id, now],
+        )
+        .map_err(database_error("touch-playlist"))?;
+    transaction
+        .commit()
+        .map_err(database_error("commit-save-playlist"))
+}
+
+fn start_listening_session(
+    connection: &Connection,
+    id: &str,
+    track_id: &str,
+) -> Result<(), AppError> {
+    connection
+        .execute(
+            "INSERT INTO listening_sessions
+             (id, track_id, started_at, played_ms, completed, skipped)
+             VALUES (?1, ?2, ?3, 0, 0, 0)",
+            params![id, track_id, Utc::now().to_rfc3339()],
+        )
+        .map_err(database_error("start-listening-session"))?;
+    Ok(())
+}
+
+fn update_listening_session(
+    connection: &Connection,
+    id: &str,
+    played_ms: u64,
+    completed: bool,
+    skipped: bool,
+    ended: bool,
+) -> Result<(), AppError> {
+    connection
+        .execute(
+            "UPDATE listening_sessions SET played_ms = ?2, completed = ?3, skipped = ?4,
+             ended_at = CASE WHEN ?5 THEN ?6 ELSE ended_at END WHERE id = ?1",
+            params![
+                id,
+                played_ms,
+                completed,
+                skipped,
+                ended,
+                Utc::now().to_rfc3339()
+            ],
+        )
+        .map_err(database_error("update-listening-session"))?;
+    Ok(())
+}
+
+fn get_home_snapshot(connection: &Connection) -> Result<HomeSnapshot, AppError> {
+    let (total_tracks, total_duration_ms, total_file_size): (u64, u64, u64) = connection
+        .query_row(
+            "SELECT COUNT(*), COALESCE(SUM(duration_ms), 0), COALESCE(SUM(file_size), 0)
+             FROM tracks WHERE available = 1",
+            [],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+        )
+        .map_err(database_error("home-library-totals"))?;
+    let total_artists = connection
+        .query_row("SELECT COUNT(*) FROM artists", [], |row| row.get(0))
+        .map_err(database_error("home-artist-total"))?;
+    let total_albums = connection
+        .query_row("SELECT COUNT(*) FROM albums", [], |row| row.get(0))
+        .map_err(database_error("home-album-total"))?;
+    let total_listened_ms = connection
+        .query_row(
+            "SELECT COALESCE(SUM(played_ms), 0) FROM listening_sessions",
+            [],
+            |row| row.get(0),
+        )
+        .map_err(database_error("home-listened-total"))?;
+    let top_artist = connection
+        .query_row(
+            "SELECT a.name FROM listening_sessions ls
+             JOIN track_artists ta ON ta.track_id = ls.track_id AND ta.role = 'artist'
+             JOIN artists a ON a.id = ta.artist_id
+             GROUP BY a.id ORDER BY SUM(ls.played_ms) DESC, a.name COLLATE NOCASE LIMIT 1",
+            [],
+            |row| row.get(0),
+        )
+        .optional()
+        .map_err(database_error("home-top-artist"))?;
+    let top_genre = connection
+        .query_row(
+            "SELECT g.name FROM listening_sessions ls
+             JOIN track_genres tg ON tg.track_id = ls.track_id
+             JOIN genres g ON g.id = tg.genre_id
+             GROUP BY g.id ORDER BY SUM(ls.played_ms) DESC, g.name COLLATE NOCASE LIMIT 1",
+            [],
+            |row| row.get(0),
+        )
+        .optional()
+        .map_err(database_error("home-top-genre"))?;
+    let favorite_era = connection
+        .query_row(
+            "SELECT (t.year / 10) * 10 FROM listening_sessions ls
+             JOIN tracks t ON t.id = ls.track_id WHERE t.year IS NOT NULL
+             GROUP BY (t.year / 10) ORDER BY SUM(ls.played_ms) DESC LIMIT 1",
+            [],
+            |row| row.get(0),
+        )
+        .optional()
+        .map_err(database_error("home-favorite-era"))?;
+    let continue_listening = tracks_from_id_query(
+        connection,
+        "SELECT track_id FROM listening_sessions WHERE completed = 0 AND played_ms > 0
+         GROUP BY track_id ORDER BY MAX(started_at) DESC LIMIT 12",
+    )?;
+    let recently_added = tracks_from_id_query(
+        connection,
+        "SELECT id FROM tracks WHERE available = 1 ORDER BY added_at DESC, id LIMIT 12",
+    )?;
+    let rediscover = tracks_from_id_query(
+        connection,
+        "SELECT t.id FROM tracks t LEFT JOIN listening_sessions ls ON ls.track_id = t.id
+         WHERE t.available = 1 GROUP BY t.id
+         ORDER BY COALESCE(MAX(ls.started_at), '0000') ASC, t.added_at ASC LIMIT 12",
+    )?;
+    Ok(HomeSnapshot {
+        total_tracks,
+        total_artists,
+        total_albums,
+        total_duration_ms,
+        total_file_size,
+        total_listened_ms,
+        top_artist,
+        top_genre,
+        favorite_era,
+        continue_listening,
+        recently_added,
+        rediscover,
+    })
+}
+
+fn tracks_from_id_query(connection: &Connection, sql: &str) -> Result<Vec<TrackSummary>, AppError> {
+    let mut statement = connection
+        .prepare(sql)
+        .map_err(database_error("prepare-home-tracks"))?;
+    let ids = statement
+        .query_map([], |row| row.get::<_, String>(0))
+        .map_err(database_error("query-home-tracks"))?
+        .collect::<rusqlite::Result<Vec<_>>>()
+        .map_err(database_error("read-home-track-ids"))?;
+    hydrate_track_ids(connection, ids)
+}
+
+fn hydrate_track_ids(
+    connection: &Connection,
+    ids: Vec<String>,
+) -> Result<Vec<TrackSummary>, AppError> {
+    ids.into_iter()
+        .filter_map(|id| match get_track(connection, &id) {
+            Ok(track) if track.available => Some(Ok(track)),
+            Ok(_) => None,
+            Err(error) => Some(Err(error)),
+        })
+        .collect()
+}
+
 fn resolve_track(
     connection: &Connection,
     canonical_path: &str,
@@ -1830,7 +2482,7 @@ mod tests {
     }
 
     #[test]
-    fn version_one_catalogs_upgrade_to_live_indexing() {
+    fn version_one_catalogs_upgrade_through_current_schema() {
         let mut connection = Connection::open_in_memory().expect("open old database");
         connection
             .execute_batch(include_str!("migrations/0001_catalog.sql"))
@@ -1851,7 +2503,7 @@ mod tests {
                 |row| row.get(0),
             )
             .expect("inspect upgraded tracks");
-        assert_eq!(version, 2);
+        assert_eq!(version, 3);
         assert!(fingerprint_exists);
     }
 

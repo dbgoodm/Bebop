@@ -231,7 +231,7 @@ export const AlbumDetailPage: React.FC<AlbumDetailPageProps> = ({
 
               <div className="bg-[#121620]/80 backdrop-blur-md border border-neutral-700/60 rounded-lg py-2.5 px-3 sm:px-4 flex flex-col items-center justify-center text-center shadow-lg min-w-[74px] sm:min-w-[88px]">
                 <span className="text-base sm:text-lg font-bold text-white font-mono leading-none">
-                  {album.fileSize || '1.8 GB'}
+                  {album.fileSize || '—'}
                 </span>
                 <span className="text-[10px] sm:text-[11px] text-neutral-400 font-sans mt-1 truncate max-w-[74px]">
                   Storage Size
@@ -308,7 +308,7 @@ export const AlbumDetailPage: React.FC<AlbumDetailPageProps> = ({
           >
             <div className="flex justify-between items-center py-1.5 border-b border-neutral-800/50">
               <span className="text-neutral-500">Master Source</span>
-              <span className="text-neutral-200">{album.sampleRate || '192 kHz / 24-bit'}</span>
+              <span className="text-neutral-200">{album.sampleRate || '—'}</span>
             </div>
 
             <div className="flex justify-between items-center py-1.5 border-b border-neutral-800/50">

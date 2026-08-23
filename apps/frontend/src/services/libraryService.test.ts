@@ -31,6 +31,7 @@ const scannedTrack = {
   sampleRate: 96_000,
   channels: 2,
   bitDepth: 24,
+  playCount: 0,
   available: true,
 };
 

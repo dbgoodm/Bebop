@@ -13,6 +13,7 @@ React pages/hooks
   ├─ notify watcher → 750ms coalescing → per-path reconciliation → compact library deltas
   ├─ tag draft/review → metadata overrides + audit → optional atomic Lofty file write
   ├─ opt-in enrichment → rate-limited MusicBrainz worker → persistent result cache
+  ├─ queue/collections/Home ← settings + listening sessions ← Rust playback monitor
   └─ generated IPC → playback commands → Rust PlaybackEngine → Rodio / CPAL → output device
                          ↑                                      │
                          └──── Tauri events: state, position, ended, error ────┘
@@ -82,6 +83,25 @@ Bebop's own atomic tag writer are suppressed briefly, and `.bebop-backups`/tempo
 ignored. `library://changed` contains only changed track IDs; React patches a small delta directly
 and falls back to a bounded catalog refresh for root-wide changes.
 
+## Player state and collections
+
+Queue order, the selected track, resume position, volume, hi-fi mode, output-device preference,
+theme, and library view are stored by the SQLite worker. Startup restores those values into the UI
+and audio engine, but it never starts a stream: resuming playback always requires an explicit user
+action. Production theme, table, and library-view preferences use typed IPC rather than browser
+storage; browser storage remains confined to demo mode.
+
+Playlists and favorites are relational catalog data, so root reconciliation and track moves retain
+their stable UUID references. The playback monitor owns listening sessions and measures wall-clock
+time only while audio is actually playing. It periodically checkpoints played duration and resume
+position, and records completion or skips independently of React. Play counts are completed session
+counts, not generated display values.
+
+The production Home page is a bounded SQLite projection: continue-listening, recently indexed,
+rediscovery, top artist/genre/era, storage, catalog duration, and actual listening duration all
+come from catalog and listening-session rows. Demo rails and acquisition simulations remain behind
+`VITE_BEBOP_DEMO=true` and are not mounted by the production player page.
+
 ## IPC contracts
 
 Rust is authoritative; [generated TypeScript bindings](../apps/frontend/src/services/tauri-bindings.ts)
@@ -96,6 +116,9 @@ are a consumer of those contracts.
 | `ScanProgress`     | Scanned-file and discovered-track counts during a scan.                                                |
 | `PlaybackState`    | Track identity, state, position, duration, volume/mute, hi-fi mode, and optional output path.          |
 | `AudioOutputState` | Source/device formats plus native-rate, resampling, gain, exclusive-mode, and bit-perfect disclosures. |
+| `PersistentPlayerState` | Restorable queue/checkpoint plus persisted output, theme, and library preferences.                   |
+| `HomeSnapshot`     | SQLite-derived collections and aggregate listening/catalog statistics for Home.                       |
+| `PlaylistSummary`  | Stable manual playlist identity, name, and current track count.                                       |
 
 The playback commands are `play_track`, `pause_playback`, `resume_playback`, `stop_playback`,
 `seek_playback`, `set_volume`, and `get_playback_state`. Output-device and hi-fi commands are

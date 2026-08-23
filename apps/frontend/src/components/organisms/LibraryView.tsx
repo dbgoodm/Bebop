@@ -18,6 +18,10 @@ interface LibraryViewProps {
   onSelectArtist?: (artist: ArtistItem | string) => void;
   onSelectAlbum?: (album: AlbumItem | string) => void;
   onEditTrack?: (track: TrackItem) => void;
+  favoriteTrackIds?: ReadonlySet<string>;
+  onFavoriteChange?: (trackId: string, favorite: boolean) => void;
+  selectedSubTab?: LibrarySubTab;
+  onSubTabChange?: (tab: LibrarySubTab) => void;
   showDemoDiscovery?: boolean;
 }
 
@@ -35,10 +39,19 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
   onSelectArtist,
   onSelectAlbum,
   onEditTrack,
+  favoriteTrackIds,
+  onFavoriteChange,
+  selectedSubTab,
+  onSubTabChange,
 }) => {
-  const [activeSubTab, setActiveSubTab] = useState<LibrarySubTab>(
+  const [localSubTab, setLocalSubTab] = useState<LibrarySubTab>(
     showDemoDiscovery ? 'artists' : 'tracks',
   );
+  const activeSubTab = selectedSubTab ?? localSubTab;
+  const setActiveSubTab = (tab: LibrarySubTab) => {
+    setLocalSubTab(tab);
+    onSubTabChange?.(tab);
+  };
 
   const showDiscoveryEmptyState = () => (
     <div className="rounded border border-neutral-800 bg-neutral-950/50 p-6 text-sm text-neutral-400">
@@ -99,6 +112,8 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
           onSelectArtist={onSelectArtist as ((artist: string) => void) | undefined}
           onSelectAlbum={onSelectAlbum as ((album: string) => void) | undefined}
           onEditTrack={onEditTrack}
+          favoriteTrackIds={favoriteTrackIds}
+          onFavoriteChange={onFavoriteChange}
         />
       )}
       {activeSubTab === 'artists' &&

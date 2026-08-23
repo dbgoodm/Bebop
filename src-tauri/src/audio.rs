@@ -354,6 +354,32 @@ impl PlaybackEngine {
         }
     }
 
+    pub(crate) fn restore_preferences(
+        &mut self,
+        volume: f32,
+        hifi_mode: bool,
+        selected_device_id: Option<String>,
+    ) {
+        self.state.hifi_mode = hifi_mode;
+        self.state.volume = if hifi_mode {
+            1.0
+        } else if volume.is_finite() {
+            volume.clamp(0.0, MAX_VOLUME)
+        } else {
+            1.0
+        };
+        self.state.muted = self.state.volume == 0.0;
+        self.selected_device_id = selected_device_id;
+    }
+
+    pub(crate) fn preferences(&self) -> (f32, bool, Option<String>) {
+        (
+            self.state.volume,
+            self.state.hifi_mode,
+            self.selected_device_id.clone(),
+        )
+    }
+
     pub(crate) fn prepare_track(&mut self, path: &Path, id: String) {
         self.backend.stop();
         self.state.track_id = Some(id);

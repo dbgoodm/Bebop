@@ -1,4 +1,11 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { isDemoMode } from '@/demo/mode';
+import {
+  loadPersistentPlayerState,
+  loadUiPreference,
+  saveThemePreference,
+  saveUiPreference,
+} from './playerStateService';
 
 export interface StatCardColorConfig {
   borderTop: string;
@@ -981,6 +988,7 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [customThemes, setCustomThemes] = useState<ThemeConfig[]>(() => {
+    if (!isDemoMode) return [];
     try {
       const saved = localStorage.getItem(CUSTOM_THEMES_STORAGE_KEY);
       return saved ? JSON.parse(saved) : [];
@@ -992,6 +1000,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const allThemes = [...THEME_PRESETS, ...customThemes];
 
   const [activeThemeId, setActiveThemeId] = useState<string>(() => {
+    if (!isDemoMode) return 'space-cowboy';
     try {
       return localStorage.getItem(THEME_STORAGE_KEY) || 'space-cowboy';
     } catch {
@@ -1000,8 +1009,26 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   });
 
   const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
+  const [preferencesLoaded, setPreferencesLoaded] = useState(isDemoMode);
 
   const currentTheme = allThemes.find((t) => t.id === activeThemeId) || THEME_PRESETS[0];
+
+  useEffect(() => {
+    if (isDemoMode) return;
+    void Promise.all([loadPersistentPlayerState(), loadUiPreference(CUSTOM_THEMES_STORAGE_KEY)])
+      .then(([state, savedCustomThemes]) => {
+        setActiveThemeId(state.preferences.themeId);
+        if (!savedCustomThemes) return;
+        try {
+          const parsed: unknown = JSON.parse(savedCustomThemes);
+          if (Array.isArray(parsed)) setCustomThemes(parsed as ThemeConfig[]);
+        } catch {
+          // Ignore malformed persisted customization and retain the built-in themes.
+        }
+      })
+      .catch(() => undefined)
+      .finally(() => setPreferencesLoaded(true));
+  }, []);
 
   // Apply CSS custom properties to document root for seamless, instant theming
   useEffect(() => {
@@ -1022,12 +1049,16 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     root.style.setProperty('--theme-text-secondary', currentTheme.textSecondary);
     root.style.setProperty('--theme-text-muted', currentTheme.textMuted);
 
-    try {
-      localStorage.setItem(THEME_STORAGE_KEY, currentTheme.id);
-    } catch {
-      // ignore
+    if (isDemoMode) {
+      try {
+        localStorage.setItem(THEME_STORAGE_KEY, currentTheme.id);
+      } catch {
+        // ignore
+      }
+    } else if (preferencesLoaded) {
+      void saveThemePreference(currentTheme.id).catch(() => undefined);
     }
-  }, [currentTheme]);
+  }, [currentTheme, preferencesLoaded]);
 
   const setThemeById = (id: string) => {
     setActiveThemeId(id);
@@ -1037,10 +1068,14 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setCustomThemes((prev) => {
       const filtered = prev.filter((t) => t.id !== newTheme.id);
       const next = [...filtered, newTheme];
-      try {
-        localStorage.setItem(CUSTOM_THEMES_STORAGE_KEY, JSON.stringify(next));
-      } catch {
-        // ignore
+      if (isDemoMode) {
+        try {
+          localStorage.setItem(CUSTOM_THEMES_STORAGE_KEY, JSON.stringify(next));
+        } catch {
+          // ignore
+        }
+      } else {
+        void saveUiPreference(CUSTOM_THEMES_STORAGE_KEY, JSON.stringify(next));
       }
       return next;
     });
@@ -1050,10 +1085,14 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const deleteCustomTheme = (id: string) => {
     setCustomThemes((prev) => {
       const next = prev.filter((t) => t.id !== id);
-      try {
-        localStorage.setItem(CUSTOM_THEMES_STORAGE_KEY, JSON.stringify(next));
-      } catch {
-        // ignore
+      if (isDemoMode) {
+        try {
+          localStorage.setItem(CUSTOM_THEMES_STORAGE_KEY, JSON.stringify(next));
+        } catch {
+          // ignore
+        }
+      } else {
+        void saveUiPreference(CUSTOM_THEMES_STORAGE_KEY, JSON.stringify(next));
       }
       return next;
     });

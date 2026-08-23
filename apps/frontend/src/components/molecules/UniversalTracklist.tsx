@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   Play,
   GripVertical,
@@ -10,6 +10,8 @@ import {
   X,
 } from 'lucide-react';
 import { TrackItem } from '@/types';
+import { isDemoMode } from '@/demo/mode';
+import { commands } from '@/services/tauri-bindings';
 
 export type ColumnKey =
   | 'trackNumber'
@@ -103,6 +105,8 @@ export interface UniversalTracklistProps {
   onSelectArtist?: (artistName: string) => void;
   onSelectAlbum?: (albumName: string) => void;
   onEditTrack?: (track: TrackItem) => void;
+  favoriteTrackIds?: ReadonlySet<string>;
+  onFavoriteChange?: (trackId: string, favorite: boolean) => void;
   defaultVisibleColumns?: ColumnKey[];
   storageKey?: string;
   showCustomizerButton?: boolean;
@@ -118,14 +122,16 @@ export const UniversalTracklist: React.FC<UniversalTracklistProps> = ({
   onSelectArtist,
   onSelectAlbum,
   onEditTrack,
+  favoriteTrackIds,
+  onFavoriteChange,
   defaultVisibleColumns,
   storageKey,
   showCustomizerButton = true,
   compact = false,
 }) => {
-  // Load saved column order and visibility from localStorage if available
+  // Demo mode uses browser storage; production restores the same preference through SQLite IPC.
   const [columnOrder, setColumnOrder] = useState<ColumnKey[]>(() => {
-    if (storageKey) {
+    if (storageKey && isDemoMode) {
       try {
         const saved = localStorage.getItem(`${storageKey}_order`);
         if (saved) {
@@ -146,7 +152,7 @@ export const UniversalTracklist: React.FC<UniversalTracklistProps> = ({
   });
 
   const [visibleColumns, setVisibleColumns] = useState<Record<ColumnKey, boolean>>(() => {
-    if (storageKey) {
+    if (storageKey && isDemoMode) {
       try {
         const saved = localStorage.getItem(`${storageKey}_visibility`);
         if (saved) {
@@ -175,14 +181,49 @@ export const UniversalTracklist: React.FC<UniversalTracklistProps> = ({
   const columnOrderRef = useRef<ColumnKey[]>(columnOrder);
   columnOrderRef.current = columnOrder;
 
+  useEffect(() => {
+    if (!storageKey || isDemoMode) return;
+    let active = true;
+    void Promise.all([
+      commands.getUiPreference(`${storageKey}_order`),
+      commands.getUiPreference(`${storageKey}_visibility`),
+    ])
+      .then(([order, visibility]) => {
+        if (!active) return;
+        try {
+          if (order.status === 'ok' && order.data) {
+            const parsed = JSON.parse(order.data);
+            if (Array.isArray(parsed) && parsed.length > 0) setColumnOrder(parsed);
+          }
+          if (visibility.status === 'ok' && visibility.data) {
+            const parsed = JSON.parse(visibility.data);
+            if (parsed && typeof parsed === 'object') setVisibleColumns(parsed);
+          }
+        } catch {
+          // Ignore malformed legacy preferences and keep safe defaults.
+        }
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [storageKey]);
+
   const savePreferences = (newOrder: ColumnKey[], newVis: Record<ColumnKey, boolean>) => {
     if (!storageKey) return;
-    try {
-      localStorage.setItem(`${storageKey}_order`, JSON.stringify(newOrder));
-      localStorage.setItem(`${storageKey}_visibility`, JSON.stringify(newVis));
-    } catch (e) {
-      // ignore
+    if (isDemoMode) {
+      try {
+        localStorage.setItem(`${storageKey}_order`, JSON.stringify(newOrder));
+        localStorage.setItem(`${storageKey}_visibility`, JSON.stringify(newVis));
+      } catch (e) {
+        // ignore
+      }
+      return;
     }
+    void Promise.all([
+      commands.setUiPreference(`${storageKey}_order`, JSON.stringify(newOrder)),
+      commands.setUiPreference(`${storageKey}_visibility`, JSON.stringify(newVis)),
+    ]).catch(() => undefined);
   };
 
   const toggleColumnVisibility = (colId: ColumnKey) => {
@@ -243,9 +284,14 @@ export const UniversalTracklist: React.FC<UniversalTracklistProps> = ({
 
   const toggleFav = (trackId: string, e: React.MouseEvent) => {
     e.stopPropagation();
+    const next = !(favoriteTrackIds?.has(trackId) ?? favorites[trackId]);
+    if (onFavoriteChange) {
+      onFavoriteChange(trackId, next);
+      return;
+    }
     setFavorites((prev) => ({
       ...prev,
-      [trackId]: !prev[trackId],
+      [trackId]: next,
     }));
   };
 
@@ -376,17 +422,14 @@ export const UniversalTracklist: React.FC<UniversalTracklistProps> = ({
 
       case 'playCount':
         return (
-          <span className="font-mono text-neutral-300 text-[11px]">
-            {/* Generate realistic deterministic play count based on index */}
-            {38 - (index % 15) * 2}
-          </span>
+          <span className="font-mono text-neutral-300 text-[11px]">{track.playCount ?? 0}</span>
         );
 
       case 'duration':
         return <span className="font-mono text-neutral-300 text-[11px]">{track.duration}</span>;
 
       case 'actions': {
-        const isFav = favorites[track.id];
+        const isFav = favoriteTrackIds?.has(track.id) ?? favorites[track.id];
         return (
           <span className="flex items-center gap-1">
             {onEditTrack && (

@@ -158,6 +158,7 @@ export function toTrackItem(track: TrackSummary, index: number): TrackItem {
     artistIds: track.artists.map((artist) => artist.id),
     albumId: track.albumId ?? undefined,
     genres: track.genres,
+    playCount: track.playCount,
   };
 }
 

@@ -94,6 +94,37 @@ vi.mock('@/services/themeService', () => ({
   useTheme: () => ({ currentTheme: { bgCanvas: '#000' } }),
 }));
 
+vi.mock('@/services/playerStateService', () => ({
+  loadPersistentPlayerState: () =>
+    Promise.resolve({
+      queue: [],
+      currentTrackId: null,
+      resumePositionMs: 0,
+      preferences: { libraryView: 'tracks' },
+    }),
+  loadHomeSnapshot: () =>
+    Promise.resolve({
+      totalTracks: 1,
+      totalArtists: 0,
+      totalAlbums: 0,
+      totalDurationMs: 120_000,
+      totalFileSize: 1,
+      totalListenedMs: 30_000,
+      topArtist: null,
+      topGenre: null,
+      favoriteEra: null,
+      continueListening: [],
+      recentlyAdded: [],
+      rediscover: [],
+    }),
+  loadFavoriteTrackIds: () => Promise.resolve(new Set()),
+  loadPlaylists: () => Promise.resolve([]),
+  savePlayerQueue: vi.fn(),
+  setTrackFavorite: vi.fn(),
+  createPlaylistFromQueue: vi.fn(),
+  saveLibraryViewPreference: vi.fn(),
+}));
+
 vi.mock('@/components/molecules/TopNavRail', () => ({
   TopNavRail: ({
     onTabChange,
@@ -182,7 +213,7 @@ describe('DesktopLibraryPage', () => {
     expect(screen.getByText('Native Rust output')).toBeInTheDocument();
     expect(screen.getByText('Native-only actions')).toBeInTheDocument();
     expect(screen.getByText(/Continue Listening/i)).toBeInTheDocument();
-    expect(screen.getAllByText('Scanned track')).toHaveLength(2);
+    expect(screen.getAllByText('Scanned track')).toHaveLength(1);
     expect(screen.getByText(/Library preview/i)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Open library' }));
     fireEvent.click(screen.getByRole('button', { name: 'Play scanned track' }));

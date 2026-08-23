@@ -158,6 +158,7 @@ pub struct TrackSummary {
     pub sample_rate: Option<u32>,
     pub channels: Option<u16>,
     pub bit_depth: Option<u16>,
+    pub play_count: u64,
     pub available: bool,
 }
 

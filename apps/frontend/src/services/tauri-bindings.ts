@@ -7,6 +7,7 @@ export const commands = {
 	addLibraryRoot: (path: string, label: string | null) => typedError<LibraryScan, AppError_Serialize>(__TAURI_INVOKE("add_library_root", { path, label })),
 	applyMusicbrainzCandidate: (trackId: string, candidate: EnrichmentCandidate) => typedError<MetadataPatch, AppError_Serialize>(__TAURI_INVOKE("apply_musicbrainz_candidate", { trackId, candidate })),
 	cleanupMissingTracks: (rootId: string | null, confirmed: boolean) => typedError<number, AppError_Serialize>(__TAURI_INVOKE("cleanup_missing_tracks", { rootId, confirmed })),
+	createPlaylist: (name: string) => typedError<PlaylistSummary, AppError_Serialize>(__TAURI_INVOKE("create_playlist", { name })),
 	getAlbumDetail: (albumId: string) => typedError<AlbumDetail, AppError_Serialize>(__TAURI_INVOKE("get_album_detail", { albumId })),
 	getArtistDetail: (artistId: string) => typedError<ArtistDetail, AppError_Serialize>(__TAURI_INVOKE("get_artist_detail", { artistId })),
 	getDesktopState: () => typedError<DesktopState, AppError_Serialize>(__TAURI_INVOKE("get_desktop_state")),
@@ -28,10 +29,16 @@ export const commands = {
 	isrc: string | null,
 	artworkId: string | null,
 } | null, AppError_Serialize>(__TAURI_INVOKE("get_metadata_draft", { trackId })),
+	getHomeSnapshot: () => typedError<HomeSnapshot, AppError_Serialize>(__TAURI_INVOKE("get_home_snapshot")),
+	getPersistentPlayerState: () => typedError<PersistentPlayerState, AppError_Serialize>(__TAURI_INVOKE("get_persistent_player_state")),
+	getPlaylistTracks: (playlistId: string) => typedError<TrackSummary[], AppError_Serialize>(__TAURI_INVOKE("get_playlist_tracks", { playlistId })),
 	getMusicbrainzEnabled: () => __TAURI_INVOKE<boolean>("get_musicbrainz_enabled"),
 	getPlaybackState: () => typedError<PlaybackState, AppError_Serialize>(__TAURI_INVOKE("get_playback_state")),
 	getTrackMetadata: (trackId: string) => typedError<TrackSummary, AppError_Serialize>(__TAURI_INVOKE("get_track_metadata", { trackId })),
+	getUiPreference: (key: string) => typedError<string | null, AppError_Serialize>(__TAURI_INVOKE("get_ui_preference", { key })),
 	listLibraryRoots: () => typedError<LibraryRoot[], AppError_Serialize>(__TAURI_INVOKE("list_library_roots")),
+	listFavorites: () => typedError<FavoriteReference[], AppError_Serialize>(__TAURI_INVOKE("list_favorites")),
+	listPlaylists: () => typedError<PlaylistSummary[], AppError_Serialize>(__TAURI_INVOKE("list_playlists")),
 	listAudioOutputDevices: () => typedError<AudioOutputDevice[], AppError_Serialize>(__TAURI_INVOKE("list_audio_output_devices")),
 	pausePlayback: () => typedError<PlaybackState, AppError_Serialize>(__TAURI_INVOKE("pause_playback")),
 	playTrack: (path: string) => typedError<PlaybackState, AppError_Serialize>(__TAURI_INVOKE("play_track", { path })),
@@ -45,12 +52,19 @@ export const commands = {
 	runMusicbrainzEnrichment: (trackId: string) => typedError<EnrichmentJob, AppError_Serialize>(__TAURI_INVOKE("run_musicbrainz_enrichment", { trackId })),
 	saveMetadataDraft: (trackId: string, patch: MetadataPatch) => typedError<MetadataPatch, AppError_Serialize>(__TAURI_INVOKE("save_metadata_draft", { trackId, patch })),
 	saveMetadataDrafts: (trackIds: string[], patch: MetadataPatch) => typedError<number, AppError_Serialize>(__TAURI_INVOKE("save_metadata_drafts", { trackIds, patch })),
+	savePlayerPreferences: (preferences: PlayerPreferences) => typedError<PlayerPreferences, AppError_Serialize>(__TAURI_INVOKE("save_player_preferences", { preferences })),
+	savePlayerQueue: (trackIds: string[]) => typedError<null, AppError_Serialize>(__TAURI_INVOKE("save_player_queue", { trackIds })),
 	scanLibrary: (root: string) => typedError<LibraryScan, AppError_Serialize>(__TAURI_INVOKE("scan_library", { root })),
 	selectAudioOutputDevice: (deviceId: string | null) => typedError<AudioOutputDevice[], AppError_Serialize>(__TAURI_INVOKE("select_audio_output_device", { deviceId })),
 	seekPlayback: (positionMs: number) => typedError<PlaybackState, AppError_Serialize>(__TAURI_INVOKE("seek_playback", { positionMs })),
 	setHifiMode: (enabled: boolean) => typedError<PlaybackState, AppError_Serialize>(__TAURI_INVOKE("set_hifi_mode", { enabled })),
 	setLibraryRootEnabled: (rootId: string, enabled: boolean) => typedError<LibraryRoot, AppError_Serialize>(__TAURI_INVOKE("set_library_root_enabled", { rootId, enabled })),
+	setLibraryViewPreference: (libraryView: string) => typedError<PlayerPreferences, AppError_Serialize>(__TAURI_INVOKE("set_library_view_preference", { libraryView })),
 	setMusicbrainzEnabled: (enabled: boolean) => __TAURI_INVOKE<boolean>("set_musicbrainz_enabled", { enabled }),
+	setFavorite: (entityType: string, entityId: string, favorite: boolean) => typedError<boolean, AppError_Serialize>(__TAURI_INVOKE("set_favorite", { entityType, entityId, favorite })),
+	setPlaylistTracks: (playlistId: string, trackIds: string[]) => typedError<null, AppError_Serialize>(__TAURI_INVOKE("set_playlist_tracks", { playlistId, trackIds })),
+	setThemePreference: (themeId: string) => typedError<PlayerPreferences, AppError_Serialize>(__TAURI_INVOKE("set_theme_preference", { themeId })),
+	setUiPreference: (key: string, value: string) => typedError<null, AppError_Serialize>(__TAURI_INVOKE("set_ui_preference", { key, value })),
 	setVolume: (volume: number | null) => typedError<PlaybackState, AppError_Serialize>(__TAURI_INVOKE("set_volume", { volume })),
 	stopPlayback: () => typedError<PlaybackState, AppError_Serialize>(__TAURI_INVOKE("stop_playback")),
 	writeMetadataToFile: (trackId: string) => typedError<MetadataWriteResult, AppError_Serialize>(__TAURI_INVOKE("write_metadata_to_file", { trackId })),
@@ -185,12 +199,32 @@ export type EnrichmentJob = {
 	fromCache: boolean,
 };
 
+export type FavoriteReference = {
+	entityType: string,
+	entityId: string,
+};
+
 export type GenreSummary = {
 	id: string,
 	name: string,
 	albumCount: number,
 	trackCount: number,
 	artists: ArtistReference[],
+};
+
+export type HomeSnapshot = {
+	totalTracks: number,
+	totalArtists: number,
+	totalAlbums: number,
+	totalDurationMs: number,
+	totalFileSize: number,
+	totalListenedMs: number,
+	topArtist: string | null,
+	topGenre: string | null,
+	favoriteEra: number | null,
+	continueListening: TrackSummary[],
+	recentlyAdded: TrackSummary[],
+	rediscover: TrackSummary[],
 };
 
 export type LibraryChanged = {
@@ -242,6 +276,13 @@ export type MetadataWriteResult = {
 	backupPath: string,
 };
 
+export type PersistentPlayerState = {
+	queue: TrackSummary[],
+	currentTrackId: string | null,
+	resumePositionMs: number,
+	preferences: PlayerPreferences,
+};
+
 export type PlaybackState = {
 	trackId: string | null,
 	path: string | null,
@@ -255,6 +296,21 @@ export type PlaybackState = {
 };
 
 export type PlaybackStatus = "stopped" | "loading" | "playing" | "paused" | "ended" | "error";
+
+export type PlayerPreferences = {
+	volume?: number | null,
+	hifiMode?: boolean,
+	selectedOutputDeviceId?: string | null,
+	themeId?: string,
+	visualizationEnabled?: boolean,
+	libraryView?: string,
+};
+
+export type PlaylistSummary = {
+	id: string,
+	name: string,
+	trackCount: number,
+};
 
 export type RootAvailability = "online" | "offline" | "permission-error";
 
@@ -305,6 +361,7 @@ export type TrackSummary = {
 	sampleRate: number | null,
 	channels: number | null,
 	bitDepth: number | null,
+	playCount: number,
 	available: boolean,
 };
 
