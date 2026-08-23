@@ -4,7 +4,7 @@ The completed vertical slice continues in the [Bebop V2 implementation plan](IMP
 
 ## Goal
 
-Rebuild Bebop as a local-first Tauri 2 music player. `Bebop-Qwen/` is an immutable,
+Rebuild Bebop as a local-first Tauri 2 music player. The prior prototype is an immutable,
 ignored historical archive. The first product milestone supports selecting a music folder,
 scanning real files, displaying them in the frontend, and playing a local track through a
 native Rust audio engine.
@@ -16,10 +16,10 @@ stage and commit only after its acceptance checks pass.
 
 **Suggested model:** GPT-5.6 Luna, medium reasoning
 
-- Preserve `Bebop-Qwen/`, including its nested Git repository, remote, tracked, and untracked
+- Preserve the historical prototype, including its nested Git repository, remote, tracked, and untracked
   files.
 - Initialize the parent repository at `/home/nerd/Projects/Bebop`.
-- Ignore `Bebop-Qwen/` in `.gitignore` and `.graphifyignore`.
+- Ignore the historical prototype in `.gitignore` and `.graphifyignore`.
 - Copy the prototype to `apps/frontend`; never move or delete archive source.
 - Use npm workspaces and a root `package-lock.json`.
 
@@ -60,7 +60,7 @@ stage and commit only after its acceptance checks pass.
 - Register the project Codex skill with `graphify install --project --platform codex`.
 - Enable Codex multi-agent mode only where Graphify requires it.
 - In a fresh turn, run `$graphify .` at the repository root.
-- Confirm the graph has no `Bebop-Qwen/` path, node, or reference.
+- Confirm the graph has no historical-prototype path, node, or reference.
 - Commit `graphify-out/graph.html`, `graphify-out/GRAPH_REPORT.md`, and
   `graphify-out/graph.json`; ignore Graphify cache and cost artifacts.
 
@@ -169,7 +169,7 @@ type TrackSummary = {
   id: string;
   path: string;
   title: string;
-  extension: 'flac' | 'wav' | 'mp3' | 'ogg';
+  extension: "flac" | "wav" | "mp3" | "ogg";
   fileSize: number;
   durationMs?: number;
   sampleRate?: number;
@@ -180,7 +180,7 @@ type TrackSummary = {
 type PlaybackState = {
   trackId?: string;
   path?: string;
-  status: 'stopped' | 'loading' | 'playing' | 'paused' | 'ended' | 'error';
+  status: "stopped" | "loading" | "playing" | "paused" | "ended" | "error";
   positionMs: number;
   durationMs: number;
   volume: number;

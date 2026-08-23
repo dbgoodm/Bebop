@@ -1,10 +1,11 @@
-# Bebop persistent-catalog architecture
+# Bebop V2 architecture
 
 ## Scope
 
-This milestone remains local-first. Rust owns a persistent SQLite catalog in Tauri's application
-data directory, indexes multiple user-selected roots, and owns decoding/playback. Music folders
-contain only the user's media; Bebop never places its database inside a library root.
+Bebop remains local-first. Rust owns the persistent SQLite catalog in Tauri's application-data
+directory, indexes multiple user-selected roots, validates all paths, and owns decoding/playback.
+Music folders contain only user media and explicit tag-write backups; Bebop never places its
+database inside a library root.
 
 ```text
 React pages/hooks
@@ -14,6 +15,9 @@ React pages/hooks
   ├─ tag draft/review → metadata overrides + audit → optional atomic Lofty file write
   ├─ opt-in enrichment → rate-limited MusicBrainz worker → persistent result cache
   ├─ queue/collections/Home ← settings + listening sessions ← Rust playback monitor
+  ├─ opt-in integrations → credential store + persistent outbox → Last.fm / Discord
+  ├─ explicit acquisition → typed slskd client → verified inbox import → selected root
+  ├─ signed update check → GitHub latest.json → verified artifact → confirmed install
   └─ generated IPC → playback commands → Rust PlaybackEngine → Rodio / CPAL → output device
                          ↑                                      │
                          └──── Tauri events: state, position, spectrum, ended, error ────┘
@@ -32,9 +36,11 @@ canonicalizes the opaque frontend path and resolves it against an available trac
 root. Temporarily unavailable roots and their identities remain in the catalog.
 
 SQLite is bundled through `rusqlite` and owned by one worker thread/connection. Foreign keys and
-WAL mode are enabled on startup. Schema changes use ordered migrations, and an existing database is
-backed up in the application-data directory before an upgrade. Catalog queries are limited to 500
-rows and use stable identity tie-breakers; React restores a bounded first page on startup.
+WAL mode are enabled on startup. Schema changes use ordered migrations; tests upgrade every
+historical version, and SQLite's online backup API creates a consistent application-data snapshot
+before an upgrade. Startup runs `quick_check`; corrupt database and WAL/SHM files are moved into a
+timestamped recovery directory before a clean catalog is created. Catalog queries are limited to
+500 rows and use stable identity tie-breakers; React restores a bounded first page on startup.
 
 Artist, album, and genre summaries are derived from normalized catalog relationships rather than
 prototype entities. Global search runs in SQLite across track title, artist, album, genre,
@@ -107,18 +113,21 @@ come from catalog and listening-session rows. Demo rails and acquisition simulat
 Rust is authoritative; [generated TypeScript bindings](../apps/frontend/src/services/tauri-bindings.ts)
 are a consumer of those contracts.
 
-| Contract           | Purpose                                                                                                |
-| ------------------ | ------------------------------------------------------------------------------------------------------ |
-| `AppError`         | Stable code, message, and optional string context.                                                     |
-| `TrackSummary`     | A scanned local audio file. Paths remain opaque to TypeScript.                                         |
-| `MetadataPatch`    | Nullable SQLite override and the reviewed payload for an explicit file-tag write.                     |
-| `EnrichmentJob`    | MusicBrainz job status, cached/review candidates, and conservative auto-apply outcome.                 |
-| `ScanProgress`     | Scanned-file and discovered-track counts during a scan.                                                |
-| `PlaybackState`    | Track identity, state, position, duration, volume/mute, hi-fi mode, and optional output path.          |
-| `AudioOutputState` | Source/device formats plus native-rate, resampling, gain, exclusive-mode, and bit-perfect disclosures. |
-| `PersistentPlayerState` | Restorable queue/checkpoint plus persisted output, theme, and library preferences.                   |
-| `HomeSnapshot`     | SQLite-derived collections and aggregate listening/catalog statistics for Home.                       |
-| `PlaylistSummary`  | Stable manual playlist identity, name, and current track count.                                       |
+| Contract                | Purpose                                                                                                |
+| ----------------------- | ------------------------------------------------------------------------------------------------------ |
+| `AppError`              | Stable code, message, and optional string context.                                                     |
+| `TrackSummary`          | A scanned local audio file. Paths remain opaque to TypeScript.                                         |
+| `MetadataPatch`         | Nullable SQLite override and the reviewed payload for an explicit file-tag write.                      |
+| `EnrichmentJob`         | MusicBrainz job status, cached/review candidates, and conservative auto-apply outcome.                 |
+| `ScanProgress`          | Scanned-file and discovered-track counts during a scan.                                                |
+| `PlaybackState`         | Track identity, state, position, duration, volume/mute, hi-fi mode, and optional output path.          |
+| `AudioOutputState`      | Source/device formats plus native-rate, resampling, gain, exclusive-mode, and bit-perfect disclosures. |
+| `PersistentPlayerState` | Restorable queue/checkpoint plus persisted output, theme, and library preferences.                     |
+| `HomeSnapshot`          | SQLite-derived collections and aggregate listening/catalog statistics for Home.                        |
+| `PlaylistSummary`       | Stable manual playlist identity, name, and current track count.                                        |
+| `IntegrationStatus`     | Opt-in Last.fm/Discord configuration, connection, outbox, and error state without secrets.             |
+| `AcquisitionJob`        | Persisted slskd transfer/import state without its credential or unrestricted destination paths.        |
+| `UpdateStatus`          | Daily/manual signed-update availability and non-sensitive release metadata.                            |
 
 The playback commands are `play_track`, `pause_playback`, `resume_playback`, `stop_playback`,
 `seek_playback`, `set_volume`, and `get_playback_state`. Output-device and hi-fi commands are
@@ -169,6 +178,31 @@ album, and a playback timestamp; private sharing reports only that local listeni
 Presence is cleared on pause, stop, disable, exit, and track end. Last.fm, Discord, credential-store,
 and IPC errors update `integration://status` but never propagate into the audio engine.
 
+## Acquisition boundary
+
+The production connector is a typed Rust client for a separately installed slskd instance and is
+disabled until configured. Loopback HTTP is allowed at the default `127.0.0.1:5030`; non-loopback
+servers require HTTPS and explicit confirmation. The API key remains in the OS credential store.
+Only user-initiated searches, enqueues, and transfer controls call slskd.
+
+slskd owns temporary files. Bebop imports only from a canonical configured completed-download
+inbox after finding one exact filename-and-size match. A destination must be a single safe filename
+inside an enabled, online root. Rust validates the extension and real decoder before and after an
+atomic no-clobber copy, then reconciles the root. No acquisition command accepts an arbitrary
+frontend destination path. Production never mounts the simulated demo queue.
+
+## Releases and updates
+
+Version tags build AppImage, DEB, RPM, and NSIS artifacts in GitHub Actions. The release environment
+holds the Tauri updater private key, integration identifiers, and Windows certificate; only the
+public updater key is committed. Stable promotion separately verifies checksums, updater
+signatures, required assets, and Windows Authenticode before publishing `latest.json`.
+
+Rust checks the stable channel at startup at most once per 24 hours and on explicit request. It
+never downloads automatically. Installation requires confirmation, uses Tauri's mandatory updater
+signature verification, and stops playback only after the download verifies. Integration,
+acquisition, and update failures are isolated from local playback.
+
 ## Hardware-audio smoke tests
 
 CI compiles and packages the desktop app but cannot prove physical output, DAC sample-rate
@@ -194,11 +228,17 @@ switching, or bit-perfect delivery. Run these manual checks before a release.
 
 ## Validation
 
-GitHub Actions runs the same frontend format/lint/typecheck/test gates and Rust
-format/Clippy-with-warnings-denied/test gates on Linux and Windows. It packages a Linux `.deb`
-and Windows NSIS bundle. Hardware audio is intentionally outside CI coverage.
+GitHub Actions runs frontend format/lint/typecheck/tests and Rust format, all-target/all-feature
+Clippy with warnings denied, and all-feature tests on Linux and Windows. Separate matrix entries
+package AppImage, DEB, RPM, and NSIS. Tests cover real tagged and malformed fixtures, every database
+upgrade path, corruption recovery, atomic metadata rollback, watcher identity preservation,
+bounded spectrum, integration idempotency, acquisition import boundaries, and updater throttling.
+Hardware audio, Authenticode trust on a physical Windows installation, and DAC indicators remain
+release smoke-test responsibilities because CI cannot observe them.
 
-## Deferred work
+## Deferred beyond V2
 
-Acquisition, installers beyond CI bundles, code signing, and auto-updates remain deferred to later
-stages in the V2 plan.
+Automatic file organization, acoustic fingerprinting, online lyrics, gapless transitions,
+crossfade, EQ/DSP, native DSD/DoP, macOS packaging, mobile clients, and cloud library sync remain
+future work. Opus and WavPack are not advertised until the production playback backend passes real
+decoder fixtures for them.

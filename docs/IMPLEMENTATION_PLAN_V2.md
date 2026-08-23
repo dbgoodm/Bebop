@@ -95,7 +95,14 @@ type SpectrumFrame = {
 
 type AcquisitionJob = {
   id: string;
-  status: "queued" | "downloading" | "paused" | "verifying" | "importing" | "complete" | "error";
+  status:
+    | "queued"
+    | "downloading"
+    | "paused"
+    | "verifying"
+    | "importing"
+    | "complete"
+    | "error";
   progress: number;
   sourceUser?: string;
   targetPath?: string;
@@ -225,7 +232,7 @@ Add typed commands for root management, paginated catalog queries, artist/album 
 - Add offline, unavailable-root, read-only-root, malformed-tag, interrupted-write, unavailable-DAC, rate-limit, missing-Discord, unreachable-slskd, and failed-update scenarios.
 - Perform physical Linux and Windows smoke tests with 16/24-bit and 44.1/48/96/192kHz material.
 - Update README, architecture, privacy, data-location, backup, release, and troubleshooting documentation.
-- Refresh Graphify and confirm zero `Bebop-Qwen/` references.
+- Refresh Graphify and confirm zero historical-prototype references.
 
 ## Test and Acceptance Criteria
 
@@ -245,7 +252,7 @@ Add typed commands for root management, paginated catalog queries, artist/album 
 ## Assumptions and Deferred Beyond V2
 
 - Bebop remains local-first; all network features are visibly opt-in and playback works fully offline.
-- `dbgoodm/Bebop` becomes the new release repository; `Bebop-Qwen/` remains immutable and ignored.
+- `dbgoodm/Bebop` becomes the new release repository; the historical prototype remains immutable and ignored.
 - Last.fm/Discord application registrations, Tauri signing keys, GitHub release secrets, and a Windows signing certificate are external prerequisites for Stage 17.
 - MusicBrainz use is assumed non-commercial; licensing must be revisited before commercial distribution.
 - File organization/automatic renaming, acoustic fingerprinting, online lyrics, gapless transitions, crossfade, EQ/DSP, native DSD/DoP, macOS packaging, mobile clients, and cloud library sync remain post-V2 work.

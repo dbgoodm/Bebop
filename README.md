@@ -1,8 +1,9 @@
 # Bebop
 
-Bebop is a local-first Tauri 2 music player. The current vertical slice selects a folder,
-scans tagged common PCM music formats, displays the real tracks, and plays one through a Rust-owned
-Rodio/CPAL engine.
+Bebop is a local-first Tauri 2 music platform. It persists multiple library roots, indexes real
+metadata and artwork, provides artist/album/genre discovery, and plays common PCM formats through
+a Rust-owned Rodio/CPAL engine. Playlists, favorites, queue state, listening history, metadata
+drafts, live indexing, and native spectrum analysis remain on the device.
 
 ## Quick start
 
@@ -16,8 +17,8 @@ npm run tauri:dev
 ```
 
 On Linux, `tauri:dev` automatically applies WebKitGTK's DMABUF workaround for the Omarchy
-Wayland protocol issue. `npm run tauri:dev:x11` remains an XWayland fallback. Select a music
-folder in Bebop, then choose a scanned track to play it.
+Wayland protocol issue. `npm run tauri:dev:x11` remains an XWayland fallback. Add one or more music
+folders in Bebop, then browse or search the indexed catalog.
 
 Useful commands:
 
@@ -26,13 +27,14 @@ npm run format:check
 npm run lint
 npm run typecheck
 npm test
-cargo fmt --check
-cargo clippy -- -D warnings
-cargo test
+cargo fmt --all -- --check
+cargo clippy --all-targets --all-features -- -D warnings
+cargo test --all-features
 npm run tauri:build
 ```
 
-The local Linux package is produced at `target/release/bundle/deb/`.
+Signed release builds publish Linux AppImage, DEB, RPM, and Windows NSIS artifacts. Arch/Omarchy
+maintainers should use `scripts/build-linux-release-docker` for the Debian-baseline AppImage build.
 
 ## Demo mode
 
@@ -47,14 +49,29 @@ default and does not activate in the production Tauri flow.
 
 ## Playback and hi-fi behavior
 
-Bebop recognizes FLAC, WAV, MP3, Ogg Vorbis, AAC, AIFF, and M4A/ALAC. For each track it requests a device stream matching
-the decoded sample rate and channel count, then falls back safely when that stream is unavailable.
-The player reports the active source and output format, resampling, and software-gain status.
+Bebop recognizes FLAC, WAV, MP3, Ogg Vorbis, AAC, AIFF, and M4A/ALAC. For each track it requests a
+device stream matching the decoded sample rate and channel count, then falls back safely when that
+stream is unavailable. The player reports source/output formats, resampling, software gain, and
+device-loss fallback. A bounded Rust FFT path drives the production spectrum without blocking the
+audio callback.
 
 Hi-fi mode requests native-rate output and locks Bebop's software gain at unity. A native-rate
 stream is not automatically bit-perfect: PipeWire/PulseAudio shared mode and Windows shared mode
 can still process or resample audio. Bebop therefore never claims bit-perfect playback unless a
 future platform-specific verification path can prove it.
 
-See [architecture documentation](docs/ARCHITECTURE.md) for IPC contracts, security boundaries,
-and hardware smoke tests.
+## Optional online features
+
+MusicBrainz enrichment, Last.fm, Discord Rich Presence, and the user-managed slskd connector are
+disabled by default. Update checks run at most once daily, but downloads and installation always
+require confirmation. Bebop remains fully usable offline.
+
+## Documentation
+
+- [Architecture and IPC](docs/ARCHITECTURE.md)
+- [Privacy](docs/PRIVACY.md) and [data locations](docs/DATA_LOCATIONS.md)
+- [Backup and recovery](docs/BACKUP_AND_RECOVERY.md)
+- [Online integrations](docs/INTEGRATIONS.md) and [slskd acquisition](docs/ACQUISITION.md)
+- [Signed releases and updates](docs/RELEASES.md)
+- [Troubleshooting](docs/TROUBLESHOOTING.md)
+- [V2 implementation plan](docs/IMPLEMENTATION_PLAN_V2.md)
