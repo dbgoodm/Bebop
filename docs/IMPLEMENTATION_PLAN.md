@@ -108,6 +108,24 @@ stage and commit only after its acceptance checks pass.
 
 **Commit:** `feat(player): add native Rust playback engine`
 
+## Stage 5.5 — Hi-fi output correctness
+
+**Suggested model:** GPT-5.6 Sol, high reasoning
+
+- Prefer a per-track output stream matching the source sample rate and channel count, with a
+  graceful fallback when the selected device does not support that configuration.
+- Enumerate output devices and allow Rust IPC to select either a specific device or the system
+  default.
+- Add a hi-fi mode that requests native-rate playback and locks software gain at unity.
+- Report the source format, actual device stream format, resampling status, software-gain status,
+  and whether bit-perfect output can honestly be verified.
+- Never label shared PipeWire/PulseAudio or Windows shared-mode playback as bit-perfect when the
+  operating system may still resample or process the stream.
+- Unit-test device negotiation, fallback, unity-gain locking, and signal-path reporting through a
+  fake backend; physical DAC behavior remains a Stage 7 smoke test.
+
+**Commit:** `feat(audio): add hi-fi output negotiation`
+
 ## Stage 6 — Frontend vertical slice
 
 **Suggested model:** GPT-5.6 Terra, medium reasoning

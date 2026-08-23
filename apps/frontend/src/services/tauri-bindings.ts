@@ -6,11 +6,14 @@ import { invoke as __TAURI_INVOKE } from "@tauri-apps/api/core";
 export const commands = {
 	getDesktopState: () => typedError<DesktopState, AppError_Serialize>(__TAURI_INVOKE("get_desktop_state")),
 	getPlaybackState: () => typedError<PlaybackState, AppError_Serialize>(__TAURI_INVOKE("get_playback_state")),
+	listAudioOutputDevices: () => typedError<AudioOutputDevice[], AppError_Serialize>(__TAURI_INVOKE("list_audio_output_devices")),
 	pausePlayback: () => typedError<PlaybackState, AppError_Serialize>(__TAURI_INVOKE("pause_playback")),
 	playTrack: (path: string) => typedError<PlaybackState, AppError_Serialize>(__TAURI_INVOKE("play_track", { path })),
 	resumePlayback: () => typedError<PlaybackState, AppError_Serialize>(__TAURI_INVOKE("resume_playback")),
 	scanLibrary: (root: string) => typedError<LibraryScan, AppError_Serialize>(__TAURI_INVOKE("scan_library", { root })),
+	selectAudioOutputDevice: (deviceId: string | null) => typedError<AudioOutputDevice[], AppError_Serialize>(__TAURI_INVOKE("select_audio_output_device", { deviceId })),
 	seekPlayback: (positionMs: number) => typedError<PlaybackState, AppError_Serialize>(__TAURI_INVOKE("seek_playback", { positionMs })),
+	setHifiMode: (enabled: boolean) => typedError<PlaybackState, AppError_Serialize>(__TAURI_INVOKE("set_hifi_mode", { enabled })),
 	setVolume: (volume: number | null) => typedError<PlaybackState, AppError_Serialize>(__TAURI_INVOKE("set_volume", { volume })),
 	stopPlayback: () => typedError<PlaybackState, AppError_Serialize>(__TAURI_INVOKE("stop_playback")),
 };
@@ -32,6 +35,30 @@ export type AppError_Serialize = {
 
 export type AudioExtension = "flac" | "wav" | "mp3" | "ogg";
 
+export type AudioOutputDevice = {
+	id: string,
+	name: string,
+	isDefault: boolean,
+	isSelected: boolean,
+};
+
+export type AudioOutputState = {
+	deviceId: string,
+	deviceName: string,
+	sourceSampleRate: number,
+	sourceChannels: number,
+	sourceBitDepth: number | null,
+	outputSampleRate: number,
+	outputChannels: number,
+	outputSampleFormat: string,
+	nativeSampleRate: boolean,
+	resampling: boolean,
+	softwareGain: boolean,
+	exclusiveMode: boolean,
+	bitPerfect: boolean,
+	disclosure: string,
+};
+
 export type DesktopState = {
 	libraryRoot: string | null,
 	playback: PlaybackState,
@@ -51,6 +78,8 @@ export type PlaybackState = {
 	durationMs: number,
 	volume: number | null,
 	muted: boolean,
+	hifiMode: boolean,
+	output: AudioOutputState | null,
 };
 
 export type PlaybackStatus = "stopped" | "loading" | "playing" | "paused" | "ended" | "error";

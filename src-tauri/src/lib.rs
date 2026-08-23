@@ -136,6 +136,34 @@ pub enum PlaybackStatus {
 
 #[derive(Clone, Debug, Deserialize, Serialize, Type)]
 #[serde(rename_all = "camelCase")]
+pub struct AudioOutputDevice {
+    pub id: String,
+    pub name: String,
+    pub is_default: bool,
+    pub is_selected: bool,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct AudioOutputState {
+    pub device_id: String,
+    pub device_name: String,
+    pub source_sample_rate: u32,
+    pub source_channels: u16,
+    pub source_bit_depth: Option<u16>,
+    pub output_sample_rate: u32,
+    pub output_channels: u16,
+    pub output_sample_format: String,
+    pub native_sample_rate: bool,
+    pub resampling: bool,
+    pub software_gain: bool,
+    pub exclusive_mode: bool,
+    pub bit_perfect: bool,
+    pub disclosure: String,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
 pub struct PlaybackState {
     pub track_id: Option<String>,
     pub path: Option<String>,
@@ -144,6 +172,8 @@ pub struct PlaybackState {
     pub duration_ms: u64,
     pub volume: f32,
     pub muted: bool,
+    pub hifi_mode: bool,
+    pub output: Option<AudioOutputState>,
 }
 
 impl Default for PlaybackState {
@@ -156,6 +186,8 @@ impl Default for PlaybackState {
             duration_ms: 0,
             volume: 1.0,
             muted: false,
+            hifi_mode: true,
+            output: None,
         }
     }
 }
@@ -422,18 +454,22 @@ fn play_track(
             return Err(error);
         }
     };
-    if AudioExtension::from_path(&path).is_none() {
-        let error = AppError {
-            code: "audio-format-unsupported".into(),
-            message: "Bebop currently supports FLAC, WAV, MP3, and OGG playback.".into(),
-            context: Some(BTreeMap::from([(
-                "path".into(),
-                path.to_string_lossy().into_owned(),
-            )])),
-        };
-        emit_playback_error(&app, &error);
-        return Err(error);
-    }
+    let extension = match AudioExtension::from_path(&path) {
+        Some(extension) => extension,
+        None => {
+            let error = AppError {
+                code: "audio-format-unsupported".into(),
+                message: "Bebop currently supports FLAC, WAV, MP3, and OGG playback.".into(),
+                context: Some(BTreeMap::from([(
+                    "path".into(),
+                    path.to_string_lossy().into_owned(),
+                )])),
+            };
+            emit_playback_error(&app, &error);
+            return Err(error);
+        }
+    };
+    let source_bit_depth = probe_audio_metadata(&path, &extension).bit_depth;
 
     let mut engine = state
         .playback
@@ -441,7 +477,7 @@ fn play_track(
         .map_err(|_| AppError::state_unavailable("playback-engine"))?;
     engine.prepare_track(&path, track_id(&path));
     emit_playback_state(&app, &engine.state);
-    if let Err(error) = engine.start_prepared_track(&path) {
+    if let Err(error) = engine.start_prepared_track(&path, source_bit_depth) {
         let error = AppError::from_audio(error, Some(&path));
         emit_playback_state(&app, &engine.state);
         emit_playback_error(&app, &error);
@@ -518,7 +554,62 @@ fn set_volume(
         .playback
         .lock()
         .map_err(|_| AppError::state_unavailable("playback-engine"))?;
-    engine.set_volume(volume);
+    if let Err(error) = engine.set_volume(volume) {
+        let error = AppError::from_audio(error, engine.state.path.as_deref().map(Path::new));
+        emit_playback_error(&app, &error);
+        return Err(error);
+    }
+    emit_playback_state(&app, &engine.state);
+    Ok(engine.state.clone())
+}
+
+#[tauri::command]
+#[specta::specta]
+fn list_audio_output_devices(
+    state: State<'_, AppState>,
+) -> Result<Vec<AudioOutputDevice>, AppError> {
+    state
+        .playback
+        .lock()
+        .map_err(|_| AppError::state_unavailable("playback-engine"))?
+        .output_devices()
+        .map_err(|error| AppError::from_audio(error, None))
+}
+
+#[tauri::command]
+#[specta::specta]
+fn select_audio_output_device(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    device_id: Option<String>,
+) -> Result<Vec<AudioOutputDevice>, AppError> {
+    let mut engine = state
+        .playback
+        .lock()
+        .map_err(|_| AppError::state_unavailable("playback-engine"))?;
+    if let Err(error) = engine.select_output_device(device_id) {
+        let error = AppError::from_audio(error, None);
+        emit_playback_error(&app, &error);
+        return Err(error);
+    }
+    emit_playback_state(&app, &engine.state);
+    engine
+        .output_devices()
+        .map_err(|error| AppError::from_audio(error, None))
+}
+
+#[tauri::command]
+#[specta::specta]
+fn set_hifi_mode(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    enabled: bool,
+) -> Result<PlaybackState, AppError> {
+    let mut engine = state
+        .playback
+        .lock()
+        .map_err(|_| AppError::state_unavailable("playback-engine"))?;
+    engine.set_hifi_mode(enabled);
     emit_playback_state(&app, &engine.state);
     Ok(engine.state.clone())
 }
@@ -594,15 +685,20 @@ fn ipc_bindings() -> Builder<tauri::Wry> {
         .commands(collect_commands![
             get_desktop_state,
             get_playback_state,
+            list_audio_output_devices,
             pause_playback,
             play_track,
             resume_playback,
             scan_library,
+            select_audio_output_device,
             seek_playback,
+            set_hifi_mode,
             set_volume,
             stop_playback
         ])
         .typ::<AppError>()
+        .typ::<AudioOutputDevice>()
+        .typ::<AudioOutputState>()
         .typ::<LibraryScan>()
         .typ::<TrackSummary>()
         .typ::<PlaybackState>()
