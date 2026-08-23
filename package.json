@@ -10,6 +10,8 @@
     "typecheck": "npm run typecheck --workspace=@bebop/frontend",
     "test": "npm run test --workspace=@bebop/frontend",
     "format": "npm run format --workspace=@bebop/frontend",
-    "format:check": "npm run format:check --workspace=@bebop/frontend"
+    "format:check": "npm run format:check --workspace=@bebop/frontend",
+    "tauri:dev": "tauri dev --config src-tauri/tauri.conf.json",
+    "tauri:build": "tauri build --config src-tauri/tauri.conf.json"
   }
 }

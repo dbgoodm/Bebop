@@ -1,0 +1,27 @@
+[package]
+name = "bebop-desktop"
+version = "0.1.0"
+description = "Bebop local-first desktop music player"
+authors = ["Daniel Goodman"]
+edition = "2024"
+rust-version = "1.85"
+
+[lib]
+name = "bebop_desktop"
+crate-type = ["lib", "cdylib", "staticlib"]
+
+[[bin]]
+name = "bebop-desktop"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build = { version = "2.6.3", features = [] }
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+specta = { version = "=2.0.0-rc.25", features = ["derive"] }
+specta-typescript = "0.0.12"
+tauri = { version = "2.11.5", features = [] }
+tauri-plugin-dialog = "2.7.2"
+tauri-plugin-fs = "2.5.1"
+tauri-specta = { version = "=2.0.0-rc.25", features = ["typescript"] }

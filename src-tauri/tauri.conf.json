@@ -1,0 +1,33 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Bebop",
+  "version": "0.1.0",
+  "identifier": "com.dbgoodm.bebop",
+  "build": {
+    "beforeDevCommand": "VITE_BEBOP_DEMO=true npm run dev --workspace=@bebop/frontend",
+    "beforeBuildCommand": "npm run build --workspace=@bebop/frontend",
+    "devUrl": "http://localhost:1420",
+    "frontendDist": "../apps/frontend/dist"
+  },
+  "app": {
+    "withGlobalTauri": false,
+    "windows": [
+      {
+        "label": "main",
+        "title": "Bebop",
+        "width": 1440,
+        "height": 960,
+        "minWidth": 900,
+        "minHeight": 640,
+        "resizable": true
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all"
+  }
+}
