@@ -1,7 +1,7 @@
 # Bebop
 
 Bebop is a local-first Tauri 2 music player. The current vertical slice selects a folder,
-scans FLAC/WAV/MP3/OGG files, displays the real tracks, and plays one through a Rust-owned
+scans tagged common PCM music formats, displays the real tracks, and plays one through a Rust-owned
 Rodio/CPAL engine.
 
 ## Quick start
@@ -47,7 +47,7 @@ default and does not activate in the production Tauri flow.
 
 ## Playback and hi-fi behavior
 
-Bebop recognizes FLAC, WAV, MP3, and OGG. For each track it requests a device stream matching
+Bebop recognizes FLAC, WAV, MP3, Ogg Vorbis, AAC, AIFF, and M4A/ALAC. For each track it requests a device stream matching
 the decoded sample rate and channel count, then falls back safely when that stream is unavailable.
 The player reports the active source and output format, resampling, and software-gain status.
 

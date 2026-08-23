@@ -474,17 +474,88 @@ fn upsert_track(
     now: &str,
 ) -> Result<(), AppError> {
     let id = Uuid::new_v4().to_string();
+    let metadata = &track.metadata;
+    if let Some(artwork) = &metadata.artwork {
+        transaction
+            .execute(
+                "INSERT INTO artwork (id, content_hash, cache_path, mime_type, source, created_at)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+                 ON CONFLICT(content_hash) DO UPDATE SET cache_path = excluded.cache_path",
+                params![
+                    artwork.id,
+                    artwork.content_hash,
+                    artwork.cache_path,
+                    artwork.mime_type,
+                    artwork.source,
+                    now
+                ],
+            )
+            .map_err(database_error("upsert-artwork"))?;
+    }
+    let artist_names = if metadata.artists.is_empty() {
+        vec!["Unknown Artist".to_owned()]
+    } else {
+        metadata.artists.clone()
+    };
+    let album_artist_names = if metadata.album_artists.is_empty() {
+        artist_names.clone()
+    } else {
+        metadata.album_artists.clone()
+    };
+    let artist_ids = upsert_artists(
+        transaction,
+        &artist_names,
+        &metadata.musicbrainz_artist_ids,
+        now,
+    )?;
+    let album_artist_ids = upsert_artists(
+        transaction,
+        &album_artist_names,
+        &metadata.musicbrainz_album_artist_ids,
+        now,
+    )?;
+    let album_title = metadata.album.as_deref().unwrap_or("Unknown Album");
+    let album_id = upsert_album(
+        transaction,
+        album_title,
+        &album_artist_ids,
+        metadata.year,
+        metadata.date.as_deref(),
+        metadata.label.as_deref(),
+        metadata.catalog_number.as_deref(),
+        metadata.musicbrainz_release_id.as_deref(),
+        metadata.artwork.as_ref().map(|artwork| artwork.id.as_str()),
+        now,
+    )?;
     transaction
         .execute(
             "INSERT INTO tracks (
-                id, root_id, canonical_path, relative_path, title, extension, file_size,
-                duration_ms, sample_rate, channels, bit_depth, available, modified_at_ms, added_at, updated_at
-             ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, 1, ?12, ?13, ?13)
+                id, root_id, canonical_path, relative_path, title, sort_title, album_id,
+                extension, file_size, duration_ms, sample_rate, channels, bit_depth,
+                track_number, track_total, disc_number, disc_total, year, date, composer,
+                label, catalog_number, isrc, musicbrainz_recording_id, artwork_id,
+                replaygain_track_gain, replaygain_track_peak, replaygain_album_gain,
+                replaygain_album_peak, lyrics, available, modified_at_ms, added_at, updated_at
+             ) VALUES (
+                ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13,
+                ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25,
+                ?26, ?27, ?28, ?29, ?30, 1, ?31, ?32, ?32
+             )
              ON CONFLICT(root_id, relative_path) DO UPDATE SET
                 canonical_path = excluded.canonical_path, title = excluded.title,
+                sort_title = excluded.sort_title, album_id = excluded.album_id,
                 extension = excluded.extension, file_size = excluded.file_size,
                 duration_ms = excluded.duration_ms, sample_rate = excluded.sample_rate,
                 channels = excluded.channels, bit_depth = excluded.bit_depth,
+                track_number = excluded.track_number, track_total = excluded.track_total,
+                disc_number = excluded.disc_number, disc_total = excluded.disc_total,
+                year = excluded.year, date = excluded.date, composer = excluded.composer,
+                label = excluded.label, catalog_number = excluded.catalog_number,
+                isrc = excluded.isrc, musicbrainz_recording_id = excluded.musicbrainz_recording_id,
+                artwork_id = excluded.artwork_id, replaygain_track_gain = excluded.replaygain_track_gain,
+                replaygain_track_peak = excluded.replaygain_track_peak,
+                replaygain_album_gain = excluded.replaygain_album_gain,
+                replaygain_album_peak = excluded.replaygain_album_peak, lyrics = excluded.lyrics,
                 available = 1, modified_at_ms = excluded.modified_at_ms, updated_at = excluded.updated_at",
             params![
                 id,
@@ -492,18 +563,180 @@ fn upsert_track(
                 track.canonical_path,
                 track.relative_path,
                 track.title,
+                metadata.sort_title,
+                album_id,
                 track.extension.as_str(),
                 track.file_size,
                 track.duration_ms,
                 track.sample_rate,
                 track.channels,
                 track.bit_depth,
+                metadata.track_number,
+                metadata.track_total,
+                metadata.disc_number,
+                metadata.disc_total,
+                metadata.year,
+                metadata.date,
+                metadata.composer,
+                metadata.label,
+                metadata.catalog_number,
+                metadata.isrc,
+                metadata.musicbrainz_recording_id,
+                metadata.artwork.as_ref().map(|artwork| &artwork.id),
+                metadata.replaygain_track_gain,
+                metadata.replaygain_track_peak,
+                metadata.replaygain_album_gain,
+                metadata.replaygain_album_peak,
+                metadata.lyrics,
                 track.modified_at_ms,
                 now,
             ],
         )
         .map_err(database_error("upsert-library-track"))?;
+    let track_id: String = transaction
+        .query_row(
+            "SELECT id FROM tracks WHERE root_id = ?1 AND relative_path = ?2",
+            params![root_id, track.relative_path],
+            |row| row.get(0),
+        )
+        .map_err(database_error("read-upserted-track"))?;
+    transaction
+        .execute("DELETE FROM track_artists WHERE track_id = ?1", [&track_id])
+        .map_err(database_error("clear-track-artists"))?;
+    for (position, artist_id) in artist_ids.iter().enumerate() {
+        transaction
+            .execute(
+                "INSERT INTO track_artists (track_id, artist_id, role, position) VALUES (?1, ?2, 'artist', ?3)",
+                params![track_id, artist_id, position],
+            )
+            .map_err(database_error("attach-track-artist"))?;
+    }
+    for (position, artist_id) in album_artist_ids.iter().enumerate() {
+        transaction
+            .execute(
+                "INSERT INTO track_artists (track_id, artist_id, role, position) VALUES (?1, ?2, 'album-artist', ?3)",
+                params![track_id, artist_id, position],
+            )
+            .map_err(database_error("attach-track-album-artist"))?;
+    }
+    transaction
+        .execute("DELETE FROM track_genres WHERE track_id = ?1", [&track_id])
+        .map_err(database_error("clear-track-genres"))?;
+    for genre in &metadata.genres {
+        let genre_id = Uuid::new_v4().to_string();
+        transaction
+            .execute(
+                "INSERT INTO genres (id, name) VALUES (?1, ?2) ON CONFLICT(name) DO NOTHING",
+                params![genre_id, genre],
+            )
+            .map_err(database_error("upsert-genre"))?;
+        let genre_id: String = transaction
+            .query_row(
+                "SELECT id FROM genres WHERE name = ?1 COLLATE NOCASE",
+                [genre],
+                |row| row.get(0),
+            )
+            .map_err(database_error("read-genre"))?;
+        transaction
+            .execute(
+                "INSERT INTO track_genres (track_id, genre_id) VALUES (?1, ?2)",
+                params![track_id, genre_id],
+            )
+            .map_err(database_error("attach-track-genre"))?;
+    }
     Ok(())
+}
+
+fn upsert_artists(
+    transaction: &Transaction<'_>,
+    names: &[String],
+    musicbrainz_ids: &[String],
+    now: &str,
+) -> Result<Vec<String>, AppError> {
+    let mut ids = Vec::new();
+    for name in names {
+        let existing = transaction
+            .query_row(
+                "SELECT id FROM artists WHERE name = ?1 COLLATE NOCASE LIMIT 1",
+                [name],
+                |row| row.get(0),
+            )
+            .optional()
+            .map_err(database_error("find-artist"))?;
+        let id = if let Some(id) = existing {
+            id
+        } else {
+            let id = Uuid::new_v4().to_string();
+            transaction
+                .execute(
+                    "INSERT INTO artists (id, name, musicbrainz_artist_id, created_at, updated_at)
+                     VALUES (?1, ?2, ?3, ?4, ?4)",
+                    params![id, name, musicbrainz_ids.get(ids.len()), now],
+                )
+                .map_err(database_error("insert-artist"))?;
+            id
+        };
+        if let Some(musicbrainz_id) = musicbrainz_ids.get(ids.len()) {
+            transaction
+                .execute(
+                    "UPDATE artists SET musicbrainz_artist_id = ?2, updated_at = ?3 WHERE id = ?1",
+                    params![id, musicbrainz_id, now],
+                )
+                .map_err(database_error("update-artist-musicbrainz-id"))?;
+        }
+        ids.push(id);
+    }
+    Ok(ids)
+}
+
+#[allow(clippy::too_many_arguments)]
+fn upsert_album(
+    transaction: &Transaction<'_>,
+    title: &str,
+    artist_ids: &[String],
+    year: Option<u32>,
+    date: Option<&str>,
+    label: Option<&str>,
+    catalog_number: Option<&str>,
+    musicbrainz_release_id: Option<&str>,
+    artwork_id: Option<&str>,
+    now: &str,
+) -> Result<String, AppError> {
+    let existing = transaction
+        .query_row(
+            "SELECT albums.id FROM albums
+             LEFT JOIN album_artists ON album_artists.album_id = albums.id AND album_artists.position = 0
+             WHERE albums.title = ?1 COLLATE NOCASE AND (?2 IS NULL OR album_artists.artist_id = ?2)
+             LIMIT 1",
+            params![title, artist_ids.first()],
+            |row| row.get(0),
+        )
+        .optional()
+        .map_err(database_error("find-album"))?;
+    let id = existing.unwrap_or_else(|| Uuid::new_v4().to_string());
+    transaction
+        .execute(
+            "INSERT INTO albums (id, title, year, date, label, catalog_number, musicbrainz_release_id, artwork_id, created_at, updated_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?9)
+             ON CONFLICT(id) DO UPDATE SET year = excluded.year, date = excluded.date,
+             label = excluded.label, catalog_number = excluded.catalog_number,
+             musicbrainz_release_id = excluded.musicbrainz_release_id,
+             artwork_id = COALESCE(excluded.artwork_id, albums.artwork_id), updated_at = excluded.updated_at",
+            params![id, title, year, date, label, catalog_number, musicbrainz_release_id, artwork_id, now],
+        )
+        .map_err(database_error("upsert-album"))?;
+    transaction
+        .execute("DELETE FROM album_artists WHERE album_id = ?1", [&id])
+        .map_err(database_error("clear-album-artists"))?;
+    for (position, artist_id) in artist_ids.iter().enumerate() {
+        transaction
+            .execute(
+                "INSERT INTO album_artists (album_id, artist_id, position) VALUES (?1, ?2, ?3)",
+                params![id, artist_id, position],
+            )
+            .map_err(database_error("attach-album-artist"))?;
+    }
+    Ok(id)
 }
 
 fn mark_root_unavailable(
@@ -532,9 +765,9 @@ fn mark_root_unavailable(
 }
 
 fn track_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<TrackSummary> {
-    let extension: String = row.get(5)?;
+    let extension: String = row.get(7)?;
     let extension = AudioExtension::from_database(&extension).ok_or_else(|| {
-        rusqlite::Error::InvalidColumnType(5, "extension".into(), rusqlite::types::Type::Text)
+        rusqlite::Error::InvalidColumnType(7, "extension".into(), rusqlite::types::Type::Text)
     })?;
     Ok(TrackSummary {
         id: row.get(0)?,
@@ -542,17 +775,38 @@ fn track_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<TrackSummary> {
         path: row.get(2)?,
         relative_path: row.get(3)?,
         title: row.get(4)?,
+        sort_title: row.get(5)?,
+        artists: Vec::new(),
+        album_artists: Vec::new(),
+        album_id: row.get(6)?,
+        album: "Unknown Album".into(),
+        genres: Vec::new(),
         extension,
-        file_size: row.get(6)?,
-        duration_ms: row.get(7)?,
-        sample_rate: row.get(8)?,
-        channels: row.get(9)?,
-        bit_depth: row.get(10)?,
-        available: row.get(11)?,
+        file_size: row.get(8)?,
+        duration_ms: row.get(9)?,
+        sample_rate: row.get(10)?,
+        channels: row.get(11)?,
+        bit_depth: row.get(12)?,
+        track_number: row.get(13)?,
+        track_total: row.get(14)?,
+        disc_number: row.get(15)?,
+        disc_total: row.get(16)?,
+        year: row.get(17)?,
+        date: row.get(18)?,
+        composer: row.get(19)?,
+        label: row.get(20)?,
+        catalog_number: row.get(21)?,
+        isrc: row.get(22)?,
+        musicbrainz_recording_id: row.get(23)?,
+        artwork_id: row.get(24)?,
+        available: row.get(25)?,
     })
 }
 
-const TRACK_COLUMNS: &str = "id, root_id, canonical_path, relative_path, title, extension, file_size, duration_ms, sample_rate, channels, bit_depth, available";
+const TRACK_COLUMNS: &str = "id, root_id, canonical_path, relative_path, title, sort_title,
+    album_id, extension, file_size, duration_ms, sample_rate, channels, bit_depth,
+    track_number, track_total, disc_number, disc_total, year, date, composer, label,
+    catalog_number, isrc, musicbrainz_recording_id, artwork_id, available";
 
 fn query_tracks(connection: &Connection, query: CatalogQuery) -> Result<TrackPage, AppError> {
     let limit = query.limit.clamp(1, 500);
@@ -590,7 +844,7 @@ fn query_tracks(connection: &Connection, query: CatalogQuery) -> Result<TrackPag
     let mut statement = connection
         .prepare(&sql)
         .map_err(database_error("prepare-catalog-query"))?;
-    let items = statement
+    let mut items = statement
         .query_map(
             params![
                 query.root_id,
@@ -604,12 +858,70 @@ fn query_tracks(connection: &Connection, query: CatalogQuery) -> Result<TrackPag
         .map_err(database_error("query-catalog-tracks"))?
         .collect::<rusqlite::Result<Vec<_>>>()
         .map_err(database_error("read-catalog-tracks"))?;
+    drop(statement);
+    for track in &mut items {
+        hydrate_track(connection, track)?;
+    }
     Ok(TrackPage {
         items,
         total,
         offset: query.offset,
         limit,
     })
+}
+
+fn hydrate_track(connection: &Connection, track: &mut TrackSummary) -> Result<(), AppError> {
+    track.artists = artist_references(connection, &track.id, "artist")?;
+    track.album_artists = artist_references(connection, &track.id, "album-artist")?;
+    if let Some(album_id) = &track.album_id {
+        track.album = connection
+            .query_row(
+                "SELECT title FROM albums WHERE id = ?1",
+                [album_id],
+                |row| row.get(0),
+            )
+            .optional()
+            .map_err(database_error("read-track-album"))?
+            .unwrap_or_else(|| "Unknown Album".into());
+    }
+    let mut statement = connection
+        .prepare(
+            "SELECT genres.name FROM track_genres
+             JOIN genres ON genres.id = track_genres.genre_id
+             WHERE track_genres.track_id = ?1 ORDER BY genres.name COLLATE NOCASE",
+        )
+        .map_err(database_error("prepare-track-genres"))?;
+    track.genres = statement
+        .query_map([&track.id], |row| row.get(0))
+        .map_err(database_error("query-track-genres"))?
+        .collect::<rusqlite::Result<Vec<_>>>()
+        .map_err(database_error("read-track-genres"))?;
+    Ok(())
+}
+
+fn artist_references(
+    connection: &Connection,
+    track_id: &str,
+    role: &str,
+) -> Result<Vec<crate::ArtistReference>, AppError> {
+    let mut statement = connection
+        .prepare(
+            "SELECT artists.id, artists.name FROM track_artists
+             JOIN artists ON artists.id = track_artists.artist_id
+             WHERE track_artists.track_id = ?1 AND track_artists.role = ?2
+             ORDER BY track_artists.position",
+        )
+        .map_err(database_error("prepare-track-artists"))?;
+    statement
+        .query_map(params![track_id, role], |row| {
+            Ok(crate::ArtistReference {
+                id: row.get(0)?,
+                name: row.get(1)?,
+            })
+        })
+        .map_err(database_error("query-track-artists"))?
+        .collect::<rusqlite::Result<Vec<_>>>()
+        .map_err(database_error("read-track-artists"))
 }
 
 fn resolve_track(

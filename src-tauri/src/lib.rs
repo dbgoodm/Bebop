@@ -11,6 +11,7 @@ use std::{
 
 mod audio;
 mod catalog;
+mod metadata;
 mod persistence;
 
 use serde::{Deserialize, Serialize};
@@ -22,8 +23,8 @@ use tauri_specta::{Builder, collect_commands};
 
 use audio::{AudioBackendError, PlaybackEngine};
 pub use catalog::{
-    AudioExtension, CatalogQuery, LibraryRoot, LibraryScan, RootAvailability, ScanProgress,
-    SortDirection, TrackPage, TrackSort, TrackSummary, WatchMode,
+    ArtistReference, AudioExtension, CatalogQuery, LibraryRoot, LibraryScan, RootAvailability,
+    ScanProgress, SortDirection, TrackPage, TrackSort, TrackSummary, WatchMode,
 };
 use catalog::{probe_audio_metadata, scan_library_at};
 use persistence::DatabaseWorker;
@@ -187,14 +188,16 @@ pub struct LibraryChanged {
 /// Shared state owns the database worker and the sole native playback engine.
 pub struct AppState {
     database: DatabaseWorker,
+    artwork_cache: PathBuf,
     playback: Arc<Mutex<PlaybackEngine>>,
     running: Arc<AtomicBool>,
 }
 
 impl AppState {
-    fn new(database: DatabaseWorker) -> Self {
+    fn new(database: DatabaseWorker, artwork_cache: PathBuf) -> Self {
         Self {
             database,
+            artwork_cache,
             playback: Arc::new(Mutex::new(PlaybackEngine::default())),
             running: Arc::new(AtomicBool::new(true)),
         }
@@ -209,9 +212,12 @@ async fn scan_library(
     root: String,
 ) -> Result<LibraryScan, AppError> {
     let database = state.database.clone();
-    tauri::async_runtime::spawn_blocking(move || add_and_scan_root(&app, &database, root, None))
-        .await
-        .map_err(|error| AppError::new("background-task-failed", error.to_string()))?
+    let artwork_cache = state.artwork_cache.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        add_and_scan_root(&app, &database, &artwork_cache, root, None)
+    })
+    .await
+    .map_err(|error| AppError::new("background-task-failed", error.to_string()))?
 }
 
 #[tauri::command]
@@ -229,14 +235,18 @@ async fn add_library_root(
     label: Option<String>,
 ) -> Result<LibraryScan, AppError> {
     let database = state.database.clone();
-    tauri::async_runtime::spawn_blocking(move || add_and_scan_root(&app, &database, path, label))
-        .await
-        .map_err(|error| AppError::new("background-task-failed", error.to_string()))?
+    let artwork_cache = state.artwork_cache.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        add_and_scan_root(&app, &database, &artwork_cache, path, label)
+    })
+    .await
+    .map_err(|error| AppError::new("background-task-failed", error.to_string()))?
 }
 
 fn add_and_scan_root(
     app: &AppHandle,
     database: &DatabaseWorker,
+    artwork_cache: &Path,
     path: String,
     label: Option<String>,
 ) -> Result<LibraryScan, AppError> {
@@ -259,7 +269,7 @@ fn add_and_scan_root(
                 .to_owned()
         });
     let root = database.add_root(canonical.to_string_lossy().into_owned(), label)?;
-    scan_root(app, database, root)
+    scan_root(app, database, artwork_cache, root)
 }
 
 #[tauri::command]
@@ -302,9 +312,10 @@ async fn rescan_library_root(
     root_id: String,
 ) -> Result<LibraryScan, AppError> {
     let database = state.database.clone();
+    let artwork_cache = state.artwork_cache.clone();
     tauri::async_runtime::spawn_blocking(move || {
         let root = database.get_root(root_id)?;
-        scan_root(&app, &database, root)
+        scan_root(&app, &database, &artwork_cache, root)
     })
     .await
     .map_err(|error| AppError::new("background-task-failed", error.to_string()))?
@@ -318,9 +329,10 @@ async fn restore_library_root(
     root_id: String,
 ) -> Result<LibraryScan, AppError> {
     let database = state.database.clone();
+    let artwork_cache = state.artwork_cache.clone();
     tauri::async_runtime::spawn_blocking(move || {
         let root = database.set_root_enabled(root_id, true)?;
-        scan_root(&app, &database, root)
+        scan_root(&app, &database, &artwork_cache, root)
     })
     .await
     .map_err(|error| AppError::new("background-task-failed", error.to_string()))?
@@ -329,9 +341,10 @@ async fn restore_library_root(
 fn scan_root(
     app: &AppHandle,
     database: &DatabaseWorker,
+    artwork_cache: &Path,
     root: LibraryRoot,
 ) -> Result<LibraryScan, AppError> {
-    let scanned = match scan_library_at(Path::new(&root.path), |progress| {
+    let scanned = match scan_library_at(Path::new(&root.path), artwork_cache, |progress| {
         let _ = app.emit(SCAN_PROGRESS_EVENT, progress);
     }) {
         Ok(scanned) => scanned,
@@ -427,7 +440,9 @@ fn play_track(
         None => {
             let error = AppError {
                 code: "audio-format-unsupported".into(),
-                message: "Bebop currently supports FLAC, WAV, MP3, and OGG playback.".into(),
+                message:
+                    "Bebop supports FLAC, WAV, MP3, Ogg Vorbis, AAC, AIFF, and M4A/ALAC playback."
+                        .into(),
                 context: Some(BTreeMap::from([(
                     "path".into(),
                     path.to_string_lossy().into_owned(),
@@ -710,7 +725,7 @@ pub fn run() {
             let app_data = app.path().app_data_dir()?;
             let database = DatabaseWorker::start(app_data.join("bebop.sqlite3"))
                 .map_err(|error| std::io::Error::other(error.message))?;
-            app.manage(AppState::new(database));
+            app.manage(AppState::new(database, app_data.join("artwork")));
             let state = app.state::<AppState>();
             spawn_playback_monitor(app.handle().clone(), &state);
             Ok(())
@@ -758,7 +773,8 @@ mod tests {
         ] {
             fs::write(root.join(file), b"not decoded in this test").expect("write fixture");
         }
-        let scan = scan_library_at(&root, |_| {}).expect("scan succeeds");
+        let scan =
+            scan_library_at(&root, &root.join(".artwork-cache"), |_| {}).expect("scan succeeds");
         assert_eq!(scan.tracks.len(), 4);
         assert!(
             scan.tracks
@@ -790,17 +806,45 @@ mod tests {
         let first = database
             .reconcile(
                 library_root.id.clone(),
-                scan_library_at(&root, |_| {}).expect("first scan"),
+                scan_library_at(&root, &root.join(".artwork-cache"), |_| {}).expect("first scan"),
             )
             .expect("first reconciliation");
         let second = database
             .reconcile(
                 library_root.id,
-                scan_library_at(&root, |_| {}).expect("second scan"),
+                scan_library_at(&root, &root.join(".artwork-cache"), |_| {}).expect("second scan"),
             )
             .expect("second reconciliation");
         assert_eq!(first[0].id, second[0].id);
         fs::remove_dir_all(root).expect("remove root fixture");
+    }
+
+    #[test]
+    fn tagged_fixture_populates_catalog_entities() {
+        let root = temporary_directory("tagged-catalog");
+        let fixture = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/tone.flac");
+        fs::copy(fixture, root.join("tagged.flac")).expect("copy tagged fixture");
+        let database = DatabaseWorker::in_memory().expect("database starts");
+        let library_root = database
+            .add_root(
+                root.canonicalize()
+                    .expect("canonical root")
+                    .to_string_lossy()
+                    .into_owned(),
+                "Tagged".into(),
+            )
+            .expect("root added");
+        let tracks = database
+            .reconcile(
+                library_root.id,
+                scan_library_at(&root, &root.join(".artwork-cache"), |_| {}).expect("fixture scan"),
+            )
+            .expect("fixture reconciliation");
+        assert_eq!(tracks[0].title, "Fixture FLAC");
+        assert_eq!(tracks[0].artists[0].name, "Fixture Artist");
+        assert_eq!(tracks[0].album, "Fixture Album");
+        assert_eq!(tracks[0].genres, ["Jazz"]);
+        fs::remove_dir_all(root).expect("remove fixture");
     }
 
     #[test]

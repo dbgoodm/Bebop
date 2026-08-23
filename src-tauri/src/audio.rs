@@ -553,6 +553,7 @@ impl PlaybackEngine {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::path::PathBuf;
     use std::sync::{Arc, Mutex};
 
     #[derive(Default)]
@@ -819,5 +820,25 @@ mod tests {
             .expect_err("device error propagates");
         assert_eq!(error.code, "audio-device-unavailable");
         assert!(matches!(engine.state.status, PlaybackStatus::Error));
+    }
+
+    #[test]
+    fn advertised_formats_decode_through_the_real_playback_decoder() {
+        let fixtures = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures");
+        for name in [
+            "tone.flac",
+            "tone.mp3",
+            "tone.ogg",
+            "tone.wav",
+            "tone.aiff",
+            "tone.aac",
+            "tone-aac.m4a",
+            "tone-alac.m4a",
+        ] {
+            let file = File::open(fixtures.join(name)).expect("open audio fixture");
+            let mut decoder = Decoder::try_from(file)
+                .unwrap_or_else(|error| panic!("{name} must decode through Rodio: {error}"));
+            assert!(decoder.by_ref().take(16).count() > 0, "{name} yields PCM");
+        }
     }
 }

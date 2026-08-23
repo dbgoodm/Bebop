@@ -32,8 +32,15 @@ WAL mode are enabled on startup. Schema changes use ordered migrations, and an e
 backed up in the application-data directory before an upgrade. Catalog queries are limited to 500
 rows and use stable identity tie-breakers; React restores a bounded first page on startup.
 
-Supported extensions are `flac`, `wav`, `mp3`, and `ogg`. Scans return filename-derived titles,
-path, extension, file size, and available duration/sample-rate/channel/bit-depth data.
+Playback-tested extensions are `flac`, `wav`, `mp3`, `ogg`, `aac`, `aif`/`aiff`, and
+`m4a`/`mp4` (AAC or ALAC). Lofty reads embedded titles, artists, album artists, albums, genres,
+numbering, dates, credits, identifiers, ReplayGain, lyrics, and artwork. Missing tags explicitly
+fall back to the filename, `Unknown Artist`, and `Unknown Album`. Embedded or neighboring cover art
+is copied into a hash-addressed application-data cache.
+
+Lofty can parse Opus and WavPack tags, but those extensions are not advertised or indexed yet:
+the current cross-platform Rodio/Symphonia backend has no production decoder for either format.
+They remain behind the V2 rule that metadata probing and real Rust playback fixtures must both pass.
 
 ## IPC contracts
 

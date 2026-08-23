@@ -7,7 +7,10 @@ use symphonia::core::{
 };
 use walkdir::{DirEntry, WalkDir};
 
-use crate::AppError;
+use crate::{
+    AppError,
+    metadata::{EmbeddedMetadata, read_embedded_metadata},
+};
 
 #[derive(Clone, Debug, Deserialize, Serialize, Type)]
 #[serde(rename_all = "lowercase")]
@@ -16,6 +19,9 @@ pub enum AudioExtension {
     Wav,
     Mp3,
     Ogg,
+    Aac,
+    Aiff,
+    M4a,
 }
 
 impl AudioExtension {
@@ -25,6 +31,9 @@ impl AudioExtension {
             "wav" => Some(Self::Wav),
             "mp3" => Some(Self::Mp3),
             "ogg" => Some(Self::Ogg),
+            "aac" => Some(Self::Aac),
+            "aif" | "aiff" => Some(Self::Aiff),
+            "m4a" | "mp4" => Some(Self::M4a),
             _ => None,
         }
     }
@@ -35,6 +44,9 @@ impl AudioExtension {
             Self::Wav => "wav",
             Self::Mp3 => "mp3",
             Self::Ogg => "ogg",
+            Self::Aac => "aac",
+            Self::Aiff => "aiff",
+            Self::M4a => "m4a",
         }
     }
 
@@ -44,6 +56,9 @@ impl AudioExtension {
             "wav" => Some(Self::Wav),
             "mp3" => Some(Self::Mp3),
             "ogg" => Some(Self::Ogg),
+            "aac" => Some(Self::Aac),
+            "aiff" => Some(Self::Aiff),
+            "m4a" => Some(Self::M4a),
             _ => None,
         }
     }
@@ -114,6 +129,24 @@ pub struct TrackSummary {
     pub path: String,
     pub relative_path: String,
     pub title: String,
+    pub sort_title: Option<String>,
+    pub artists: Vec<ArtistReference>,
+    pub album_artists: Vec<ArtistReference>,
+    pub album_id: Option<String>,
+    pub album: String,
+    pub genres: Vec<String>,
+    pub track_number: Option<u32>,
+    pub track_total: Option<u32>,
+    pub disc_number: Option<u32>,
+    pub disc_total: Option<u32>,
+    pub year: Option<u32>,
+    pub date: Option<String>,
+    pub composer: Option<String>,
+    pub label: Option<String>,
+    pub catalog_number: Option<String>,
+    pub isrc: Option<String>,
+    pub musicbrainz_recording_id: Option<String>,
+    pub artwork_id: Option<String>,
     pub extension: AudioExtension,
     pub file_size: u64,
     pub duration_ms: Option<u64>,
@@ -121,6 +154,13 @@ pub struct TrackSummary {
     pub channels: Option<u16>,
     pub bit_depth: Option<u16>,
     pub available: bool,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct ArtistReference {
+    pub id: String,
+    pub name: String,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, Type)]
@@ -203,6 +243,7 @@ pub(crate) struct ScannedTrack {
     pub channels: Option<u16>,
     pub bit_depth: Option<u16>,
     pub modified_at_ms: Option<i64>,
+    pub metadata: EmbeddedMetadata,
 }
 
 #[derive(Debug)]
@@ -268,6 +309,7 @@ pub(crate) fn probe_audio_metadata(path: &Path, extension: &AudioExtension) -> A
 
 pub(crate) fn scan_library_at<F>(
     requested_root: &Path,
+    artwork_cache: &Path,
     mut emit_progress: F,
 ) -> Result<ScannedLibrary, AppError>
 where
@@ -339,6 +381,15 @@ where
             .to_string_lossy()
             .into_owned();
         let audio = probe_audio_metadata(&canonical_path, &extension);
+        let embedded = match read_embedded_metadata(&canonical_path, artwork_cache) {
+            Ok(metadata) => metadata,
+            Err(error) => {
+                warnings.push(format!(
+                    "Used filename metadata for {current_path}: {error}"
+                ));
+                EmbeddedMetadata::default()
+            }
+        };
         let modified_at_ms = metadata
             .modified()
             .ok()
@@ -347,7 +398,10 @@ where
         tracks.push(ScannedTrack {
             canonical_path: canonical_path.to_string_lossy().into_owned(),
             relative_path,
-            title: display_title(&canonical_path),
+            title: embedded
+                .title
+                .clone()
+                .unwrap_or_else(|| display_title(&canonical_path)),
             extension,
             file_size: metadata.len(),
             duration_ms: audio.duration_ms,
@@ -355,6 +409,7 @@ where
             channels: audio.channels,
             bit_depth: audio.bit_depth,
             modified_at_ms,
+            metadata: embedded,
         });
         emit_progress(&ScanProgress {
             scanned_files,

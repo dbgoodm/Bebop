@@ -1,21 +1,21 @@
 # Graph Report - Bebop  (2026-08-23)
 
 ## Corpus Check
-- 84 files · ~66,183 words
+- 85 files · ~68,289 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 757 nodes · 1696 edges · 53 communities (36 shown, 17 thin omitted)
-- Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 7 edges (avg confidence: 0.85)
+- 790 nodes · 1803 edges · 54 communities (37 shown, 17 thin omitted)
+- Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 9 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `ee95484e`
+- Built from commit: `d0c0aeca`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
-- PlaybackEngine
+- audio.rs
 - useTheme
 - devDependencies
 - What You Must Do When Invoked
@@ -52,7 +52,7 @@
 - Bebop persistent-catalog architecture
 - frontend/package.json
 - vite
-- autoprefixer
+- metadata.rs
 - eslint
 - @eslint/js
 - eslint-plugin-react-hooks
@@ -61,18 +61,19 @@
 - @testing-library/react
 - @testing-library/user-event
 - vitest
+- esbuild
 
 ## God Nodes (most connected - your core abstractions)
 1. `TrackItem` - 38 edges
 2. `AppError` - 33 edges
 3. `useTheme()` - 31 edges
-4. `AppState` - 29 edges
+4. `AppState` - 30 edges
 5. `PlaybackEngine` - 24 edges
 6. `DatabaseWorker` - 20 edges
 7. `AudioBackendError` - 18 edges
-8. `RealAudioEngine` - 17 edges
-9. `PlaybackState` - 17 edges
-10. `compilerOptions` - 16 edges
+8. `database_error()` - 18 edges
+9. `RealAudioEngine` - 17 edges
+10. `PlaybackState` - 17 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `UniversalTracklistProps` --references--> `TrackItem`  [EXTRACTED]
@@ -89,9 +90,9 @@
 ## Import Cycles
 - None detected.
 
-## Communities (53 total, 17 thin omitted)
+## Communities (54 total, 17 thin omitted)
 
-### Community 0 - "PlaybackEngine"
+### Community 0 - "audio.rs"
 Cohesion: 0.08
 Nodes (41): AudioOutputDevice, AudioOutputState, Box, Device, OutputStream, PlaybackState, SampleFormat, Send (+33 more)
 
@@ -101,7 +102,7 @@ Nodes (25): AlbumDetailPage(), DiscoverView(), FullscreenNowPlaying(), Fullscree
 
 ### Community 2 - "devDependencies"
 Cohesion: 0.10
-Nodes (21): devDependencies, esbuild, eslint-plugin-react-refresh, prettier, tailwindcss, @tauri-apps/cli, @testing-library/jest-dom, tsx (+13 more)
+Nodes (21): devDependencies, autoprefixer, eslint-plugin-react-refresh, prettier, tailwindcss, @tauri-apps/cli, @testing-library/jest-dom, tsx (+13 more)
 
 ### Community 3 - "What You Must Do When Invoked"
 Cohesion: 0.08
@@ -136,8 +137,8 @@ Cohesion: 0.22
 Nodes (8): graphify reference: extra exports and benchmark, Step 6b - Wiki (only if --wiki flag), Step 7 - Neo4j export (only if --neo4j or --neo4j-push flag), Step 7a - FalkorDB export (only if --falkordb or --falkordb-push flag), Step 7b - SVG export (only if --svg flag), Step 7c - GraphML export (only if --graphml flag), Step 7d - MCP server (only if --mcp flag), Step 8 - Token reduction benchmark (only if total_words > 5000)
 
 ### Community 17 - "lib.rs"
-Cohesion: 0.12
-Nodes (61): AppHandle, AtomicBool, BTreeMap, Builder, LibraryScan, add_and_scan_root(), add_library_root(), AppError (+53 more)
+Cohesion: 0.11
+Nodes (66): AppHandle, AtomicBool, BTreeMap, Builder, LibraryScan, add_and_scan_root(), add_library_root(), AppError (+58 more)
 
 ### Community 18 - "tauri.conf.json"
 Cohesion: 0.09
@@ -152,8 +153,8 @@ Cohesion: 0.13
 Nodes (14): core:default, dialog:allow-open, fs:allow-read, fs:allow-read-dir, fs:allow-stat, linux, main, windows (+6 more)
 
 ### Community 21 - "libraryService.ts"
-Cohesion: 0.07
-Nodes (56): useLibraryScan(), asAppError(), PlaybackEventName, mocks, playingState, track, useNativePlayback(), chooseLibraryFolder() (+48 more)
+Cohesion: 0.06
+Nodes (57): useLibraryScan(), asAppError(), PlaybackEventName, mocks, playingState, track, useNativePlayback(), chooseLibraryFolder() (+49 more)
 
 ### Community 25 - "graphify reference: query, path, explain"
 Cohesion: 0.33
@@ -172,12 +173,12 @@ Cohesion: 0.50
 Nodes (3): For --cluster-only, For --update (incremental re-extraction), graphify reference: incremental update and cluster-only
 
 ### Community 34 - "Result"
-Cohesion: 0.13
-Nodes (47): Connection, FnOnce, Receiver, RootAvailability, Row, Sender, ScannedLibrary, ScannedTrack (+39 more)
+Cohesion: 0.12
+Nodes (51): Connection, FnOnce, Receiver, RootAvailability, Row, Sender, add_root(), artist_references() (+43 more)
 
 ### Community 35 - "catalog.rs"
-Cohesion: 0.09
-Nodes (32): DirEntry, F, SortDirection, AudioExtension, AudioMetadata, CatalogQuery, display_title(), is_hidden() (+24 more)
+Cohesion: 0.11
+Nodes (32): DirEntry, F, SortDirection, ArtistReference, AudioExtension, AudioMetadata, CatalogQuery, display_title() (+24 more)
 
 ### Community 36 - "DesktopLibraryPage.tsx"
 Cohesion: 0.11
@@ -207,22 +208,26 @@ Nodes (4): name, private, type, version
 Cohesion: 0.67
 Nodes (3): vite, vite, vite
 
+### Community 44 - "metadata.rs"
+Cohesion: 0.26
+Nodes (21): ItemKey, cache_artwork(), cache_bytes(), CachedArtwork, clean(), EmbeddedMetadata, float_item(), item() (+13 more)
+
 ## Knowledge Gaps
-- **235 isolated node(s):** `singleQuote`, `trailingComma`, `printWidth`, `name`, `private` (+230 more)
+- **236 isolated node(s):** `singleQuote`, `trailingComma`, `printWidth`, `name`, `private` (+231 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **17 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `devDependencies` connect `devDependencies` to `frontend/package.json`, `vite`, `autoprefixer`, `eslint`, `@eslint/js`, `eslint-plugin-react-hooks`, `globals`, `jsdom`, `@testing-library/react`, `@testing-library/user-event`, `vitest`?**
-  _High betweenness centrality (0.070) - this node is a cross-community bridge._
+- **Why does `devDependencies` connect `devDependencies` to `frontend/package.json`, `vite`, `eslint`, `@eslint/js`, `eslint-plugin-react-hooks`, `globals`, `jsdom`, `@testing-library/react`, `@testing-library/user-event`, `vitest`, `esbuild`?**
+  _High betweenness centrality (0.071) - this node is a cross-community bridge._
 - **Why does `typescript` connect `devDependencies` to `lib.rs`?**
-  _High betweenness centrality (0.064) - this node is a cross-community bridge._
+  _High betweenness centrality (0.066) - this node is a cross-community bridge._
 - **What connects `singleQuote`, `trailingComma`, `printWidth` to the rest of the system?**
-  _235 weakly-connected nodes found - possible documentation gaps or missing edges._
-- **Should `PlaybackEngine` be split into smaller, more focused modules?**
-  _Cohesion score 0.07826384142173616 - nodes in this community are weakly interconnected._
+  _236 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **Should `audio.rs` be split into smaller, more focused modules?**
+  _Cohesion score 0.07659007659007659 - nodes in this community are weakly interconnected._
 - **Should `useTheme` be split into smaller, more focused modules?**
   _Cohesion score 0.10227272727272728 - nodes in this community are weakly interconnected._
 - **Should `devDependencies` be split into smaller, more focused modules?**

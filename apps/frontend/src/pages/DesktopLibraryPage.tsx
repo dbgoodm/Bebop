@@ -286,7 +286,8 @@ export function DesktopLibraryPage() {
               </button>
             ) : (
               <EmptyState title="Start with a local music folder.">
-                Bebop will recognize FLAC, WAV, MP3, and OGG files without uploading them.
+                Bebop recognizes FLAC, WAV, MP3, Ogg Vorbis, AAC, AIFF, and M4A/ALAC without
+                uploading them.
               </EmptyState>
             )}
           </div>
@@ -340,7 +341,8 @@ export function DesktopLibraryPage() {
                 </p>
                 <h1 className="mt-2 text-3xl font-bold text-white">Your music, on this device.</h1>
                 <p className="mt-2 text-sm text-neutral-400">
-                  Select a folder to index FLAC, WAV, MP3, and OGG files. Bebop never uploads it.
+                  Select folders to index FLAC, WAV, MP3, Ogg Vorbis, AAC, AIFF, and M4A/ALAC. Bebop
+                  never uploads them.
                 </p>
               </div>
               <button

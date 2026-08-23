@@ -40,7 +40,12 @@ export type AppError_Serialize = {
 	context?: { [key in string]: string } | null,
 };
 
-export type AudioExtension = "flac" | "wav" | "mp3" | "ogg";
+export type ArtistReference = {
+	id: string,
+	name: string,
+};
+
+export type AudioExtension = "flac" | "wav" | "mp3" | "ogg" | "aac" | "aiff" | "m4a";
 
 export type AudioOutputDevice = {
 	id: string,
@@ -145,6 +150,24 @@ export type TrackSummary = {
 	path: string,
 	relativePath: string,
 	title: string,
+	sortTitle: string | null,
+	artists: ArtistReference[],
+	albumArtists: ArtistReference[],
+	albumId: string | null,
+	album: string,
+	genres: string[],
+	trackNumber: number | null,
+	trackTotal: number | null,
+	discNumber: number | null,
+	discTotal: number | null,
+	year: number | null,
+	date: string | null,
+	composer: string | null,
+	label: string | null,
+	catalogNumber: string | null,
+	isrc: string | null,
+	musicbrainzRecordingId: string | null,
+	artworkId: string | null,
 	extension: AudioExtension,
 	fileSize: number,
 	durationMs: number | null,
