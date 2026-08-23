@@ -1,0 +1,107 @@
+@import 'tailwindcss';
+
+/* Theme Variable Dynamic Styles */
+:root {
+  --theme-primary: #f59e0b;
+  --theme-primary-hover: #fbbf24;
+  --theme-secondary: #ef4444;
+  --theme-glow: rgba(245, 158, 11, 0.45);
+  --theme-bg-canvas: #05070d;
+  --theme-bg-card: #0d131f;
+  --theme-bg-surface: #141d2e;
+  --theme-border: #23324d;
+  --theme-text-primary: #ffffff;
+  --theme-text-secondary: #e2e8f0;
+  --theme-text-muted: #7c8ba1;
+}
+
+/* Custom Sleek Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(10, 14, 23, 0.6);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: 9999px;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--theme-primary, #f59e0b);
+  box-shadow: 0 0 8px var(--theme-glow, rgba(245, 158, 11, 0.4));
+}
+
+::-webkit-scrollbar-thumb:active {
+  background: var(--theme-primary-hover, #fbbf24);
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Firefox standard scrollbar properties */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) rgba(10, 14, 23, 0.6);
+}
+
+/* Theme helper utility classes */
+.theme-canvas-bg {
+  background-color: var(--theme-bg-canvas);
+}
+
+.theme-card-bg {
+  background-color: var(--theme-bg-card);
+  border-color: var(--theme-border);
+}
+
+.theme-surface-bg {
+  background-color: var(--theme-bg-surface);
+  border-color: var(--theme-border);
+}
+
+.theme-accent-text {
+  color: var(--theme-primary);
+}
+
+.theme-accent-bg {
+  background-color: var(--theme-primary);
+}
+
+.theme-accent-border {
+  border-color: var(--theme-primary);
+}
+
+.theme-glow-sm {
+  box-shadow: 0 0 12px var(--theme-glow);
+}
+
+.theme-glow-lg {
+  box-shadow: 0 0 24px var(--theme-glow);
+}
+
+/* Global Selection styling */
+::selection {
+  background: var(--theme-primary);
+  color: #000000;
+}
+
+@layer utilities {
+  /* Hide scrollbar for Chrome, Safari and Opera */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  /* Hide scrollbar for IE, Edge and Firefox */
+  .no-scrollbar {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+  }
+}

@@ -1,0 +1,5 @@
+Bebop-Qwen/
+node_modules/
+dist/
+coverage/
+target/

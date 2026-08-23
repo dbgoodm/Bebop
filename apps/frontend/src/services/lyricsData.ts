@@ -1,0 +1,120 @@
+export interface LyricLine {
+  time: number; // in seconds
+  text: string;
+}
+
+export const TRACK_LYRICS: Record<string, LyricLine[]> = {
+  // Cowboy Bebop / The Real Folk Blues / Tank! / Bebop OST
+  'Tank!': [
+    { time: 0, text: '♪ (Upbeat double bass intro)' },
+    { time: 4, text: "3, 2, 1, Let's jam." },
+    { time: 10, text: '♪ (Explosive brass section)' },
+    { time: 25, text: '♪ (Alto sax solo kicks in)' },
+    { time: 45, text: "The sky right now, you think's on my world" },
+    { time: 52, text: 'Your honesty is rover the hunter' },
+    { time: 60, text: "You're that friend I have fanning cold" },
+    { time: 70, text: 'Now fence find thin gun you night' },
+    { time: 82, text: "Never for and exciting... it's never him" },
+    { time: 95, text: 'Cool, it-split at the back' },
+    { time: 110, text: 'Your honesty is awersomang yud' },
+    { time: 125, text: '♪ (Bongos and rapid trumpet crescendo)' },
+    { time: 150, text: '♪ (Final explosive brass hit)' },
+  ],
+  Time: [
+    { time: 0, text: '♪ (Ticking clocks and chimes ring out in 24-bit 192kHz)' },
+    { time: 30, text: '♪ (Rototoms and bass guitar build up)' },
+    { time: 55, text: 'Ticking away the moments that make up a dull day' },
+    { time: 66, text: 'Fritter and waste the hours in an offhand way' },
+    { time: 77, text: 'Kicking around on a piece of ground in your hometown' },
+    { time: 88, text: 'Waiting for someone or something to show you the way' },
+    { time: 100, text: 'Tired of lying in the sunshine, staying home to watch the rain' },
+    { time: 112, text: 'You are young and life is long, and there is time to kill today' },
+    { time: 124, text: 'And then one day you find ten years have got behind you' },
+    { time: 136, text: 'No one told you when to run, you missed the starting gun' },
+    { time: 150, text: '♪ (David Gilmour legendary guitar solo)' },
+    { time: 210, text: "And you run, and you run to catch up with the sun, but it's sinking" },
+    { time: 222, text: 'Racing around to come up behind you again' },
+    { time: 234, text: "The sun is the same in a relative way, but you're older" },
+    { time: 246, text: 'Shorter of breath, and one day closer to death' },
+    { time: 260, text: 'Every year is getting shorter, never seem to find the time' },
+    { time: 272, text: 'Plans that either come to naught or half a page of scribbled lines' },
+    { time: 284, text: 'Hanging on in quiet desperation is the English way' },
+    { time: 296, text: "The time is gone, the song is over, thought I'd something more to say" },
+    { time: 320, text: 'Home, home again... I like to be here when I can' },
+  ],
+  'Welcome to the Machine': [
+    { time: 0, text: '♪ (Industrial synthesizer pulse and mechanical elevator sound)' },
+    { time: 42, text: 'Welcome, my son, welcome to the machine' },
+    { time: 58, text: "Where have you been? It's alright, we know where you've been" },
+    { time: 76, text: "You've been in the pipeline, filling in time" },
+    { time: 92, text: 'Provided with toys and Scouting for Boys' },
+    { time: 108, text: 'You bought a guitar to punish your ma' },
+    { time: 124, text: "And you didn't like school, and you know you're nobody's fool" },
+    { time: 140, text: 'So welcome to the machine' },
+    { time: 180, text: '♪ (Acoustic guitar and panning EMS VCS3 synthesizer)' },
+    { time: 220, text: 'Welcome, my son, welcome to the machine' },
+    { time: 240, text: "What did you dream? It's alright, we told you what to dream" },
+    { time: 260, text: 'You dreamed of a big star, he played a mean guitar' },
+    { time: 280, text: 'He always ate in the Steak Bar, he loved to drive in his Jaguar' },
+    { time: 300, text: 'So welcome to the machine' },
+  ],
+  'Wish You Were Here': [
+    { time: 0, text: '♪ (Radio tuning and acoustic 12-string guitar)' },
+    { time: 40, text: 'So, so you think you can tell' },
+    { time: 48, text: 'Heaven from hell? Blue skies from pain?' },
+    { time: 58, text: 'Can you tell a green field from a cold steel rail?' },
+    { time: 68, text: 'A smile from a veil? Do you think you can tell?' },
+    { time: 82, text: 'Did they get you to trade your heroes for ghosts?' },
+    { time: 92, text: 'Hot ashes for trees? Hot air for a cool breeze?' },
+    { time: 102, text: 'Cold comfort for change? Did you exchange' },
+    { time: 112, text: 'A walk-on part in the war for a lead role in a cage?' },
+    { time: 130, text: 'How I wish, how I wish you were here' },
+    { time: 142, text: "We're just two lost souls swimming in a fish bowl, year after year" },
+    { time: 158, text: 'Running over the same old ground, what have we found?' },
+    { time: 170, text: 'The same old fears... Wish you were here' },
+  ],
+  'So What': [
+    { time: 0, text: '♪ (Paul Chambers gentle double bass intro)' },
+    { time: 18, text: '♪ (Bill Evans melancholic piano chords)' },
+    { time: 33, text: '♪ (Miles Davis modal trumpet theme - D Dorian)' },
+    { time: 60, text: '♪ (John Coltrane tenor sax solo begins)' },
+    { time: 120, text: '♪ (Cannonball Adderley alto sax solo)' },
+    { time: 180, text: '♪ (Bill Evans delicate modal piano improvisation)' },
+    { time: 240, text: '♪ (Paul Chambers melodic bass solo)' },
+    { time: 300, text: '♪ (Return to the iconic two-note "So What" riff)' },
+  ],
+  'Get Lucky': [
+    { time: 0, text: '♪ (Nile Rodgers funky Stratocaster riff)' },
+    { time: 15, text: 'Like the legend of the phoenix, huh' },
+    { time: 22, text: 'All ends with beginnings' },
+    { time: 29, text: 'What keep the planet spinning, ah' },
+    { time: 37, text: 'The force from the beginning' },
+    { time: 44, text: "We've come too far to give up who we are" },
+    { time: 51, text: "So let's raise the bar and our cups to the stars" },
+    { time: 59, text: "She's up all night 'til the sun, I'm up all night to get some" },
+    { time: 66, text: "She's up all night for good fun, I'm up all night to get lucky" },
+    { time: 74, text: "We're up all night 'til the sun, we're up all night to get some" },
+    { time: 81, text: "We're up all night for good fun, we're up all night to get lucky" },
+  ],
+};
+
+export function getLyricsForTrack(title: string): LyricLine[] {
+  if (TRACK_LYRICS[title]) {
+    return TRACK_LYRICS[title];
+  }
+  // Generic fallback lyrics if not explicitly defined
+  return [
+    { time: 0, text: `♪ Instrumental intro for "${title}"` },
+    { time: 15, text: 'The melody resonates in lossless master clarity' },
+    { time: 30, text: 'Harmonic overtone alignment across the stereo soundstage' },
+    { time: 45, text: "The sky right now, you think's on my world" },
+    { time: 60, text: 'Your honesty is rover the hunter' },
+    { time: 75, text: "You're that friend I have fanning cold" },
+    { time: 90, text: 'Now fence find thin gun you night' },
+    { time: 105, text: "Never for and exciting... it's never him" },
+    { time: 120, text: 'Cool, it-split at the back' },
+    { time: 135, text: 'Pure studio master analog presence' },
+    { time: 150, text: 'Dynamic range DR15 with zero intersample clipping' },
+    { time: 180, text: '♪ Musical outro and fading decay' },
+  ];
+}

@@ -1,0 +1,15 @@
+{
+  "name": "bebop",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": ["apps/*"],
+  "scripts": {
+    "dev": "npm run dev --workspace=@bebop/frontend",
+    "build": "npm run build --workspace=@bebop/frontend",
+    "lint": "npm run lint --workspace=@bebop/frontend",
+    "typecheck": "npm run typecheck --workspace=@bebop/frontend",
+    "test": "npm run test --workspace=@bebop/frontend",
+    "format": "npm run format --workspace=@bebop/frontend",
+    "format:check": "npm run format:check --workspace=@bebop/frontend"
+  }
+}
