@@ -2,8 +2,15 @@ use std::{
     collections::BTreeMap,
     fs::File,
     path::{Path, PathBuf},
-    sync::{Mutex, RwLock},
+    sync::{
+        Arc, Mutex, RwLock,
+        atomic::{AtomicBool, Ordering},
+    },
+    thread,
+    time::Duration,
 };
+
+mod audio;
 
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -13,11 +20,18 @@ use specta_typescript::Typescript;
 use symphonia::core::{
     formats::FormatOptions, io::MediaSourceStream, meta::MetadataOptions, probe::Hint,
 };
-use tauri::{AppHandle, Emitter, State};
+use tauri::{AppHandle, Emitter, Manager, State, WindowEvent};
 use tauri_specta::{Builder, collect_commands};
 use walkdir::{DirEntry, WalkDir};
 
+use audio::{AudioBackendError, PlaybackEngine};
+
 const SCAN_PROGRESS_EVENT: &str = "library://scan-progress";
+const PLAYBACK_STATE_EVENT: &str = "playback://state";
+const PLAYBACK_POSITION_EVENT: &str = "playback://position";
+const PLAYBACK_ENDED_EVENT: &str = "playback://ended";
+const PLAYBACK_ERROR_EVENT: &str = "playback://error";
+const POSITION_INTERVAL: Duration = Duration::from_millis(250);
 
 #[derive(Clone, Debug, Deserialize, Serialize, Type)]
 #[serde(rename_all = "camelCase")]
@@ -45,6 +59,23 @@ impl AppError {
                 ("root".into(), root.into()),
                 ("reason".into(), error.to_string()),
             ])),
+        }
+    }
+
+    fn library_not_selected() -> Self {
+        Self {
+            code: "library-not-selected".into(),
+            message: "Select and scan a music library before starting playback.".into(),
+            context: None,
+        }
+    }
+
+    fn from_audio(error: AudioBackendError, path: Option<&Path>) -> Self {
+        Self {
+            code: error.code.into(),
+            message: error.message,
+            context: path
+                .map(|path| BTreeMap::from([("path".into(), path.to_string_lossy().into_owned())])),
         }
     }
 }
@@ -144,17 +175,21 @@ pub struct DesktopState {
     pub playback: PlaybackState,
 }
 
-#[derive(Default)]
-pub struct PlaybackEngine {
-    state: PlaybackState,
+/// Shared state owns the canonical library root and the sole native playback engine.
+pub struct AppState {
+    library_root: Arc<RwLock<Option<PathBuf>>>,
+    playback: Arc<Mutex<PlaybackEngine>>,
+    running: Arc<AtomicBool>,
 }
 
-/// Shared state stores the canonical root. Stage 5 playback commands must validate targets
-/// against this root before opening files.
-#[derive(Default)]
-pub struct AppState {
-    library_root: RwLock<Option<PathBuf>>,
-    playback: Mutex<PlaybackEngine>,
+impl Default for AppState {
+    fn default() -> Self {
+        Self {
+            library_root: Arc::new(RwLock::new(None)),
+            playback: Arc::new(Mutex::new(PlaybackEngine::default())),
+            running: Arc::new(AtomicBool::new(true)),
+        }
+    }
 }
 
 #[derive(Default)]
@@ -349,6 +384,156 @@ fn scan_library(
     Ok(scan)
 }
 
+fn active_library_root(state: &AppState) -> Result<PathBuf, AppError> {
+    state
+        .library_root
+        .read()
+        .map_err(|_| AppError::state_unavailable("library-root"))?
+        .clone()
+        .ok_or_else(AppError::library_not_selected)
+}
+
+fn emit_playback_state(app: &AppHandle, state: &PlaybackState) {
+    let _ = app.emit(PLAYBACK_STATE_EVENT, state);
+}
+
+fn emit_playback_error(app: &AppHandle, error: &AppError) {
+    let _ = app.emit(PLAYBACK_ERROR_EVENT, error);
+}
+
+#[tauri::command]
+#[specta::specta]
+fn play_track(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    path: String,
+) -> Result<PlaybackState, AppError> {
+    let root = match active_library_root(&state) {
+        Ok(root) => root,
+        Err(error) => {
+            emit_playback_error(&app, &error);
+            return Err(error);
+        }
+    };
+    let path = match canonical_track_path(&root, &path) {
+        Ok(path) => path,
+        Err(error) => {
+            emit_playback_error(&app, &error);
+            return Err(error);
+        }
+    };
+    if AudioExtension::from_path(&path).is_none() {
+        let error = AppError {
+            code: "audio-format-unsupported".into(),
+            message: "Bebop currently supports FLAC, WAV, MP3, and OGG playback.".into(),
+            context: Some(BTreeMap::from([(
+                "path".into(),
+                path.to_string_lossy().into_owned(),
+            )])),
+        };
+        emit_playback_error(&app, &error);
+        return Err(error);
+    }
+
+    let mut engine = state
+        .playback
+        .lock()
+        .map_err(|_| AppError::state_unavailable("playback-engine"))?;
+    engine.prepare_track(&path, track_id(&path));
+    emit_playback_state(&app, &engine.state);
+    if let Err(error) = engine.start_prepared_track(&path) {
+        let error = AppError::from_audio(error, Some(&path));
+        emit_playback_state(&app, &engine.state);
+        emit_playback_error(&app, &error);
+        return Err(error);
+    }
+    emit_playback_state(&app, &engine.state);
+    Ok(engine.state.clone())
+}
+
+#[tauri::command]
+#[specta::specta]
+fn pause_playback(app: AppHandle, state: State<'_, AppState>) -> Result<PlaybackState, AppError> {
+    let mut engine = state
+        .playback
+        .lock()
+        .map_err(|_| AppError::state_unavailable("playback-engine"))?;
+    engine.pause();
+    emit_playback_state(&app, &engine.state);
+    Ok(engine.state.clone())
+}
+
+#[tauri::command]
+#[specta::specta]
+fn resume_playback(app: AppHandle, state: State<'_, AppState>) -> Result<PlaybackState, AppError> {
+    let mut engine = state
+        .playback
+        .lock()
+        .map_err(|_| AppError::state_unavailable("playback-engine"))?;
+    engine.resume();
+    emit_playback_state(&app, &engine.state);
+    Ok(engine.state.clone())
+}
+
+#[tauri::command]
+#[specta::specta]
+fn stop_playback(app: AppHandle, state: State<'_, AppState>) -> Result<PlaybackState, AppError> {
+    let mut engine = state
+        .playback
+        .lock()
+        .map_err(|_| AppError::state_unavailable("playback-engine"))?;
+    engine.stop();
+    emit_playback_state(&app, &engine.state);
+    Ok(engine.state.clone())
+}
+
+#[tauri::command]
+#[specta::specta]
+fn seek_playback(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    position_ms: u64,
+) -> Result<PlaybackState, AppError> {
+    let mut engine = state
+        .playback
+        .lock()
+        .map_err(|_| AppError::state_unavailable("playback-engine"))?;
+    if let Err(error) = engine.seek(position_ms) {
+        let error = AppError::from_audio(error, engine.state.path.as_deref().map(Path::new));
+        emit_playback_error(&app, &error);
+        return Err(error);
+    }
+    emit_playback_state(&app, &engine.state);
+    Ok(engine.state.clone())
+}
+
+#[tauri::command]
+#[specta::specta]
+fn set_volume(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    volume: f32,
+) -> Result<PlaybackState, AppError> {
+    let mut engine = state
+        .playback
+        .lock()
+        .map_err(|_| AppError::state_unavailable("playback-engine"))?;
+    engine.set_volume(volume);
+    emit_playback_state(&app, &engine.state);
+    Ok(engine.state.clone())
+}
+
+#[tauri::command]
+#[specta::specta]
+fn get_playback_state(state: State<'_, AppState>) -> Result<PlaybackState, AppError> {
+    let mut engine = state
+        .playback
+        .lock()
+        .map_err(|_| AppError::state_unavailable("playback-engine"))?;
+    engine.synchronize();
+    Ok(engine.state.clone())
+}
+
 #[tauri::command]
 #[specta::specta]
 fn get_desktop_state(state: State<'_, AppState>) -> Result<DesktopState, AppError> {
@@ -358,21 +543,65 @@ fn get_desktop_state(state: State<'_, AppState>) -> Result<DesktopState, AppErro
         .map_err(|_| AppError::state_unavailable("library-root"))?
         .as_ref()
         .map(|path| path.to_string_lossy().into_owned());
-    let playback = state
+    let mut engine = state
         .playback
         .lock()
-        .map_err(|_| AppError::state_unavailable("playback-engine"))?
-        .state
-        .clone();
+        .map_err(|_| AppError::state_unavailable("playback-engine"))?;
+    engine.synchronize();
+    let playback = engine.state.clone();
     Ok(DesktopState {
         library_root,
         playback,
     })
 }
 
+fn spawn_playback_monitor(app: AppHandle, state: &AppState) {
+    let playback = Arc::clone(&state.playback);
+    let running = Arc::clone(&state.running);
+    thread::spawn(move || {
+        while running.load(Ordering::Acquire) {
+            thread::sleep(POSITION_INTERVAL);
+            let Ok(mut engine) = playback.lock() else {
+                break;
+            };
+            let active = matches!(
+                engine.state.status,
+                PlaybackStatus::Playing | PlaybackStatus::Paused
+            );
+            let ended = engine.synchronize();
+            let snapshot = engine.state.clone();
+            drop(engine);
+            if active {
+                let _ = app.emit(PLAYBACK_POSITION_EVENT, &snapshot);
+            }
+            if ended {
+                emit_playback_state(&app, &snapshot);
+                let _ = app.emit(PLAYBACK_ENDED_EVENT, &snapshot);
+            }
+        }
+    });
+}
+
+fn shutdown_playback(state: &AppState) {
+    state.running.store(false, Ordering::Release);
+    if let Ok(mut engine) = state.playback.lock() {
+        engine.shutdown();
+    }
+}
+
 fn ipc_bindings() -> Builder<tauri::Wry> {
     Builder::<tauri::Wry>::new()
-        .commands(collect_commands![get_desktop_state, scan_library])
+        .commands(collect_commands![
+            get_desktop_state,
+            get_playback_state,
+            pause_playback,
+            play_track,
+            resume_playback,
+            scan_library,
+            seek_playback,
+            set_volume,
+            stop_playback
+        ])
         .typ::<AppError>()
         .typ::<LibraryScan>()
         .typ::<TrackSummary>()
@@ -401,6 +630,16 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .manage(AppState::default())
+        .setup(|app| {
+            let state = app.state::<AppState>();
+            spawn_playback_monitor(app.handle().clone(), &state);
+            Ok(())
+        })
+        .on_window_event(|window, event| {
+            if matches!(event, WindowEvent::Destroyed) {
+                shutdown_playback(&window.state::<AppState>());
+            }
+        })
         .invoke_handler(bindings.invoke_handler())
         .run(tauri::generate_context!())
         .expect("error while running Bebop desktop application");

@@ -5,7 +5,14 @@ import { invoke as __TAURI_INVOKE } from "@tauri-apps/api/core";
 /** Commands */
 export const commands = {
 	getDesktopState: () => typedError<DesktopState, AppError_Serialize>(__TAURI_INVOKE("get_desktop_state")),
+	getPlaybackState: () => typedError<PlaybackState, AppError_Serialize>(__TAURI_INVOKE("get_playback_state")),
+	pausePlayback: () => typedError<PlaybackState, AppError_Serialize>(__TAURI_INVOKE("pause_playback")),
+	playTrack: (path: string) => typedError<PlaybackState, AppError_Serialize>(__TAURI_INVOKE("play_track", { path })),
+	resumePlayback: () => typedError<PlaybackState, AppError_Serialize>(__TAURI_INVOKE("resume_playback")),
 	scanLibrary: (root: string) => typedError<LibraryScan, AppError_Serialize>(__TAURI_INVOKE("scan_library", { root })),
+	seekPlayback: (positionMs: number) => typedError<PlaybackState, AppError_Serialize>(__TAURI_INVOKE("seek_playback", { positionMs })),
+	setVolume: (volume: number | null) => typedError<PlaybackState, AppError_Serialize>(__TAURI_INVOKE("set_volume", { volume })),
+	stopPlayback: () => typedError<PlaybackState, AppError_Serialize>(__TAURI_INVOKE("stop_playback")),
 };
 
 /* Types */

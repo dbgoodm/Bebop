@@ -1,26 +1,25 @@
 # Graph Report - Bebop  (2026-08-23)
 
 ## Corpus Check
-- 72 files · ~52,066 words
+- 73 files · ~53,634 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 478 nodes · 807 edges · 35 communities (27 shown, 8 thin omitted)
+- 549 nodes · 1034 edges · 34 communities (26 shown, 8 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 1 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `0a12fb44`
+- Built from commit: `c793216f`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
-- TrackItem
-- FullscreenNowPlaying.tsx
+- PlaybackEngine
+- useTheme
 - devDependencies
 - What You Must Do When Invoked
 - MusicPlayerPage.tsx
-- library.ts
 - compilerOptions
 - RealAudioEngine
 - Bebop clean rebuild and vertical-slice plan
@@ -47,39 +46,39 @@
 ## God Nodes (most connected - your core abstractions)
 1. `TrackItem` - 34 edges
 2. `useTheme()` - 31 edges
-3. `RealAudioEngine` - 19 edges
-4. `compilerOptions` - 16 edges
-5. `scan_library_at()` - 15 edges
-6. `ArtistItem` - 14 edges
-7. `AlbumItem` - 14 edges
-8. `scripts` - 12 edges
-9. `What You Must Do When Invoked` - 12 edges
-10. `Bebop clean rebuild and vertical-slice plan` - 12 edges
+3. `AppState` - 22 edges
+4. `AppError` - 21 edges
+5. `RealAudioEngine` - 19 edges
+6. `PlaybackEngine` - 19 edges
+7. `compilerOptions` - 16 edges
+8. `play_track()` - 16 edges
+9. `RodioBackend` - 15 edges
+10. `PlaybackState` - 15 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `FullscreenNowPlayingProps` --references--> `TrackItem`  [EXTRACTED]
   apps/frontend/src/components/organisms/FullscreenNowPlaying.tsx → apps/frontend/src/types.ts
 - `NowPlayingBarProps` --references--> `TrackItem`  [EXTRACTED]
   apps/frontend/src/components/organisms/NowPlayingBar.tsx → apps/frontend/src/types.ts
-- `NowPlayingQueueModalProps` --references--> `TrackItem`  [EXTRACTED]
-  apps/frontend/src/components/organisms/NowPlayingQueueModal.tsx → apps/frontend/src/types.ts
 - `WaveformScrubberProps` --references--> `TrackItem`  [EXTRACTED]
   apps/frontend/src/components/organisms/WaveformScrubber.tsx → apps/frontend/src/types.ts
-- `UniversalTracklistProps` --references--> `TrackItem`  [EXTRACTED]
-  apps/frontend/src/components/molecules/UniversalTracklist.tsx → apps/frontend/src/types.ts
+- `ContinueListeningRail()` --calls--> `useTheme()`  [EXTRACTED]
+  apps/frontend/src/components/molecules/ContinueListeningRail.tsx → apps/frontend/src/services/themeService.tsx
+- `RecentlyAddedRail()` --calls--> `useTheme()`  [EXTRACTED]
+  apps/frontend/src/components/molecules/RecentlyAddedRail.tsx → apps/frontend/src/services/themeService.tsx
 
 ## Import Cycles
 - None detected.
 
-## Communities (35 total, 8 thin omitted)
+## Communities (34 total, 8 thin omitted)
 
-### Community 0 - "TrackItem"
-Cohesion: 0.12
-Nodes (30): ALL_AVAILABLE_COLUMNS, ColumnDefinition, ColumnKey, UniversalTracklist(), UniversalTracklistProps, AlbumDetailPageProps, AlbumsGridView(), AlbumsGridViewProps (+22 more)
+### Community 0 - "PlaybackEngine"
+Cohesion: 0.08
+Nodes (23): Box, Into, OutputStream, PlaybackState, Send, Sink, AudioBackend, AudioBackendError (+15 more)
 
-### Community 1 - "FullscreenNowPlaying.tsx"
-Cohesion: 0.19
-Nodes (11): FullscreenNowPlaying(), FullscreenNowPlayingProps, MonstercatVisualizer(), MonstercatVisualizerProps, generateSoundcloudWaveform(), pseudoRandom(), WaveformScrubber(), WaveformScrubberProps (+3 more)
+### Community 1 - "useTheme"
+Cohesion: 0.09
+Nodes (30): DEFAULT_STATS, ListeningStats(), ListeningStatsProps, DiscoverView(), FullscreenNowPlaying(), FullscreenNowPlayingProps, MonstercatVisualizer(), MonstercatVisualizerProps (+22 more)
 
 ### Community 2 - "devDependencies"
 Cohesion: 0.05
@@ -90,12 +89,8 @@ Cohesion: 0.08
 Nodes (24): For /graphify add and --watch, For /graphify query, For the commit hook and native CLAUDE.md integration, For --update and --cluster-only, /graphify, Honesty Rules, Interpreter guard for subcommands, Part A - Structural extraction for code files (+16 more)
 
 ### Community 4 - "MusicPlayerPage.tsx"
-Cohesion: 0.06
-Nodes (55): App(), ContinueListeningRail(), SAMPLE_CONTINUE_ITEMS, DEFAULT_STATS, ListeningStats(), ListeningStatsProps, RecentlyAddedRail(), RediscoverRail() (+47 more)
-
-### Community 5 - "library.ts"
-Cohesion: 0.36
-Nodes (5): DEMO_RECENTLY_ADDED, DEMO_REDISCOVER_ITEMS, LOCAL_RECENTLY_ADDED, LOCAL_REDISCOVER_ITEMS, isDemoMode
+Cohesion: 0.05
+Nodes (72): App(), ContinueListeningRail(), SAMPLE_CONTINUE_ITEMS, RecentlyAddedRail(), RediscoverRail(), MAIN_NAV_ITEMS, TopNavRail(), ALL_AVAILABLE_COLUMNS (+64 more)
 
 ### Community 6 - "compilerOptions"
 Cohesion: 0.10
@@ -119,7 +114,7 @@ Nodes (8): graphify reference: extra exports and benchmark, Step 6b - Wiki (only
 
 ### Community 17 - "lib.rs"
 Cohesion: 0.10
-Nodes (44): AppHandle, BTreeMap, Builder, Default, DirEntry, Error, F, Mutex (+36 more)
+Nodes (57): AppHandle, AtomicBool, BTreeMap, Builder, DirEntry, Error, F, PathBuf (+49 more)
 
 ### Community 18 - "tauri.conf.json"
 Cohesion: 0.11
@@ -134,8 +129,8 @@ Cohesion: 0.13
 Nodes (14): core:default, dialog:allow-open, fs:allow-read, fs:allow-read-dir, fs:allow-stat, linux, main, windows (+6 more)
 
 ### Community 21 - "libraryService.ts"
-Cohesion: 0.10
-Nodes (28): LibraryView(), AppShell(), AppShellProps, useLibraryScan(), DesktopLibraryPage(), chooseLibraryFolder(), errorSnapshot(), formatBitrate() (+20 more)
+Cohesion: 0.11
+Nodes (27): AppShell(), AppShellProps, useLibraryScan(), DesktopLibraryPage(), chooseLibraryFolder(), errorSnapshot(), formatBitrate(), formatDuration() (+19 more)
 
 ### Community 25 - "graphify reference: query, path, explain"
 Cohesion: 0.33
@@ -162,16 +157,16 @@ Nodes (3): For --cluster-only, For --update (incremental re-extraction), graphif
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `devDependencies` connect `devDependencies` to `scripts`?**
-  _High betweenness centrality (0.049) - this node is a cross-community bridge._
-- **Why does `TrackItem` connect `TrackItem` to `FullscreenNowPlaying.tsx`, `MusicPlayerPage.tsx`, `library.ts`, `RealAudioEngine`, `libraryService.ts`?**
-  _High betweenness centrality (0.034) - this node is a cross-community bridge._
+  _High betweenness centrality (0.072) - this node is a cross-community bridge._
+- **Why does `typescript` connect `devDependencies` to `lib.rs`?**
+  _High betweenness centrality (0.059) - this node is a cross-community bridge._
 - **What connects `singleQuote`, `trailingComma`, `printWidth` to the rest of the system?**
   _187 weakly-connected nodes found - possible documentation gaps or missing edges._
-- **Should `TrackItem` be split into smaller, more focused modules?**
-  _Cohesion score 0.12195121951219512 - nodes in this community are weakly interconnected._
+- **Should `PlaybackEngine` be split into smaller, more focused modules?**
+  _Cohesion score 0.08484848484848485 - nodes in this community are weakly interconnected._
+- **Should `useTheme` be split into smaller, more focused modules?**
+  _Cohesion score 0.08636977058029689 - nodes in this community are weakly interconnected._
 - **Should `devDependencies` be split into smaller, more focused modules?**
   _Cohesion score 0.05128205128205128 - nodes in this community are weakly interconnected._
 - **Should `What You Must Do When Invoked` be split into smaller, more focused modules?**
   _Cohesion score 0.08 - nodes in this community are weakly interconnected._
-- **Should `MusicPlayerPage.tsx` be split into smaller, more focused modules?**
-  _Cohesion score 0.06298904538341157 - nodes in this community are weakly interconnected._
