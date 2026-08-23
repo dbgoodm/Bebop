@@ -7,6 +7,7 @@ import { TopNavRail } from '@/components/molecules/TopNavRail';
 import { LibraryView } from '@/components/organisms/LibraryView';
 import { ArtistDetailPage } from '@/components/organisms/ArtistDetailPage';
 import { AlbumDetailPage } from '@/components/organisms/AlbumDetailPage';
+import { MetadataEditor } from '@/components/organisms/MetadataEditor';
 import { FullscreenNowPlaying } from '@/components/organisms/FullscreenNowPlaying';
 import { NowPlayingBar } from '@/components/organisms/NowPlayingBar';
 import { NowPlayingQueueModal } from '@/components/organisms/NowPlayingQueueModal';
@@ -48,6 +49,7 @@ export function DesktopLibraryPage() {
   const [selectedTrack, setSelectedTrack] = useState<TrackItem | null>(null);
   const [selectedArtist, setSelectedArtist] = useState<ArtistItem | null>(null);
   const [selectedAlbum, setSelectedAlbum] = useState<AlbumItem | null>(null);
+  const [editingTrack, setEditingTrack] = useState<TrackItem | null>(null);
   const [isFullscreenOpen, setIsFullscreenOpen] = useState(false);
   const [isQueueOpen, setIsQueueOpen] = useState(false);
   const completedEnds = useRef(0);
@@ -396,6 +398,7 @@ export function DesktopLibraryPage() {
                 onPlayArtist={(artist) => void playArtist(artist)}
                 onSelectArtist={(artist) => void selectArtist(artist)}
                 onSelectAlbum={(album) => void selectAlbum(album)}
+                onEditTrack={setEditingTrack}
               />
             )}
           </div>
@@ -630,6 +633,7 @@ export function DesktopLibraryPage() {
                 onPlayArtist={(artist) => void playArtist(artist)}
                 onSelectArtist={(artist) => void selectArtist(artist)}
                 onSelectAlbum={(album) => void selectAlbum(album)}
+                onEditTrack={setEditingTrack}
               />
             )}
           </div>
@@ -696,6 +700,9 @@ export function DesktopLibraryPage() {
         onSelectAlbum={(album) => void selectAlbum(album)}
       />
       <ThemeSelectorModal />
+      {editingTrack && (
+        <MetadataEditor track={editingTrack} onClose={() => setEditingTrack(null)} />
+      )}
     </AppShell>
   );
 }

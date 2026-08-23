@@ -5,10 +5,31 @@ import { invoke as __TAURI_INVOKE } from "@tauri-apps/api/core";
 /** Commands */
 export const commands = {
 	addLibraryRoot: (path: string, label: string | null) => typedError<LibraryScan, AppError_Serialize>(__TAURI_INVOKE("add_library_root", { path, label })),
+	applyMusicbrainzCandidate: (trackId: string, candidate: EnrichmentCandidate) => typedError<MetadataPatch, AppError_Serialize>(__TAURI_INVOKE("apply_musicbrainz_candidate", { trackId, candidate })),
 	getAlbumDetail: (albumId: string) => typedError<AlbumDetail, AppError_Serialize>(__TAURI_INVOKE("get_album_detail", { albumId })),
 	getArtistDetail: (artistId: string) => typedError<ArtistDetail, AppError_Serialize>(__TAURI_INVOKE("get_artist_detail", { artistId })),
 	getDesktopState: () => typedError<DesktopState, AppError_Serialize>(__TAURI_INVOKE("get_desktop_state")),
+	getMetadataDraft: (trackId: string) => typedError<{
+	title: string | null,
+	artists: string[] | null,
+	album: string | null,
+	albumArtists: string[] | null,
+	genres: string[] | null,
+	trackNumber: number | null,
+	trackTotal: number | null,
+	discNumber: number | null,
+	discTotal: number | null,
+	year: number | null,
+	date: string | null,
+	composer: string | null,
+	label: string | null,
+	catalogNumber: string | null,
+	isrc: string | null,
+	artworkId: string | null,
+} | null, AppError_Serialize>(__TAURI_INVOKE("get_metadata_draft", { trackId })),
+	getMusicbrainzEnabled: () => __TAURI_INVOKE<boolean>("get_musicbrainz_enabled"),
 	getPlaybackState: () => typedError<PlaybackState, AppError_Serialize>(__TAURI_INVOKE("get_playback_state")),
+	getTrackMetadata: (trackId: string) => typedError<TrackSummary, AppError_Serialize>(__TAURI_INVOKE("get_track_metadata", { trackId })),
 	listLibraryRoots: () => typedError<LibraryRoot[], AppError_Serialize>(__TAURI_INVOKE("list_library_roots")),
 	listAudioOutputDevices: () => typedError<AudioOutputDevice[], AppError_Serialize>(__TAURI_INVOKE("list_audio_output_devices")),
 	pausePlayback: () => typedError<PlaybackState, AppError_Serialize>(__TAURI_INVOKE("pause_playback")),
@@ -19,13 +40,19 @@ export const commands = {
 	rescanLibraryRoot: (rootId: string) => typedError<LibraryScan, AppError_Serialize>(__TAURI_INVOKE("rescan_library_root", { rootId })),
 	resumePlayback: () => typedError<PlaybackState, AppError_Serialize>(__TAURI_INVOKE("resume_playback")),
 	restoreLibraryRoot: (rootId: string) => typedError<LibraryScan, AppError_Serialize>(__TAURI_INVOKE("restore_library_root", { rootId })),
+	rollbackMetadataFile: (trackId: string) => typedError<MetadataWriteResult, AppError_Serialize>(__TAURI_INVOKE("rollback_metadata_file", { trackId })),
+	runMusicbrainzEnrichment: (trackId: string) => typedError<EnrichmentJob, AppError_Serialize>(__TAURI_INVOKE("run_musicbrainz_enrichment", { trackId })),
+	saveMetadataDraft: (trackId: string, patch: MetadataPatch) => typedError<MetadataPatch, AppError_Serialize>(__TAURI_INVOKE("save_metadata_draft", { trackId, patch })),
+	saveMetadataDrafts: (trackIds: string[], patch: MetadataPatch) => typedError<number, AppError_Serialize>(__TAURI_INVOKE("save_metadata_drafts", { trackIds, patch })),
 	scanLibrary: (root: string) => typedError<LibraryScan, AppError_Serialize>(__TAURI_INVOKE("scan_library", { root })),
 	selectAudioOutputDevice: (deviceId: string | null) => typedError<AudioOutputDevice[], AppError_Serialize>(__TAURI_INVOKE("select_audio_output_device", { deviceId })),
 	seekPlayback: (positionMs: number) => typedError<PlaybackState, AppError_Serialize>(__TAURI_INVOKE("seek_playback", { positionMs })),
 	setHifiMode: (enabled: boolean) => typedError<PlaybackState, AppError_Serialize>(__TAURI_INVOKE("set_hifi_mode", { enabled })),
 	setLibraryRootEnabled: (rootId: string, enabled: boolean) => typedError<LibraryRoot, AppError_Serialize>(__TAURI_INVOKE("set_library_root_enabled", { rootId, enabled })),
+	setMusicbrainzEnabled: (enabled: boolean) => __TAURI_INVOKE<boolean>("set_musicbrainz_enabled", { enabled }),
 	setVolume: (volume: number | null) => typedError<PlaybackState, AppError_Serialize>(__TAURI_INVOKE("set_volume", { volume })),
 	stopPlayback: () => typedError<PlaybackState, AppError_Serialize>(__TAURI_INVOKE("stop_playback")),
+	writeMetadataToFile: (trackId: string) => typedError<MetadataWriteResult, AppError_Serialize>(__TAURI_INVOKE("write_metadata_to_file", { trackId })),
 };
 
 /* Types */
@@ -135,6 +162,28 @@ export type DiscoveryQuery = {
 	limit: number,
 };
 
+export type EnrichmentCandidate = {
+	recordingId: string,
+	title: string,
+	artists: string[],
+	releaseId: string | null,
+	release: string | null,
+	albumArtists: string[],
+	trackNumber: number | null,
+	trackTotal: number | null,
+	durationMs: number | null,
+	score: number,
+	requiresReview: boolean,
+};
+
+export type EnrichmentJob = {
+	trackId: string,
+	status: string,
+	candidates: EnrichmentCandidate[],
+	autoApplied: boolean,
+	fromCache: boolean,
+};
+
 export type GenreSummary = {
 	id: string,
 	name: string,
@@ -165,6 +214,31 @@ export type LibraryScan = {
 	root: string,
 	tracks: TrackSummary[],
 	warnings: string[],
+};
+
+export type MetadataPatch = {
+	title: string | null,
+	artists: string[] | null,
+	album: string | null,
+	albumArtists: string[] | null,
+	genres: string[] | null,
+	trackNumber: number | null,
+	trackTotal: number | null,
+	discNumber: number | null,
+	discTotal: number | null,
+	year: number | null,
+	date: string | null,
+	composer: string | null,
+	label: string | null,
+	catalogNumber: string | null,
+	isrc: string | null,
+	artworkId: string | null,
+};
+
+export type MetadataWriteResult = {
+	trackId: string,
+	path: string,
+	backupPath: string,
 };
 
 export type PlaybackState = {

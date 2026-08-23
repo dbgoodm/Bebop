@@ -9,6 +9,7 @@ interface TracksTableViewProps {
   onPlayTrack: (track: TrackItem) => void;
   onSelectArtist?: (artistName: string) => void;
   onSelectAlbum?: (albumName: string) => void;
+  onEditTrack?: (track: TrackItem) => void;
   columnVisibility?: ColumnVisibility;
   onToggleColumn?: (column: keyof ColumnVisibility) => void;
 }
@@ -20,6 +21,7 @@ export const TracksTableView: React.FC<TracksTableViewProps> = ({
   onPlayTrack,
   onSelectArtist,
   onSelectAlbum,
+  onEditTrack,
 }) => {
   return (
     <UniversalTracklist
@@ -30,6 +32,7 @@ export const TracksTableView: React.FC<TracksTableViewProps> = ({
       onPlayTrack={onPlayTrack}
       onSelectArtist={onSelectArtist}
       onSelectAlbum={onSelectAlbum}
+      onEditTrack={onEditTrack}
       storageKey="library_tracks_columns"
       defaultVisibleColumns={[
         'trackNumber',

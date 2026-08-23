@@ -102,6 +102,7 @@ export interface UniversalTracklistProps {
   onPlayTrack?: (track: TrackItem) => void;
   onSelectArtist?: (artistName: string) => void;
   onSelectAlbum?: (albumName: string) => void;
+  onEditTrack?: (track: TrackItem) => void;
   defaultVisibleColumns?: ColumnKey[];
   storageKey?: string;
   showCustomizerButton?: boolean;
@@ -116,6 +117,7 @@ export const UniversalTracklist: React.FC<UniversalTracklistProps> = ({
   onPlayTrack,
   onSelectArtist,
   onSelectAlbum,
+  onEditTrack,
   defaultVisibleColumns,
   storageKey,
   showCustomizerButton = true,
@@ -386,18 +388,33 @@ export const UniversalTracklist: React.FC<UniversalTracklistProps> = ({
       case 'actions': {
         const isFav = favorites[track.id];
         return (
-          <button
-            type="button"
-            onClick={(e) => toggleFav(track.id, e)}
-            className="text-neutral-500 hover:text-red-500 transition-colors p-1"
-            aria-label={isFav ? 'Remove favorite' : 'Add favorite'}
-          >
-            <Heart
-              className={`w-3.5 h-3.5 ${
-                isFav ? 'fill-red-500 text-red-500' : 'text-neutral-500 hover:text-neutral-300'
-              }`}
-            />
-          </button>
+          <span className="flex items-center gap-1">
+            {onEditTrack && (
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onEditTrack(track);
+                }}
+                className="px-1 font-mono text-[10px] text-neutral-500 hover:text-amber-300"
+                aria-label={`Edit metadata for ${track.title}`}
+              >
+                Edit
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={(e) => toggleFav(track.id, e)}
+              className="p-1 text-neutral-500 transition-colors hover:text-red-500"
+              aria-label={isFav ? 'Remove favorite' : 'Add favorite'}
+            >
+              <Heart
+                className={`w-3.5 h-3.5 ${
+                  isFav ? 'fill-red-500 text-red-500' : 'text-neutral-500 hover:text-neutral-300'
+                }`}
+              />
+            </button>
+          </span>
         );
       }
 

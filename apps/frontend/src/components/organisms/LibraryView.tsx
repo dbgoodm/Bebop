@@ -17,6 +17,7 @@ interface LibraryViewProps {
   onPlayArtist?: (artist: ArtistItem) => void;
   onSelectArtist?: (artist: ArtistItem | string) => void;
   onSelectAlbum?: (album: AlbumItem | string) => void;
+  onEditTrack?: (track: TrackItem) => void;
   showDemoDiscovery?: boolean;
 }
 
@@ -33,6 +34,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
   onPlayArtist,
   onSelectArtist,
   onSelectAlbum,
+  onEditTrack,
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<LibrarySubTab>(
     showDemoDiscovery ? 'artists' : 'tracks',
@@ -96,6 +98,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
           onPlayTrack={onPlayTrack}
           onSelectArtist={onSelectArtist as ((artist: string) => void) | undefined}
           onSelectAlbum={onSelectAlbum as ((album: string) => void) | undefined}
+          onEditTrack={onEditTrack}
         />
       )}
       {activeSubTab === 'artists' &&

@@ -16,6 +16,7 @@ use crate::{
         DiscoveryCatalog, DiscoveryQuery, GenreSummary, LibraryRoot, RootAvailability,
         ScannedLibrary, SortDirection, TrackPage, TrackSort, TrackSummary, WatchMode,
     },
+    metadata::{CachedArtwork, MetadataPatch},
 };
 
 const SCHEMA_VERSION: i64 = 1;
@@ -75,6 +76,38 @@ enum Request {
     GetAlbumDetail {
         id: String,
         reply: Sender<Result<AlbumDetail, AppError>>,
+    },
+    SaveMetadataDraft {
+        track_id: String,
+        patch: Box<MetadataPatch>,
+        source: String,
+        reply: Sender<Result<MetadataPatch, AppError>>,
+    },
+    GetMetadataDraft {
+        track_id: String,
+        reply: Sender<Result<Option<MetadataPatch>, AppError>>,
+    },
+    ResolveTrackId {
+        track_id: String,
+        reply: Sender<Result<PathBuf, AppError>>,
+    },
+    GetTrack {
+        track_id: String,
+        reply: Sender<Result<TrackSummary, AppError>>,
+    },
+    GetEnrichmentCache {
+        query_key: String,
+        reply: Sender<Result<Option<String>, AppError>>,
+    },
+    SaveEnrichmentCache {
+        track_id: String,
+        query_key: String,
+        result_json: String,
+        reply: Sender<Result<(), AppError>>,
+    },
+    SaveArtwork {
+        artwork: CachedArtwork,
+        reply: Sender<Result<(), AppError>>,
     },
 }
 
@@ -220,6 +253,60 @@ impl DatabaseWorker {
     pub(crate) fn get_album_detail(&self, id: String) -> Result<AlbumDetail, AppError> {
         self.request(|reply| Request::GetAlbumDetail { id, reply })
     }
+
+    pub(crate) fn save_metadata_draft(
+        &self,
+        track_id: String,
+        patch: MetadataPatch,
+        source: String,
+    ) -> Result<MetadataPatch, AppError> {
+        self.request(|reply| Request::SaveMetadataDraft {
+            track_id,
+            patch: Box::new(patch),
+            source,
+            reply,
+        })
+    }
+
+    pub(crate) fn get_metadata_draft(
+        &self,
+        track_id: String,
+    ) -> Result<Option<MetadataPatch>, AppError> {
+        self.request(|reply| Request::GetMetadataDraft { track_id, reply })
+    }
+
+    pub(crate) fn resolve_track_id(&self, track_id: String) -> Result<PathBuf, AppError> {
+        self.request(|reply| Request::ResolveTrackId { track_id, reply })
+    }
+
+    pub(crate) fn get_track(&self, track_id: String) -> Result<TrackSummary, AppError> {
+        self.request(|reply| Request::GetTrack { track_id, reply })
+    }
+
+    pub(crate) fn get_enrichment_cache(
+        &self,
+        query_key: String,
+    ) -> Result<Option<String>, AppError> {
+        self.request(|reply| Request::GetEnrichmentCache { query_key, reply })
+    }
+
+    pub(crate) fn save_enrichment_cache(
+        &self,
+        track_id: String,
+        query_key: String,
+        result_json: String,
+    ) -> Result<(), AppError> {
+        self.request(|reply| Request::SaveEnrichmentCache {
+            track_id,
+            query_key,
+            result_json,
+            reply,
+        })
+    }
+
+    pub(crate) fn save_artwork(&self, artwork: CachedArtwork) -> Result<(), AppError> {
+        self.request(|reply| Request::SaveArtwork { artwork, reply })
+    }
 }
 
 fn backup_before_upgrade(database_path: &Path) -> Result<(), AppError> {
@@ -342,6 +429,43 @@ fn database_loop(mut connection: Connection, receiver: Receiver<Request>) {
             }
             Request::GetAlbumDetail { id, reply } => {
                 send(reply, get_album_detail(&connection, &id));
+            }
+            Request::SaveMetadataDraft {
+                track_id,
+                patch,
+                source,
+                reply,
+            } => {
+                send(
+                    reply,
+                    save_metadata_draft(&connection, &track_id, &patch, &source),
+                );
+            }
+            Request::GetMetadataDraft { track_id, reply } => {
+                send(reply, get_metadata_draft(&connection, &track_id));
+            }
+            Request::ResolveTrackId { track_id, reply } => {
+                send(reply, resolve_track_id(&connection, &track_id));
+            }
+            Request::GetTrack { track_id, reply } => {
+                send(reply, get_track(&connection, &track_id));
+            }
+            Request::GetEnrichmentCache { query_key, reply } => {
+                send(reply, get_enrichment_cache(&connection, &query_key));
+            }
+            Request::SaveEnrichmentCache {
+                track_id,
+                query_key,
+                result_json,
+                reply,
+            } => {
+                send(
+                    reply,
+                    save_enrichment_cache(&connection, &track_id, &query_key, &result_json),
+                );
+            }
+            Request::SaveArtwork { artwork, reply } => {
+                send(reply, save_artwork(&connection, &artwork));
             }
         }
     }
@@ -515,15 +639,18 @@ fn upsert_track(
     if let Some(artwork) = &metadata.artwork {
         transaction
             .execute(
-                "INSERT INTO artwork (id, content_hash, cache_path, mime_type, source, created_at)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6)
-                 ON CONFLICT(content_hash) DO UPDATE SET cache_path = excluded.cache_path",
+                "INSERT INTO artwork
+                 (id, content_hash, cache_path, mime_type, source, source_id, created_at)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+                 ON CONFLICT(content_hash) DO UPDATE SET cache_path = excluded.cache_path,
+                 source = excluded.source, source_id = excluded.source_id",
                 params![
                     artwork.id,
                     artwork.content_hash,
                     artwork.cache_path,
                     artwork.mime_type,
                     artwork.source,
+                    artwork.source_id,
                     now
                 ],
             )
@@ -940,7 +1067,53 @@ fn hydrate_track(connection: &Connection, track: &mut TrackSummary) -> Result<()
         .map_err(database_error("query-track-genres"))?
         .collect::<rusqlite::Result<Vec<_>>>()
         .map_err(database_error("read-track-genres"))?;
+    if let Some(patch) = get_metadata_draft(connection, &track.id)? {
+        apply_metadata_override(track, patch);
+    }
     Ok(())
+}
+
+fn apply_metadata_override(track: &mut TrackSummary, patch: MetadataPatch) {
+    if let Some(title) = patch.title {
+        track.title = title;
+    }
+    if let Some(artists) = patch.artists {
+        track.artists = artists
+            .into_iter()
+            .enumerate()
+            .map(|(index, name)| crate::ArtistReference {
+                id: format!("override-artist-{index}"),
+                name,
+            })
+            .collect();
+    }
+    if let Some(album) = patch.album {
+        track.album = album;
+    }
+    if let Some(album_artists) = patch.album_artists {
+        track.album_artists = album_artists
+            .into_iter()
+            .enumerate()
+            .map(|(index, name)| crate::ArtistReference {
+                id: format!("override-album-artist-{index}"),
+                name,
+            })
+            .collect();
+    }
+    if let Some(genres) = patch.genres {
+        track.genres = genres;
+    }
+    track.track_number = patch.track_number.or(track.track_number);
+    track.track_total = patch.track_total.or(track.track_total);
+    track.disc_number = patch.disc_number.or(track.disc_number);
+    track.disc_total = patch.disc_total.or(track.disc_total);
+    track.year = patch.year.or(track.year);
+    track.date = patch.date.or(track.date.take());
+    track.composer = patch.composer.or(track.composer.take());
+    track.label = patch.label.or(track.label.take());
+    track.catalog_number = patch.catalog_number.or(track.catalog_number.take());
+    track.isrc = patch.isrc.or(track.isrc.take());
+    track.artwork_id = patch.artwork_id.or(track.artwork_id.take());
 }
 
 fn artist_references(
@@ -1239,6 +1412,176 @@ fn tracks_for_entity(
         hydrate_track(connection, track)?;
     }
     Ok(tracks)
+}
+
+fn save_metadata_draft(
+    connection: &Connection,
+    track_id: &str,
+    patch: &MetadataPatch,
+    source: &str,
+) -> Result<MetadataPatch, AppError> {
+    let exists: bool = connection
+        .query_row(
+            "SELECT EXISTS(SELECT 1 FROM tracks WHERE id = ?1)",
+            [track_id],
+            |row| row.get(0),
+        )
+        .map_err(database_error("find-metadata-track"))?;
+    if !exists {
+        return Err(AppError::new(
+            "track-not-found",
+            "The track selected for metadata editing no longer exists.",
+        ));
+    }
+    let before: Option<String> = connection
+        .query_row(
+            "SELECT patch_json FROM metadata_overrides WHERE track_id = ?1",
+            [track_id],
+            |row| row.get(0),
+        )
+        .optional()
+        .map_err(database_error("read-previous-metadata-draft"))?;
+    let json = serde_json::to_string(patch)
+        .map_err(|error| AppError::persistence("serialize-metadata-draft", error.to_string()))?;
+    let now = Utc::now().to_rfc3339();
+    connection
+        .execute(
+            "INSERT INTO metadata_overrides (track_id, patch_json, source, created_at, updated_at)
+             VALUES (?1, ?2, ?3, ?4, ?4)
+             ON CONFLICT(track_id) DO UPDATE SET patch_json = excluded.patch_json,
+             source = excluded.source, updated_at = excluded.updated_at",
+            params![track_id, json, source, now],
+        )
+        .map_err(database_error("save-metadata-draft"))?;
+    connection
+        .execute(
+            "INSERT INTO metadata_audit (id, track_id, source, before_json, after_json, created_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            params![
+                Uuid::new_v4().to_string(),
+                track_id,
+                source,
+                before,
+                json,
+                now
+            ],
+        )
+        .map_err(database_error("audit-metadata-draft"))?;
+    Ok(patch.clone())
+}
+
+fn get_metadata_draft(
+    connection: &Connection,
+    track_id: &str,
+) -> Result<Option<MetadataPatch>, AppError> {
+    let json: Option<String> = connection
+        .query_row(
+            "SELECT patch_json FROM metadata_overrides WHERE track_id = ?1",
+            [track_id],
+            |row| row.get(0),
+        )
+        .optional()
+        .map_err(database_error("read-metadata-draft"))?;
+    json.map(|json| {
+        serde_json::from_str(&json)
+            .map_err(|error| AppError::persistence("deserialize-metadata-draft", error.to_string()))
+    })
+    .transpose()
+}
+
+fn resolve_track_id(connection: &Connection, track_id: &str) -> Result<PathBuf, AppError> {
+    connection
+        .query_row(
+            "SELECT tracks.canonical_path FROM tracks
+             JOIN library_roots ON library_roots.id = tracks.root_id
+             WHERE tracks.id = ?1 AND tracks.available = 1 AND library_roots.enabled = 1",
+            [track_id],
+            |row| row.get::<_, String>(0).map(PathBuf::from),
+        )
+        .optional()
+        .map_err(database_error("resolve-track-id"))?
+        .ok_or_else(|| {
+            AppError::new(
+                "track-outside-library",
+                "The track is not available inside an enabled library root.",
+            )
+        })
+}
+
+fn get_track(connection: &Connection, track_id: &str) -> Result<TrackSummary, AppError> {
+    let mut track = connection
+        .query_row(
+            &format!("SELECT {TRACK_COLUMNS} FROM tracks WHERE id = ?1"),
+            [track_id],
+            track_from_row,
+        )
+        .optional()
+        .map_err(database_error("read-track"))?
+        .ok_or_else(|| AppError::new("track-not-found", "The requested track no longer exists."))?;
+    hydrate_track(connection, &mut track)?;
+    Ok(track)
+}
+
+fn get_enrichment_cache(
+    connection: &Connection,
+    query_key: &str,
+) -> Result<Option<String>, AppError> {
+    connection
+        .query_row(
+            "SELECT result_json FROM enrichment_results
+             WHERE provider = 'musicbrainz' AND query_key = ?1 AND status = 'cached'
+             ORDER BY updated_at DESC LIMIT 1",
+            [query_key],
+            |row| row.get(0),
+        )
+        .optional()
+        .map_err(database_error("read-enrichment-cache"))
+}
+
+fn save_enrichment_cache(
+    connection: &Connection,
+    track_id: &str,
+    query_key: &str,
+    result_json: &str,
+) -> Result<(), AppError> {
+    let now = Utc::now().to_rfc3339();
+    connection
+        .execute(
+            "INSERT INTO enrichment_results
+             (id, track_id, provider, query_key, result_json, status, created_at, updated_at)
+             VALUES (?1, ?2, 'musicbrainz', ?3, ?4, 'cached', ?5, ?5)",
+            params![
+                Uuid::new_v4().to_string(),
+                track_id,
+                query_key,
+                result_json,
+                now
+            ],
+        )
+        .map_err(database_error("save-enrichment-cache"))?;
+    Ok(())
+}
+
+fn save_artwork(connection: &Connection, artwork: &CachedArtwork) -> Result<(), AppError> {
+    connection
+        .execute(
+            "INSERT INTO artwork
+             (id, content_hash, cache_path, mime_type, source, source_id, created_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+             ON CONFLICT(content_hash) DO UPDATE SET cache_path = excluded.cache_path,
+             source = excluded.source, source_id = excluded.source_id",
+            params![
+                artwork.id,
+                artwork.content_hash,
+                artwork.cache_path,
+                artwork.mime_type,
+                artwork.source,
+                artwork.source_id,
+                Utc::now().to_rfc3339()
+            ],
+        )
+        .map_err(database_error("save-artwork"))?;
+    Ok(())
 }
 
 fn resolve_track(

@@ -1,4 +1,5 @@
 Bebop-Qwen/
+.bebop-backups/
 node_modules/
 dist/
 coverage/

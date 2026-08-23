@@ -11,6 +11,7 @@ use std::{
 
 mod audio;
 mod catalog;
+mod enrichment;
 mod metadata;
 mod persistence;
 
@@ -28,10 +29,15 @@ pub use catalog::{
     RootAvailability, ScanProgress, SortDirection, TrackPage, TrackSort, TrackSummary, WatchMode,
 };
 use catalog::{probe_audio_metadata, scan_library_at};
+pub use enrichment::{EnrichmentCandidate, EnrichmentJob};
+use enrichment::{MusicBrainzClient, enrich_track, patch_from_candidate};
+pub use metadata::{MetadataPatch, MetadataWriteResult};
+use metadata::{cache_external_artwork, restore_backup, write_patch_atomically};
 use persistence::DatabaseWorker;
 
 const SCAN_PROGRESS_EVENT: &str = "library://scan-progress";
 const LIBRARY_CHANGED_EVENT: &str = "library://changed";
+const METADATA_JOB_PROGRESS_EVENT: &str = "metadata://job-progress";
 const PLAYBACK_STATE_EVENT: &str = "playback://state";
 const PLAYBACK_POSITION_EVENT: &str = "playback://position";
 const PLAYBACK_ENDED_EVENT: &str = "playback://ended";
@@ -190,6 +196,7 @@ pub struct LibraryChanged {
 pub struct AppState {
     database: DatabaseWorker,
     artwork_cache: PathBuf,
+    musicbrainz: Arc<MusicBrainzClient>,
     playback: Arc<Mutex<PlaybackEngine>>,
     running: Arc<AtomicBool>,
 }
@@ -199,6 +206,7 @@ impl AppState {
         Self {
             database,
             artwork_cache,
+            musicbrainz: Arc::new(MusicBrainzClient::default()),
             playback: Arc::new(Mutex::new(PlaybackEngine::default())),
             running: Arc::new(AtomicBool::new(true)),
         }
@@ -404,6 +412,234 @@ fn get_artist_detail(
 #[specta::specta]
 fn get_album_detail(state: State<'_, AppState>, album_id: String) -> Result<AlbumDetail, AppError> {
     state.database.get_album_detail(album_id)
+}
+
+#[tauri::command]
+#[specta::specta]
+fn get_metadata_draft(
+    state: State<'_, AppState>,
+    track_id: String,
+) -> Result<Option<MetadataPatch>, AppError> {
+    state.database.get_metadata_draft(track_id)
+}
+
+#[tauri::command]
+#[specta::specta]
+fn get_track_metadata(
+    state: State<'_, AppState>,
+    track_id: String,
+) -> Result<TrackSummary, AppError> {
+    state.database.get_track(track_id)
+}
+
+#[tauri::command]
+#[specta::specta]
+fn save_metadata_draft(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    track_id: String,
+    patch: MetadataPatch,
+) -> Result<MetadataPatch, AppError> {
+    let saved = state
+        .database
+        .save_metadata_draft(track_id.clone(), patch, "user".into())?;
+    emit_library_changed(&app, "metadata-override", None, vec![track_id]);
+    Ok(saved)
+}
+
+#[tauri::command]
+#[specta::specta]
+fn save_metadata_drafts(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    track_ids: Vec<String>,
+    patch: MetadataPatch,
+) -> Result<u32, AppError> {
+    if track_ids.is_empty() {
+        return Err(AppError::new(
+            "metadata-batch-empty",
+            "Select at least one track for batch editing.",
+        ));
+    }
+    for track_id in &track_ids {
+        state
+            .database
+            .save_metadata_draft(track_id.clone(), patch.clone(), "user-batch".into())?;
+    }
+    emit_library_changed(&app, "metadata-override", None, track_ids.clone());
+    Ok(track_ids.len().try_into().unwrap_or(u32::MAX))
+}
+
+#[tauri::command]
+#[specta::specta]
+async fn write_metadata_to_file(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    track_id: String,
+) -> Result<MetadataWriteResult, AppError> {
+    ensure_track_not_playing(&state, &track_id)?;
+    let database = state.database.clone();
+    let task_track_id = track_id.clone();
+    let result = tauri::async_runtime::spawn_blocking(move || {
+        let path = database.resolve_track_id(task_track_id.clone())?;
+        if path
+            .metadata()
+            .map_err(|error| AppError::new("track-unavailable", error.to_string()))?
+            .permissions()
+            .readonly()
+        {
+            return Err(AppError::new(
+                "metadata-root-read-only",
+                "Metadata cannot be written because this track is read-only.",
+            ));
+        }
+        let patch = database
+            .get_metadata_draft(task_track_id.clone())?
+            .ok_or_else(|| {
+                AppError::new(
+                    "metadata-draft-not-found",
+                    "Save a metadata draft before writing tags to the file.",
+                )
+            })?;
+        let backup = write_patch_atomically(&path, &patch)
+            .map_err(|error| AppError::new("metadata-write-failed", error))?;
+        Ok(MetadataWriteResult {
+            track_id: task_track_id,
+            path: path.to_string_lossy().into_owned(),
+            backup_path: backup.to_string_lossy().into_owned(),
+        })
+    })
+    .await
+    .map_err(|error| AppError::new("background-task-failed", error.to_string()))??;
+    emit_library_changed(&app, "metadata-file-written", None, vec![track_id]);
+    Ok(result)
+}
+
+#[tauri::command]
+#[specta::specta]
+async fn rollback_metadata_file(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    track_id: String,
+) -> Result<MetadataWriteResult, AppError> {
+    ensure_track_not_playing(&state, &track_id)?;
+    let database = state.database.clone();
+    let task_track_id = track_id.clone();
+    let result = tauri::async_runtime::spawn_blocking(move || {
+        let path = database.resolve_track_id(task_track_id.clone())?;
+        let backup = restore_backup(&path)
+            .map_err(|error| AppError::new("metadata-rollback-failed", error))?;
+        Ok(MetadataWriteResult {
+            track_id: task_track_id,
+            path: path.to_string_lossy().into_owned(),
+            backup_path: backup.to_string_lossy().into_owned(),
+        })
+    })
+    .await
+    .map_err(|error| AppError::new("background-task-failed", error.to_string()))??;
+    emit_library_changed(&app, "metadata-file-rolled-back", None, vec![track_id]);
+    Ok(result)
+}
+
+fn ensure_track_not_playing(state: &AppState, track_id: &str) -> Result<(), AppError> {
+    let playback = state
+        .playback
+        .lock()
+        .map_err(|_| AppError::state_unavailable("playback-engine"))?;
+    if playback.state.track_id.as_deref() == Some(track_id)
+        && matches!(
+            playback.state.status,
+            PlaybackStatus::Loading | PlaybackStatus::Playing | PlaybackStatus::Paused
+        )
+    {
+        return Err(AppError::new(
+            "metadata-track-active",
+            "Stop this track before writing or restoring its file tags.",
+        ));
+    }
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+fn set_musicbrainz_enabled(state: State<'_, AppState>, enabled: bool) -> bool {
+    state.musicbrainz.set_enabled(enabled);
+    enabled
+}
+
+#[tauri::command]
+#[specta::specta]
+fn get_musicbrainz_enabled(state: State<'_, AppState>) -> bool {
+    state.musicbrainz.enabled()
+}
+
+#[tauri::command]
+#[specta::specta]
+async fn run_musicbrainz_enrichment(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    track_id: String,
+) -> Result<EnrichmentJob, AppError> {
+    let database = state.database.clone();
+    let client = Arc::clone(&state.musicbrainz);
+    let pending = EnrichmentJob {
+        track_id: track_id.clone(),
+        status: "searching".into(),
+        candidates: Vec::new(),
+        auto_applied: false,
+        from_cache: false,
+    };
+    let _ = app.emit(METADATA_JOB_PROGRESS_EVENT, &pending);
+    let job =
+        tauri::async_runtime::spawn_blocking(move || enrich_track(&database, &client, track_id))
+            .await
+            .map_err(|error| AppError::new("background-task-failed", error.to_string()))??;
+    let _ = app.emit(METADATA_JOB_PROGRESS_EVENT, &job);
+    Ok(job)
+}
+
+#[tauri::command]
+#[specta::specta]
+async fn apply_musicbrainz_candidate(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    track_id: String,
+    candidate: EnrichmentCandidate,
+) -> Result<MetadataPatch, AppError> {
+    if !candidate.requires_review {
+        return Err(AppError::new(
+            "musicbrainz-review-not-required",
+            "This exact match was already applied automatically.",
+        ));
+    }
+    let database = state.database.clone();
+    let client = Arc::clone(&state.musicbrainz);
+    let artwork_cache = state.artwork_cache.clone();
+    let task_track_id = track_id.clone();
+    let saved = tauri::async_runtime::spawn_blocking(move || {
+        let track = database.get_track(task_track_id.clone())?;
+        let mut patch = patch_from_candidate(&track, &candidate);
+        if let Some(release_id) = candidate.release_id.as_deref()
+            && let Ok(Some((bytes, mime))) = client.cover_art(release_id)
+            && let Ok(artwork) = cache_external_artwork(
+                &bytes,
+                &mime,
+                "cover-art-archive",
+                release_id,
+                &artwork_cache,
+            )
+        {
+            let artwork_id = artwork.id.clone();
+            if database.save_artwork(artwork).is_ok() {
+                patch.artwork_id = Some(artwork_id);
+            }
+        }
+        database.save_metadata_draft(task_track_id, patch, "musicbrainz-review".into())
+    })
+    .await
+    .map_err(|error| AppError::new("background-task-failed", error.to_string()))??;
+    emit_library_changed(&app, "metadata-enriched", None, vec![track_id]);
+    Ok(saved)
 }
 
 fn emit_library_changed(
@@ -692,10 +928,14 @@ fn ipc_bindings() -> Builder<tauri::Wry> {
     Builder::<tauri::Wry>::new()
         .commands(collect_commands![
             add_library_root,
+            apply_musicbrainz_candidate,
             get_album_detail,
             get_artist_detail,
             get_desktop_state,
+            get_metadata_draft,
+            get_musicbrainz_enabled,
             get_playback_state,
+            get_track_metadata,
             list_library_roots,
             list_audio_output_devices,
             pause_playback,
@@ -706,13 +946,19 @@ fn ipc_bindings() -> Builder<tauri::Wry> {
             rescan_library_root,
             resume_playback,
             restore_library_root,
+            rollback_metadata_file,
+            run_musicbrainz_enrichment,
+            save_metadata_draft,
+            save_metadata_drafts,
             scan_library,
             select_audio_output_device,
             seek_playback,
             set_hifi_mode,
             set_library_root_enabled,
+            set_musicbrainz_enabled,
             set_volume,
-            stop_playback
+            stop_playback,
+            write_metadata_to_file
         ])
         .typ::<AppError>()
         .typ::<AlbumDetail>()
@@ -724,10 +970,14 @@ fn ipc_bindings() -> Builder<tauri::Wry> {
         .typ::<CatalogQuery>()
         .typ::<DiscoveryCatalog>()
         .typ::<DiscoveryQuery>()
+        .typ::<EnrichmentCandidate>()
+        .typ::<EnrichmentJob>()
         .typ::<GenreSummary>()
         .typ::<LibraryChanged>()
         .typ::<LibraryRoot>()
         .typ::<LibraryScan>()
+        .typ::<MetadataPatch>()
+        .typ::<MetadataWriteResult>()
         .typ::<PlaybackState>()
         .typ::<ScanProgress>()
         .typ::<SortDirection>()
@@ -893,6 +1143,20 @@ mod tests {
             .get_artist_detail(discovery.artists[0].id.clone())
             .expect("artist detail");
         assert_eq!(detail.tracks[0].id, tracks[0].id);
+        database
+            .save_metadata_draft(
+                tracks[0].id.clone(),
+                MetadataPatch {
+                    title: Some("Database override".into()),
+                    ..MetadataPatch::default()
+                },
+                "test".into(),
+            )
+            .expect("save override");
+        let overridden = database
+            .query_tracks(CatalogQuery::default())
+            .expect("query override");
+        assert_eq!(overridden.items[0].title, "Database override");
         fs::remove_dir_all(root).expect("remove fixture");
     }
 

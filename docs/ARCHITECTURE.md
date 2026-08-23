@@ -10,6 +10,8 @@ contain only the user's media; Bebop never places its database inside a library 
 React pages/hooks
   ├─ root commands → Rust scanner → reconciliation transaction → SQLite worker
   ├─ bounded catalog queries ← pagination/search/sort/filter ← SQLite worker
+  ├─ tag draft/review → metadata overrides + audit → optional atomic Lofty file write
+  ├─ opt-in enrichment → rate-limited MusicBrainz worker → persistent result cache
   └─ generated IPC → playback commands → Rust PlaybackEngine → Rodio / CPAL → output device
                          ↑                                      │
                          └──── Tauri events: state, position, ended, error ────┘
@@ -47,6 +49,24 @@ Lofty can parse Opus and WavPack tags, but those extensions are not advertised o
 the current cross-platform Rodio/Symphonia backend has no production decoder for either format.
 They remain behind the V2 rule that metadata probing and real Rust playback fixtures must both pass.
 
+Database metadata overrides take precedence over embedded tags, which take precedence over the
+explicit filename/unknown-value fallbacks. Saving an editor draft updates SQLite and appends an
+audit row; it does not touch the media file. A separate confirmed write is rejected for active,
+read-only, unavailable, disabled-root, and unsupported tracks. Before writing, Bebop retains one
+full-file copy in a neighboring ignored `.bebop-backups/` directory, edits an adjacent temporary
+file, decodes and hashes the audio before and after, re-reads the requested tag, and atomically
+replaces the original. Rollback uses the same validated temporary-replacement path.
+
+Single-track and batch draft commands share the same audited override model. MusicBrainz is
+explicitly opt-in and runs on a blocking worker rather than the UI thread. A single
+client enforces at most one request per second, retries temporary HTTP 503 responses, sends a
+meaningful Bebop user agent, and caches JSON candidates in SQLite. An embedded recording ID, or one
+unambiguous exact album/album-artist match with complete matching numbering and duration within two
+seconds, may update the SQLite override. Every other candidate requires a user review. Enrichment
+never writes tags to files. When a reviewed release has an approved front image, its 500px Cover
+Art Archive representation is stored in the same hash-addressed cache, with its provider and
+release ID retained in SQLite.
+
 ## IPC contracts
 
 Rust is authoritative; [generated TypeScript bindings](../apps/frontend/src/services/tauri-bindings.ts)
@@ -56,6 +76,8 @@ are a consumer of those contracts.
 | ------------------ | ------------------------------------------------------------------------------------------------------ |
 | `AppError`         | Stable code, message, and optional string context.                                                     |
 | `TrackSummary`     | A scanned local audio file. Paths remain opaque to TypeScript.                                         |
+| `MetadataPatch`    | Nullable SQLite override and the reviewed payload for an explicit file-tag write.                     |
+| `EnrichmentJob`    | MusicBrainz job status, cached/review candidates, and conservative auto-apply outcome.                 |
 | `ScanProgress`     | Scanned-file and discovered-track counts during a scan.                                                |
 | `PlaybackState`    | Track identity, state, position, duration, volume/mute, hi-fi mode, and optional output path.          |
 | `AudioOutputState` | Source/device formats plus native-rate, resampling, gain, exclusive-mode, and bit-perfect disclosures. |
@@ -109,6 +131,5 @@ and Windows NSIS bundle. Hardware audio is intentionally outside CI coverage.
 
 ## Deferred work
 
-Embedded tag indexing/editing, MusicBrainz, file watching, native spectrum samples, Last.fm,
-Discord presence, acquisition, installers beyond CI bundles, code signing, and auto-updates remain
-deferred to later stages in the V2 plan.
+File watching, native spectrum samples, Last.fm, Discord presence, acquisition, installers beyond
+CI bundles, code signing, and auto-updates remain deferred to later stages in the V2 plan.
