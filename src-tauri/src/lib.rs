@@ -9,6 +9,7 @@ use std::{
     time::{Duration, Instant},
 };
 
+mod acquisition;
 mod audio;
 mod catalog;
 mod enrichment;
@@ -28,6 +29,11 @@ use tauri::{AppHandle, Emitter, Manager, State, WindowEvent};
 use tauri_specta::{Builder, collect_commands};
 use uuid::Uuid;
 
+use acquisition::AcquisitionManager;
+pub use acquisition::{
+    AcquisitionJob, AcquisitionSearch, AcquisitionSearchFile, AcquisitionSearchGroup,
+    AcquisitionSettings, AcquisitionStatus,
+};
 use audio::{AudioBackendError, PlaybackEngine};
 pub use catalog::{
     AlbumDetail, AlbumSummary, ArtistDetail, ArtistReference, ArtistSummary, AudioExtension,
@@ -223,6 +229,7 @@ pub struct AppState {
     artwork_cache: PathBuf,
     musicbrainz: Arc<MusicBrainzClient>,
     integrations: IntegrationManager,
+    acquisition: AcquisitionManager,
     watcher: LibraryWatcher,
     listening: Arc<Mutex<Option<ActiveListeningSession>>>,
     playback: Arc<Mutex<PlaybackEngine>>,
@@ -257,6 +264,7 @@ impl AppState {
         );
         playback.set_spectrum_enabled(preferences.visualization_enabled);
         Self {
+            acquisition: AcquisitionManager::start(app.clone(), database.clone()),
             integrations: IntegrationManager::start(app, database.clone()),
             database,
             artwork_cache,
@@ -269,6 +277,169 @@ impl AppState {
             running: Arc::new(AtomicBool::new(true)),
         }
     }
+}
+
+#[tauri::command]
+#[specta::specta]
+fn get_acquisition_settings(state: State<'_, AppState>) -> Result<AcquisitionSettings, AppError> {
+    acquisition::load_settings(&state.database)
+}
+
+#[tauri::command]
+#[specta::specta]
+fn set_acquisition_settings(
+    state: State<'_, AppState>,
+    settings: AcquisitionSettings,
+) -> Result<AcquisitionSettings, AppError> {
+    acquisition::save_settings(&state.database, settings)
+}
+
+#[tauri::command]
+#[specta::specta]
+async fn configure_slskd_api_key(
+    state: State<'_, AppState>,
+    api_key: String,
+) -> Result<AcquisitionStatus, AppError> {
+    let database = state.database.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        acquisition::set_api_key(&api_key)?;
+        Ok(acquisition::test_connection(&database))
+    })
+    .await
+    .map_err(|error| AppError::new("background-task-failed", error.to_string()))?
+}
+
+#[tauri::command]
+#[specta::specta]
+async fn disconnect_slskd(state: State<'_, AppState>) -> Result<AcquisitionStatus, AppError> {
+    let database = state.database.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        acquisition::clear_api_key()?;
+        Ok(acquisition::test_connection(&database))
+    })
+    .await
+    .map_err(|error| AppError::new("background-task-failed", error.to_string()))?
+}
+
+#[tauri::command]
+#[specta::specta]
+async fn test_slskd_connection(state: State<'_, AppState>) -> Result<AcquisitionStatus, AppError> {
+    let database = state.database.clone();
+    tauri::async_runtime::spawn_blocking(move || acquisition::test_connection(&database))
+        .await
+        .map_err(|error| AppError::new("background-task-failed", error.to_string()))
+}
+
+#[tauri::command]
+#[specta::specta]
+async fn search_acquisition(
+    state: State<'_, AppState>,
+    query: String,
+) -> Result<AcquisitionSearch, AppError> {
+    let database = state.database.clone();
+    tauri::async_runtime::spawn_blocking(move || acquisition::start_search(&database, query))
+        .await
+        .map_err(|error| AppError::new("background-task-failed", error.to_string()))?
+}
+
+#[tauri::command]
+#[specta::specta]
+async fn get_acquisition_search(
+    state: State<'_, AppState>,
+    search_id: String,
+) -> Result<AcquisitionSearch, AppError> {
+    let database = state.database.clone();
+    tauri::async_runtime::spawn_blocking(move || acquisition::get_search(&database, search_id))
+        .await
+        .map_err(|error| AppError::new("background-task-failed", error.to_string()))?
+}
+
+#[tauri::command]
+#[specta::specta]
+async fn enqueue_acquisition(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    search_id: String,
+    source_user: String,
+    file: AcquisitionSearchFile,
+) -> Result<AcquisitionJob, AppError> {
+    let database = state.database.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        acquisition::enqueue(&app, &database, search_id, source_user, file)
+    })
+    .await
+    .map_err(|error| AppError::new("background-task-failed", error.to_string()))?
+}
+
+#[tauri::command]
+#[specta::specta]
+async fn list_acquisition_jobs(
+    app: AppHandle,
+    state: State<'_, AppState>,
+) -> Result<Vec<AcquisitionJob>, AppError> {
+    let database = state.database.clone();
+    tauri::async_runtime::spawn_blocking(move || acquisition::list_jobs(&app, &database))
+        .await
+        .map_err(|error| AppError::new("background-task-failed", error.to_string()))?
+}
+
+#[tauri::command]
+#[specta::specta]
+async fn pause_acquisition(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    job_id: String,
+) -> Result<AcquisitionJob, AppError> {
+    let database = state.database.clone();
+    tauri::async_runtime::spawn_blocking(move || acquisition::pause(&app, &database, job_id))
+        .await
+        .map_err(|error| AppError::new("background-task-failed", error.to_string()))?
+}
+
+#[tauri::command]
+#[specta::specta]
+async fn resume_acquisition(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    job_id: String,
+) -> Result<AcquisitionJob, AppError> {
+    let database = state.database.clone();
+    tauri::async_runtime::spawn_blocking(move || acquisition::resume(&app, &database, job_id))
+        .await
+        .map_err(|error| AppError::new("background-task-failed", error.to_string()))?
+}
+
+#[tauri::command]
+#[specta::specta]
+async fn cancel_acquisition(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    job_id: String,
+) -> Result<AcquisitionJob, AppError> {
+    let database = state.database.clone();
+    tauri::async_runtime::spawn_blocking(move || acquisition::cancel(&app, &database, job_id))
+        .await
+        .map_err(|error| AppError::new("background-task-failed", error.to_string()))?
+}
+
+#[tauri::command]
+#[specta::specta]
+async fn import_acquisition(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    job_id: String,
+    root_id: String,
+) -> Result<AcquisitionJob, AppError> {
+    let database = state.database.clone();
+    let artwork_cache = state.artwork_cache.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let (job, _) = acquisition::import(&app, &database, job_id, root_id.clone())?;
+        let root = database.get_root(root_id)?;
+        scan_root(&app, &database, &artwork_cache, root)?;
+        Ok(job)
+    })
+    .await
+    .map_err(|error| AppError::new("background-task-failed", error.to_string()))?
 }
 
 #[tauri::command]
@@ -1480,6 +1651,7 @@ fn spawn_spectrum_emitter(app: AppHandle, state: &AppState) {
 fn shutdown_playback(state: &AppState) {
     state.running.store(false, Ordering::Release);
     state.integrations.shutdown();
+    state.acquisition.shutdown();
     if let Ok(mut engine) = state.playback.lock() {
         let was_playing = matches!(engine.state.status, PlaybackStatus::Playing);
         let _ = state
@@ -1500,10 +1672,16 @@ fn ipc_bindings() -> Builder<tauri::Wry> {
         .commands(collect_commands![
             add_library_root,
             apply_musicbrainz_candidate,
+            cancel_acquisition,
             cleanup_missing_tracks,
+            configure_slskd_api_key,
             configure_lastfm_session,
             create_playlist,
+            disconnect_slskd,
             disconnect_lastfm,
+            enqueue_acquisition,
+            get_acquisition_search,
+            get_acquisition_settings,
             get_album_detail,
             get_artist_detail,
             get_desktop_state,
@@ -1517,16 +1695,20 @@ fn ipc_bindings() -> Builder<tauri::Wry> {
             get_playback_state,
             get_track_metadata,
             get_ui_preference,
+            import_acquisition,
+            list_acquisition_jobs,
             list_library_roots,
             list_favorites,
             list_playlists,
             list_audio_output_devices,
+            pause_acquisition,
             pause_playback,
             play_track,
             query_catalog_tracks,
             query_discovery,
             remove_library_root,
             rescan_library_root,
+            resume_acquisition,
             resume_playback,
             restore_library_root,
             rollback_metadata_file,
@@ -1536,8 +1718,10 @@ fn ipc_bindings() -> Builder<tauri::Wry> {
             save_player_preferences,
             save_player_queue,
             scan_library,
+            search_acquisition,
             select_audio_output_device,
             seek_playback,
+            set_acquisition_settings,
             set_hifi_mode,
             set_integration_settings,
             set_library_root_enabled,
@@ -1551,8 +1735,15 @@ fn ipc_bindings() -> Builder<tauri::Wry> {
             set_volume,
             set_visualization_enabled,
             stop_playback,
+            test_slskd_connection,
             write_metadata_to_file
         ])
+        .typ::<AcquisitionJob>()
+        .typ::<AcquisitionSearch>()
+        .typ::<AcquisitionSearchFile>()
+        .typ::<AcquisitionSearchGroup>()
+        .typ::<AcquisitionSettings>()
+        .typ::<AcquisitionStatus>()
         .typ::<AppError>()
         .typ::<AlbumDetail>()
         .typ::<AlbumSummary>()

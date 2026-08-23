@@ -12,6 +12,7 @@ use uuid::Uuid;
 
 use crate::{
     AppError,
+    acquisition::AcquisitionRecord,
     catalog::{
         AlbumDetail, AlbumSummary, ArtistDetail, ArtistSummary, AudioExtension, CatalogQuery,
         DiscoveryCatalog, DiscoveryQuery, GenreSummary, LibraryRoot, RootAvailability,
@@ -24,11 +25,12 @@ use crate::{
     },
 };
 
-const SCHEMA_VERSION: i64 = 3;
+const SCHEMA_VERSION: i64 = 4;
 const MIGRATIONS: &[(i64, &str)] = &[
     (1, include_str!("migrations/0001_catalog.sql")),
     (2, include_str!("migrations/0002_live_indexing.sql")),
     (3, include_str!("migrations/0003_player_state.sql")),
+    (4, include_str!("migrations/0004_acquisition.sql")),
 ];
 type CatalogSignatures = HashMap<String, (String, u64, Option<i64>, bool)>;
 
@@ -215,6 +217,15 @@ enum Request {
         retry: bool,
         reply: Sender<Result<(), AppError>>,
     },
+    SaveAcquisitionJob {
+        record: Box<AcquisitionRecord>,
+        reply: Sender<Result<(), AppError>>,
+    },
+    GetAcquisitionJob {
+        id: String,
+        reply: Sender<Result<AcquisitionRecord, AppError>>,
+    },
+    ListAcquisitionJobs(Sender<Result<Vec<AcquisitionRecord>, AppError>>),
 }
 
 impl DatabaseWorker {
@@ -593,6 +604,21 @@ impl DatabaseWorker {
             reply,
         })
     }
+
+    pub(crate) fn save_acquisition_job(&self, record: AcquisitionRecord) -> Result<(), AppError> {
+        self.request(|reply| Request::SaveAcquisitionJob {
+            record: Box::new(record),
+            reply,
+        })
+    }
+
+    pub(crate) fn get_acquisition_job(&self, id: String) -> Result<AcquisitionRecord, AppError> {
+        self.request(|reply| Request::GetAcquisitionJob { id, reply })
+    }
+
+    pub(crate) fn list_acquisition_jobs(&self) -> Result<Vec<AcquisitionRecord>, AppError> {
+        self.request(Request::ListAcquisitionJobs)
+    }
 }
 
 fn backup_before_upgrade(database_path: &Path) -> Result<(), AppError> {
@@ -863,6 +889,15 @@ fn database_loop(mut connection: Connection, receiver: Receiver<Request>) {
                 reply,
                 fail_integration_job(&connection, &id, attempts, &error, retry),
             ),
+            Request::SaveAcquisitionJob { record, reply } => {
+                send(reply, save_acquisition_job(&connection, &record));
+            }
+            Request::GetAcquisitionJob { id, reply } => {
+                send(reply, get_acquisition_job(&connection, &id));
+            }
+            Request::ListAcquisitionJobs(reply) => {
+                send(reply, list_acquisition_jobs(&connection));
+            }
         }
     }
 }
@@ -2630,6 +2665,94 @@ fn fail_integration_job(
     Ok(())
 }
 
+fn save_acquisition_job(
+    connection: &Connection,
+    record: &AcquisitionRecord,
+) -> Result<(), AppError> {
+    let now = Utc::now().to_rfc3339();
+    connection
+        .execute(
+            "INSERT INTO acquisition_jobs
+             (id, status, progress, source_user, target_path, provider_job_id, error_json,
+              created_at, updated_at, remote_filename, file_size, search_id)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?8, ?9, ?10, ?11)
+             ON CONFLICT(id) DO UPDATE SET status = excluded.status,
+               progress = excluded.progress, source_user = excluded.source_user,
+               target_path = excluded.target_path, provider_job_id = excluded.provider_job_id,
+               error_json = excluded.error_json, remote_filename = excluded.remote_filename,
+               file_size = excluded.file_size, search_id = excluded.search_id,
+               updated_at = excluded.updated_at",
+            params![
+                record.id,
+                record.status,
+                record.progress,
+                record.source_user,
+                record.target_path,
+                record.provider_job_id,
+                record
+                    .error
+                    .as_ref()
+                    .and_then(|error| serde_json::to_string(error).ok()),
+                now,
+                record.remote_filename,
+                record.file_size,
+                record.search_id,
+            ],
+        )
+        .map_err(database_error("save-acquisition-job"))?;
+    Ok(())
+}
+
+fn acquisition_record_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<AcquisitionRecord> {
+    let error_json: Option<String> = row.get(6)?;
+    Ok(AcquisitionRecord {
+        id: row.get(0)?,
+        status: row.get(1)?,
+        progress: row.get(2)?,
+        source_user: row.get(3)?,
+        target_path: row.get(4)?,
+        provider_job_id: row.get(5)?,
+        error: error_json.and_then(|json| serde_json::from_str(&json).ok()),
+        remote_filename: row.get(7)?,
+        file_size: row.get(8)?,
+        search_id: row.get(9)?,
+    })
+}
+
+fn get_acquisition_job(connection: &Connection, id: &str) -> Result<AcquisitionRecord, AppError> {
+    connection
+        .query_row(
+            "SELECT id, status, progress, source_user, target_path, provider_job_id,
+             error_json, remote_filename, file_size, search_id
+             FROM acquisition_jobs WHERE id = ?1",
+            [id],
+            acquisition_record_from_row,
+        )
+        .optional()
+        .map_err(database_error("read-acquisition-job"))?
+        .ok_or_else(|| {
+            AppError::new(
+                "acquisition-job-not-found",
+                "The acquisition job no longer exists.",
+            )
+        })
+}
+
+fn list_acquisition_jobs(connection: &Connection) -> Result<Vec<AcquisitionRecord>, AppError> {
+    let mut statement = connection
+        .prepare(
+            "SELECT id, status, progress, source_user, target_path, provider_job_id,
+             error_json, remote_filename, file_size, search_id
+             FROM acquisition_jobs ORDER BY updated_at DESC",
+        )
+        .map_err(database_error("prepare-acquisition-jobs"))?;
+    statement
+        .query_map([], acquisition_record_from_row)
+        .map_err(database_error("query-acquisition-jobs"))?
+        .collect::<rusqlite::Result<Vec<_>>>()
+        .map_err(database_error("read-acquisition-jobs"))
+}
+
 fn resolve_track(
     connection: &Connection,
     canonical_path: &str,
@@ -2712,6 +2835,33 @@ mod tests {
     }
 
     #[test]
+    fn acquisition_jobs_round_trip_without_exposing_credentials() {
+        let worker = DatabaseWorker::in_memory().expect("database starts");
+        let record = AcquisitionRecord {
+            id: "job-1".into(),
+            status: "downloading".into(),
+            progress: 0.25,
+            source_user: Some("source-user".into()),
+            target_path: None,
+            provider_job_id: Some("batch-1".into()),
+            error: None,
+            remote_filename: Some("Artist\\Album\\Track.flac".into()),
+            file_size: 1234,
+            search_id: Some("search-1".into()),
+        };
+        worker
+            .save_acquisition_job(record)
+            .expect("persist acquisition job");
+        let restored = worker
+            .get_acquisition_job("job-1".into())
+            .expect("restore acquisition job");
+        assert_eq!(restored.status, "downloading");
+        assert_eq!(restored.progress, 0.25);
+        assert_eq!(restored.provider_job_id.as_deref(), Some("batch-1"));
+        assert_eq!(worker.list_acquisition_jobs().expect("list jobs").len(), 1);
+    }
+
+    #[test]
     fn version_one_catalogs_upgrade_through_current_schema() {
         let mut connection = Connection::open_in_memory().expect("open old database");
         connection
@@ -2733,7 +2883,7 @@ mod tests {
                 |row| row.get(0),
             )
             .expect("inspect upgraded tracks");
-        assert_eq!(version, 3);
+        assert_eq!(version, 4);
         assert!(fingerprint_exists);
     }
 

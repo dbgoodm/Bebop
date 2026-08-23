@@ -10,6 +10,7 @@ import { LibraryView } from '@/components/organisms/LibraryView';
 import { ArtistDetailPage } from '@/components/organisms/ArtistDetailPage';
 import { AlbumDetailPage } from '@/components/organisms/AlbumDetailPage';
 import { MetadataEditor } from '@/components/organisms/MetadataEditor';
+import { AcquisitionPanel } from '@/components/organisms/AcquisitionPanel';
 import { FullscreenNowPlaying } from '@/components/organisms/FullscreenNowPlaying';
 import { NowPlayingBar } from '@/components/organisms/NowPlayingBar';
 import { NowPlayingQueueModal } from '@/components/organisms/NowPlayingQueueModal';
@@ -866,6 +867,7 @@ export function DesktopLibraryPage() {
                 </div>
               </div>
             </div>
+            <AcquisitionPanel roots={library.roots} />
           </div>
         )}
 

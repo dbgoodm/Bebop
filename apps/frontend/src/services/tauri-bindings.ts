@@ -6,10 +6,16 @@ import { invoke as __TAURI_INVOKE } from "@tauri-apps/api/core";
 export const commands = {
 	addLibraryRoot: (path: string, label: string | null) => typedError<LibraryScan, AppError_Serialize>(__TAURI_INVOKE("add_library_root", { path, label })),
 	applyMusicbrainzCandidate: (trackId: string, candidate: EnrichmentCandidate) => typedError<MetadataPatch, AppError_Serialize>(__TAURI_INVOKE("apply_musicbrainz_candidate", { trackId, candidate })),
+	cancelAcquisition: (jobId: string) => typedError<AcquisitionJob_Serialize, AppError_Serialize>(__TAURI_INVOKE("cancel_acquisition", { jobId })),
 	cleanupMissingTracks: (rootId: string | null, confirmed: boolean) => typedError<number, AppError_Serialize>(__TAURI_INVOKE("cleanup_missing_tracks", { rootId, confirmed })),
+	configureSlskdApiKey: (apiKey: string) => typedError<AcquisitionStatus_Serialize, AppError_Serialize>(__TAURI_INVOKE("configure_slskd_api_key", { apiKey })),
 	configureLastfmSession: (sessionKey: string) => typedError<IntegrationStatus_Serialize[], AppError_Serialize>(__TAURI_INVOKE("configure_lastfm_session", { sessionKey })),
 	createPlaylist: (name: string) => typedError<PlaylistSummary, AppError_Serialize>(__TAURI_INVOKE("create_playlist", { name })),
+	disconnectSlskd: () => typedError<AcquisitionStatus_Serialize, AppError_Serialize>(__TAURI_INVOKE("disconnect_slskd")),
 	disconnectLastfm: () => typedError<IntegrationStatus_Serialize[], AppError_Serialize>(__TAURI_INVOKE("disconnect_lastfm")),
+	enqueueAcquisition: (searchId: string, sourceUser: string, file: AcquisitionSearchFile) => typedError<AcquisitionJob_Serialize, AppError_Serialize>(__TAURI_INVOKE("enqueue_acquisition", { searchId, sourceUser, file })),
+	getAcquisitionSearch: (searchId: string) => typedError<AcquisitionSearch, AppError_Serialize>(__TAURI_INVOKE("get_acquisition_search", { searchId })),
+	getAcquisitionSettings: () => typedError<AcquisitionSettings, AppError_Serialize>(__TAURI_INVOKE("get_acquisition_settings")),
 	getAlbumDetail: (albumId: string) => typedError<AlbumDetail, AppError_Serialize>(__TAURI_INVOKE("get_album_detail", { albumId })),
 	getArtistDetail: (artistId: string) => typedError<ArtistDetail, AppError_Serialize>(__TAURI_INVOKE("get_artist_detail", { artistId })),
 	getDesktopState: () => typedError<DesktopState, AppError_Serialize>(__TAURI_INVOKE("get_desktop_state")),
@@ -40,16 +46,20 @@ export const commands = {
 	getPlaybackState: () => typedError<PlaybackState, AppError_Serialize>(__TAURI_INVOKE("get_playback_state")),
 	getTrackMetadata: (trackId: string) => typedError<TrackSummary, AppError_Serialize>(__TAURI_INVOKE("get_track_metadata", { trackId })),
 	getUiPreference: (key: string) => typedError<string | null, AppError_Serialize>(__TAURI_INVOKE("get_ui_preference", { key })),
+	importAcquisition: (jobId: string, rootId: string) => typedError<AcquisitionJob_Serialize, AppError_Serialize>(__TAURI_INVOKE("import_acquisition", { jobId, rootId })),
+	listAcquisitionJobs: () => typedError<AcquisitionJob_Serialize[], AppError_Serialize>(__TAURI_INVOKE("list_acquisition_jobs")),
 	listLibraryRoots: () => typedError<LibraryRoot[], AppError_Serialize>(__TAURI_INVOKE("list_library_roots")),
 	listFavorites: () => typedError<FavoriteReference[], AppError_Serialize>(__TAURI_INVOKE("list_favorites")),
 	listPlaylists: () => typedError<PlaylistSummary[], AppError_Serialize>(__TAURI_INVOKE("list_playlists")),
 	listAudioOutputDevices: () => typedError<AudioOutputDevice[], AppError_Serialize>(__TAURI_INVOKE("list_audio_output_devices")),
+	pauseAcquisition: (jobId: string) => typedError<AcquisitionJob_Serialize, AppError_Serialize>(__TAURI_INVOKE("pause_acquisition", { jobId })),
 	pausePlayback: () => typedError<PlaybackState, AppError_Serialize>(__TAURI_INVOKE("pause_playback")),
 	playTrack: (path: string) => typedError<PlaybackState, AppError_Serialize>(__TAURI_INVOKE("play_track", { path })),
 	queryCatalogTracks: (query: CatalogQuery) => typedError<TrackPage, AppError_Serialize>(__TAURI_INVOKE("query_catalog_tracks", { query })),
 	queryDiscovery: (query: DiscoveryQuery) => typedError<DiscoveryCatalog, AppError_Serialize>(__TAURI_INVOKE("query_discovery", { query })),
 	removeLibraryRoot: (rootId: string, confirmed: boolean) => typedError<null, AppError_Serialize>(__TAURI_INVOKE("remove_library_root", { rootId, confirmed })),
 	rescanLibraryRoot: (rootId: string) => typedError<LibraryScan, AppError_Serialize>(__TAURI_INVOKE("rescan_library_root", { rootId })),
+	resumeAcquisition: (jobId: string) => typedError<AcquisitionJob_Serialize, AppError_Serialize>(__TAURI_INVOKE("resume_acquisition", { jobId })),
 	resumePlayback: () => typedError<PlaybackState, AppError_Serialize>(__TAURI_INVOKE("resume_playback")),
 	restoreLibraryRoot: (rootId: string) => typedError<LibraryScan, AppError_Serialize>(__TAURI_INVOKE("restore_library_root", { rootId })),
 	rollbackMetadataFile: (trackId: string) => typedError<MetadataWriteResult, AppError_Serialize>(__TAURI_INVOKE("rollback_metadata_file", { trackId })),
@@ -59,8 +69,10 @@ export const commands = {
 	savePlayerPreferences: (preferences: PlayerPreferences) => typedError<PlayerPreferences, AppError_Serialize>(__TAURI_INVOKE("save_player_preferences", { preferences })),
 	savePlayerQueue: (trackIds: string[]) => typedError<null, AppError_Serialize>(__TAURI_INVOKE("save_player_queue", { trackIds })),
 	scanLibrary: (root: string) => typedError<LibraryScan, AppError_Serialize>(__TAURI_INVOKE("scan_library", { root })),
+	searchAcquisition: (query: string) => typedError<AcquisitionSearch, AppError_Serialize>(__TAURI_INVOKE("search_acquisition", { query })),
 	selectAudioOutputDevice: (deviceId: string | null) => typedError<AudioOutputDevice[], AppError_Serialize>(__TAURI_INVOKE("select_audio_output_device", { deviceId })),
 	seekPlayback: (positionMs: number) => typedError<PlaybackState, AppError_Serialize>(__TAURI_INVOKE("seek_playback", { positionMs })),
+	setAcquisitionSettings: (settings: AcquisitionSettings) => typedError<AcquisitionSettings, AppError_Serialize>(__TAURI_INVOKE("set_acquisition_settings", { settings })),
 	setHifiMode: (enabled: boolean) => typedError<PlaybackState, AppError_Serialize>(__TAURI_INVOKE("set_hifi_mode", { enabled })),
 	setIntegrationSettings: (settings: IntegrationSettings) => typedError<IntegrationSettings, AppError_Serialize>(__TAURI_INVOKE("set_integration_settings", { settings })),
 	setLibraryRootEnabled: (rootId: string, enabled: boolean) => typedError<LibraryRoot, AppError_Serialize>(__TAURI_INVOKE("set_library_root_enabled", { rootId, enabled })),
@@ -74,10 +86,84 @@ export const commands = {
 	setVolume: (volume: number | null) => typedError<PlaybackState, AppError_Serialize>(__TAURI_INVOKE("set_volume", { volume })),
 	setVisualizationEnabled: (enabled: boolean) => typedError<PlayerPreferences, AppError_Serialize>(__TAURI_INVOKE("set_visualization_enabled", { enabled })),
 	stopPlayback: () => typedError<PlaybackState, AppError_Serialize>(__TAURI_INVOKE("stop_playback")),
+	testSlskdConnection: () => typedError<AcquisitionStatus_Serialize, AppError_Serialize>(__TAURI_INVOKE("test_slskd_connection")),
 	writeMetadataToFile: (trackId: string) => typedError<MetadataWriteResult, AppError_Serialize>(__TAURI_INVOKE("write_metadata_to_file", { trackId })),
 };
 
 /* Types */
+export type AcquisitionJob = AcquisitionJob_Serialize | AcquisitionJob_Deserialize;
+
+export type AcquisitionJobStatus = "queued" | "downloading" | "paused" | "verifying" | "importing" | "complete" | "error";
+
+export type AcquisitionJob_Deserialize = {
+	id: string,
+	status: AcquisitionJobStatus,
+	progress: number | null,
+	sourceUser: string | null,
+	targetPath: string | null,
+	error: AppError_Deserialize | null,
+};
+
+export type AcquisitionJob_Serialize = {
+	id: string,
+	status: AcquisitionJobStatus,
+	progress: number | null,
+	sourceUser: string | null,
+	targetPath: string | null,
+	error: AppError_Serialize | null,
+};
+
+export type AcquisitionSearch = {
+	id: string,
+	query: string,
+	complete: boolean,
+	groups: AcquisitionSearchGroup[],
+};
+
+export type AcquisitionSearchFile = {
+	filename: string,
+	size: number,
+	bitRate: number | null,
+	bitDepth: number | null,
+	sampleRate: number | null,
+	length: number | null,
+	isLocked: boolean,
+};
+
+export type AcquisitionSearchGroup = {
+	searchId: string,
+	sourceUser: string,
+	uploadSpeed: number,
+	queueLength: number,
+	freeUploadSlot: boolean,
+	files: AcquisitionSearchFile[],
+};
+
+export type AcquisitionSettings = {
+	serverUrl?: string,
+	inboxPath?: string | null,
+	confirmedRemote?: boolean,
+	importMode?: string,
+};
+
+export type AcquisitionStatus = AcquisitionStatus_Serialize | AcquisitionStatus_Deserialize;
+
+export type AcquisitionStatus_Deserialize = {
+	configured: boolean,
+	connected: boolean,
+	serverUrl: string,
+	version: string | null,
+	error: AppError_Deserialize | null,
+};
+
+export type AcquisitionStatus_Serialize = {
+	configured: boolean,
+	connected: boolean,
+	serverUrl: string,
+	version: string | null,
+	error: AppError_Serialize | null,
+};
+
 export type AlbumDetail = {
 	album: AlbumSummary,
 	tracks: TrackSummary[],
