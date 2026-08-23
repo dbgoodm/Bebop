@@ -17,7 +17,6 @@ import { FullscreenNowPlaying } from '@/components/organisms/FullscreenNowPlayin
 import { NowPlayingQueueModal } from '@/components/organisms/NowPlayingQueueModal';
 import { AntraEngineProvider } from '@/services/antraEngineService';
 import { AntraQueueDrawer } from '@/components/organisms/AntraQueueDrawer';
-import { realAudioEngine } from '@/services/realAudioEngine';
 import {
   NavTab,
   ContinueListeningItem,
@@ -33,6 +32,8 @@ import { ThemeProvider, useTheme } from '@/services/themeService';
 import { ThemeSelectorModal } from '@/components/organisms/ThemeSelectorModal';
 import { useDemoMode } from '@/hooks/useDemoMode';
 import { DesktopLibraryPage } from './DesktopLibraryPage';
+
+type DemoAudioEngine = (typeof import('@/services/realAudioEngine'))['realAudioEngine'];
 
 export default function MusicPlayerPage() {
   const demoMode = useDemoMode();
@@ -60,6 +61,7 @@ function DemoMusicPlayer() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTimeSeconds, setCurrentTimeSeconds] = useState(0);
   const [nowResuming, setNowResuming] = useState<string | null>(null);
+  const [audioEngine, setAudioEngine] = useState<DemoAudioEngine | null>(null);
 
   // Fullscreen view & Queue modal states
   const [isFullscreenNowPlaying, setIsFullscreenNowPlaying] = useState(false);
@@ -70,6 +72,16 @@ function DemoMusicPlayer() {
     defaultTrack,
     ...LOCAL_TRACKS.filter((t) => t.id !== defaultTrack.id).slice(0, 12),
   ]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void import('@/services/realAudioEngine').then(({ realAudioEngine }) => {
+      if (!cancelled) setAudioEngine(realAudioEngine);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleNextTrack = useCallback(() => {
     if (playQueue.length > 0) {
@@ -97,18 +109,19 @@ function DemoMusicPlayer() {
 
   // Hook real audio engine events
   useEffect(() => {
-    realAudioEngine.onTimeUpdate((current) => {
+    if (!audioEngine) return;
+    audioEngine.onTimeUpdate((current) => {
       setCurrentTimeSeconds(Math.floor(current));
     });
 
-    realAudioEngine.onStateChange((playing) => {
+    audioEngine.onStateChange((playing) => {
       setIsPlaying(playing);
     });
 
-    realAudioEngine.onTrackEnd(() => {
+    audioEngine.onTrackEnd(() => {
       handleNextTrack();
     });
-  }, [handleNextTrack]);
+  }, [audioEngine, handleNextTrack]);
 
   const handleTabChange = (tab: NavTab) => {
     setActiveTab(tab);
@@ -122,7 +135,7 @@ function DemoMusicPlayer() {
     setNowResuming(`Track: "${track.title}" by ${track.artist}`);
 
     // Start real playback & FFT stream
-    realAudioEngine.playTrack(track);
+    void audioEngine?.playTrack(track);
 
     // Ensure track is present in queue
     setPlayQueue((prev) => {
@@ -135,21 +148,22 @@ function DemoMusicPlayer() {
 
   const handleTogglePlay = () => {
     if (isPlaying) {
-      realAudioEngine.pause();
+      audioEngine?.pause();
     } else {
       if (currentTrack) {
-        realAudioEngine.resume();
+        audioEngine?.resume();
       }
     }
   };
 
   const handleSeek = (seconds: number) => {
     setCurrentTimeSeconds(Math.floor(seconds));
-    realAudioEngine.seek(seconds);
+    audioEngine?.seek(seconds);
   };
 
   const handleImportAudioFile = async (file: File) => {
-    const importedTrack = await realAudioEngine.loadLocalAudioFile(file);
+    if (!audioEngine) return;
+    const importedTrack = await audioEngine.loadLocalAudioFile(file);
     handlePlayTrack(importedTrack);
     setNowResuming(`Imported File: "${importedTrack.title}"`);
   };
@@ -546,6 +560,7 @@ function DemoMusicPlayer() {
         onExpandFullscreen={() => setIsFullscreenNowPlaying(true)}
         onToggleQueue={() => setIsQueueModalOpen((prev) => !prev)}
         queueCount={playQueue.length}
+        frequencyDataProvider={audioEngine?.getFrequencyData.bind(audioEngine)}
       />
 
       {/* Now Playing Queue Modal */}
@@ -579,6 +594,7 @@ function DemoMusicPlayer() {
         onPlayQueueTrack={handlePlayTrack}
         onSelectArtist={handleSelectArtist}
         onSelectAlbum={handleSelectAlbum}
+        frequencyDataProvider={audioEngine?.getFrequencyData.bind(audioEngine)}
       />
 
       {/* Theme Studio Palette Customizer Modal */}

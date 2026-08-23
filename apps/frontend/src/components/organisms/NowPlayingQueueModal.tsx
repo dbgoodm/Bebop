@@ -76,7 +76,7 @@ export const NowPlayingQueueModal: React.FC<NowPlayingQueueModalProps> = ({
                 </span>
               </div>
               <p className="text-xs text-neutral-400 font-mono mt-0.5">
-                {totalMinutes} min total • Bit-Perfect Direct Playback
+                {totalMinutes} min total • Native Rust playback
               </p>
             </div>
           </div>
@@ -115,7 +115,7 @@ export const NowPlayingQueueModal: React.FC<NowPlayingQueueModalProps> = ({
               </button>
             )}
           </div>
-          <span className="text-neutral-400">WASAPI Exclusive</span>
+          <span className="text-neutral-400">OS signal path reported</span>
         </div>
 
         {/* Queue List */}

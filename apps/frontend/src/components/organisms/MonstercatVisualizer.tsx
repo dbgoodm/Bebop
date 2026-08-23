@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { realAudioEngine } from '@/services/realAudioEngine';
 
 interface MonstercatVisualizerProps {
   isPlaying: boolean;
@@ -13,6 +12,7 @@ interface MonstercatVisualizerProps {
   className?: string;
   intensity?: number;
   autoFillWidth?: boolean;
+  frequencyDataProvider?: (outputArray: Uint8Array) => Uint8Array;
 }
 
 /**
@@ -38,6 +38,7 @@ export const MonstercatVisualizer: React.FC<MonstercatVisualizerProps> = ({
   className = '',
   intensity = 1.0,
   autoFillWidth = true,
+  frequencyDataProvider,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -120,8 +121,9 @@ export const MonstercatVisualizer: React.FC<MonstercatVisualizerProps> = ({
 
       const state = physicsRef.current;
 
-      // 1. PULL REAL LIVE FFT FREQUENCY DATA FROM WEB AUDIO API
-      realAudioEngine.getFrequencyData(state.rawFftBuffer);
+      // Native playback has no spectrum transport yet, so callers omit this in production.
+      if (frequencyDataProvider) frequencyDataProvider(state.rawFftBuffer);
+      else state.rawFftBuffer.fill(0);
 
       const rawTargets = new Float32Array(numBars);
       const sampleRate = 44100;
@@ -267,6 +269,7 @@ export const MonstercatVisualizer: React.FC<MonstercatVisualizerProps> = ({
     intensity,
     autoFillWidth,
     height,
+    frequencyDataProvider,
   ]);
 
   return (

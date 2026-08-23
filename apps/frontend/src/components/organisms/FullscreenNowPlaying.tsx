@@ -33,6 +33,12 @@ interface FullscreenNowPlayingProps {
   onPlayQueueTrack: (track: TrackItem) => void;
   onSelectArtist?: (artistName: string) => void;
   onSelectAlbum?: (albumName: string) => void;
+  volume?: number;
+  muted?: boolean;
+  onVolumeChange?: (volume: number) => void;
+  onToggleMute?: () => void;
+  spectrumAvailable?: boolean;
+  frequencyDataProvider?: (outputArray: Uint8Array) => Uint8Array;
 }
 
 export const FullscreenNowPlaying: React.FC<FullscreenNowPlayingProps> = ({
@@ -49,10 +55,16 @@ export const FullscreenNowPlaying: React.FC<FullscreenNowPlayingProps> = ({
   onPlayQueueTrack,
   onSelectArtist,
   onSelectAlbum,
+  volume: controlledVolume,
+  muted: controlledMuted,
+  onVolumeChange,
+  onToggleMute,
+  spectrumAvailable = true,
+  frequencyDataProvider,
 }) => {
   const { currentTheme } = useTheme();
-  const [volume, setVolume] = useState(85);
-  const [isMuted, setIsMuted] = useState(false);
+  const [localVolume, setLocalVolume] = useState(85);
+  const [localMuted, setLocalMuted] = useState(false);
   const [isShuffle, setIsShuffle] = useState(false);
   const [repeatMode, setRepeatMode] = useState<'off' | 'all' | 'one'>('off');
   const lyricsContainerRef = useRef<HTMLDivElement | null>(null);
@@ -92,6 +104,19 @@ export const FullscreenNowPlaying: React.FC<FullscreenNowPlayingProps> = ({
   }, [isOpen, activeLyricIndex]);
 
   if (!isOpen || !currentTrack) return null;
+
+  const volume = controlledVolume === undefined ? localVolume : Math.round(controlledVolume * 100);
+  const isMuted = controlledMuted ?? localMuted;
+  const changeVolume = (nextVolume: number) => {
+    if (onVolumeChange) onVolumeChange(nextVolume / 100);
+    else setLocalVolume(nextVolume);
+    if (onVolumeChange && isMuted) onToggleMute?.();
+    else if (!onVolumeChange && isMuted) setLocalMuted(false);
+  };
+  const toggleMute = () => {
+    if (onToggleMute) onToggleMute();
+    else setLocalMuted((muted) => !muted);
+  };
 
   const formatTime = (secs: number) => {
     const m = Math.floor(secs / 60);
@@ -402,7 +427,7 @@ export const FullscreenNowPlaying: React.FC<FullscreenNowPlayingProps> = ({
           className="w-full flex flex-col gap-1 items-center"
         >
           <MonstercatVisualizer
-            isPlaying={isPlaying}
+            isPlaying={spectrumAvailable && isPlaying}
             height={56}
             barWidth={4}
             barGap={3}
@@ -410,6 +435,7 @@ export const FullscreenNowPlaying: React.FC<FullscreenNowPlayingProps> = ({
             secondaryColor={currentTheme.visualizerSecondary}
             glowEffect={currentTheme.waveformGlow}
             autoFillWidth={true}
+            frequencyDataProvider={frequencyDataProvider}
           />
         </div>
 
@@ -503,7 +529,7 @@ export const FullscreenNowPlaying: React.FC<FullscreenNowPlayingProps> = ({
           <div className="w-1/4 flex items-center justify-end gap-3">
             <button
               type="button"
-              onClick={() => setIsMuted(!isMuted)}
+              onClick={toggleMute}
               className="hover:text-white cursor-pointer"
               aria-label="Toggle Mute"
             >
@@ -519,8 +545,7 @@ export const FullscreenNowPlaying: React.FC<FullscreenNowPlayingProps> = ({
               max="100"
               value={isMuted ? 0 : volume}
               onChange={(e) => {
-                setVolume(Number(e.target.value));
-                if (isMuted) setIsMuted(false);
+                changeVolume(Number(e.target.value));
               }}
               className="w-20 sm:w-28 h-1.5 bg-neutral-800 rounded-lg appearance-none cursor-pointer accent-amber-500"
             />

@@ -31,6 +31,12 @@ interface NowPlayingBarProps {
   onExpandFullscreen?: () => void;
   onToggleQueue?: () => void;
   queueCount?: number;
+  volume?: number;
+  muted?: boolean;
+  onVolumeChange?: (volume: number) => void;
+  onToggleMute?: () => void;
+  spectrumAvailable?: boolean;
+  frequencyDataProvider?: (outputArray: Uint8Array) => Uint8Array;
 }
 
 // Deterministic SoundCloud waveform bars generator
@@ -79,11 +85,17 @@ export const NowPlayingBar: React.FC<NowPlayingBarProps> = ({
   onExpandFullscreen,
   onToggleQueue,
   queueCount = 0,
+  volume: controlledVolume,
+  muted: controlledMuted,
+  onVolumeChange,
+  onToggleMute,
+  spectrumAvailable = true,
+  frequencyDataProvider,
 }) => {
   const { currentTheme } = useTheme();
   const handleToggle = onTogglePlay || onPlayPause || (() => {});
-  const [volume, setVolume] = useState(85);
-  const [isMuted, setIsMuted] = useState(false);
+  const [localVolume, setLocalVolume] = useState(85);
+  const [localMuted, setLocalMuted] = useState(false);
   const [isShuffle, setIsShuffle] = useState(false);
   const [repeatMode, setRepeatMode] = useState<'off' | 'all' | 'one'>('off');
 
@@ -99,6 +111,19 @@ export const NowPlayingBar: React.FC<NowPlayingBarProps> = ({
   }, [currentTrack?.id, currentTrack?.title, currentTrack?.artist]);
 
   if (!currentTrack) return null;
+
+  const volume = controlledVolume === undefined ? localVolume : Math.round(controlledVolume * 100);
+  const isMuted = controlledMuted ?? localMuted;
+  const changeVolume = (nextVolume: number) => {
+    if (onVolumeChange) onVolumeChange(nextVolume / 100);
+    else setLocalVolume(nextVolume);
+    if (onVolumeChange && isMuted) onToggleMute?.();
+    else if (!onVolumeChange && isMuted) setLocalMuted(false);
+  };
+  const toggleMute = () => {
+    if (onToggleMute) onToggleMute();
+    else setLocalMuted((muted) => !muted);
+  };
 
   const formatTime = (secs: number) => {
     const m = Math.floor(secs / 60);
@@ -149,7 +174,7 @@ export const NowPlayingBar: React.FC<NowPlayingBarProps> = ({
       {/* Full-Width Monstercat Visualizer expanding across the entire Now Playing Bar */}
       <div className="absolute inset-0 pointer-events-none opacity-25 z-0 flex items-end">
         <MonstercatVisualizer
-          isPlaying={isPlaying}
+          isPlaying={spectrumAvailable && isPlaying}
           height={42}
           barWidth={3}
           barGap={2}
@@ -157,6 +182,7 @@ export const NowPlayingBar: React.FC<NowPlayingBarProps> = ({
           secondaryColor={currentTheme.visualizerSecondary}
           glowEffect={currentTheme.waveformGlow}
           autoFillWidth={true}
+          frequencyDataProvider={frequencyDataProvider}
         />
       </div>
 
@@ -462,7 +488,9 @@ export const NowPlayingBar: React.FC<NowPlayingBarProps> = ({
         {/* WASAPI / Audio Sink Status Badge */}
         <div className="hidden xl:flex items-center gap-2 px-2.5 py-1 bg-[#101622] border border-neutral-800 rounded text-neutral-300 font-mono text-[11px]">
           <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-          <span className="text-amber-300 font-semibold">Web Audio FFT</span>
+          <span className="text-amber-300 font-semibold">
+            {spectrumAvailable ? 'Web Audio FFT' : 'Native output · spectrum unavailable'}
+          </span>
         </div>
 
         {/* Queue Icon Button (to the left of the volume adjuster) */}
@@ -489,7 +517,7 @@ export const NowPlayingBar: React.FC<NowPlayingBarProps> = ({
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => setIsMuted(!isMuted)}
+            onClick={toggleMute}
             className="hover:text-white cursor-pointer"
             aria-label="Toggle Mute"
           >
@@ -506,8 +534,7 @@ export const NowPlayingBar: React.FC<NowPlayingBarProps> = ({
             max="100"
             value={isMuted ? 0 : volume}
             onChange={(e) => {
-              setVolume(Number(e.target.value));
-              if (isMuted) setIsMuted(false);
+              changeVolume(Number(e.target.value));
             }}
             className="w-16 sm:w-20 h-1.5 bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-amber-500"
           />
