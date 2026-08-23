@@ -35,8 +35,10 @@ interface FullscreenNowPlayingProps {
   onSelectAlbum?: (albumName: string) => void;
   volume?: number;
   muted?: boolean;
-  onVolumeChange?: (volume: number) => void;
-  onToggleMute?: () => void;
+  onVolumeChange?: (volume: number) => void | Promise<void>;
+  onToggleMute?: () => void | Promise<void>;
+  volumeLocked?: boolean;
+  onUnlockVolume?: () => void | Promise<unknown>;
   spectrumAvailable?: boolean;
   frequencyDataProvider?: (outputArray: Uint8Array) => Uint8Array;
 }
@@ -59,6 +61,8 @@ export const FullscreenNowPlaying: React.FC<FullscreenNowPlayingProps> = ({
   muted: controlledMuted,
   onVolumeChange,
   onToggleMute,
+  volumeLocked = false,
+  onUnlockVolume,
   spectrumAvailable = true,
   frequencyDataProvider,
 }) => {
@@ -107,14 +111,16 @@ export const FullscreenNowPlaying: React.FC<FullscreenNowPlayingProps> = ({
 
   const volume = controlledVolume === undefined ? localVolume : Math.round(controlledVolume * 100);
   const isMuted = controlledMuted ?? localMuted;
-  const changeVolume = (nextVolume: number) => {
-    if (onVolumeChange) onVolumeChange(nextVolume / 100);
+  const changeVolume = async (nextVolume: number) => {
+    if (volumeLocked && nextVolume !== 100) await onUnlockVolume?.();
+    if (onVolumeChange) await onVolumeChange(nextVolume / 100);
     else setLocalVolume(nextVolume);
     if (onVolumeChange && isMuted) onToggleMute?.();
     else if (!onVolumeChange && isMuted) setLocalMuted(false);
   };
-  const toggleMute = () => {
-    if (onToggleMute) onToggleMute();
+  const toggleMute = async () => {
+    if (volumeLocked && !isMuted) await onUnlockVolume?.();
+    if (onToggleMute) await onToggleMute();
     else setLocalMuted((muted) => !muted);
   };
 
@@ -529,7 +535,7 @@ export const FullscreenNowPlaying: React.FC<FullscreenNowPlayingProps> = ({
           <div className="w-1/4 flex items-center justify-end gap-3">
             <button
               type="button"
-              onClick={toggleMute}
+              onClick={() => void toggleMute()}
               className="hover:text-white cursor-pointer"
               aria-label="Toggle Mute"
             >
@@ -545,8 +551,13 @@ export const FullscreenNowPlaying: React.FC<FullscreenNowPlayingProps> = ({
               max="100"
               value={isMuted ? 0 : volume}
               onChange={(e) => {
-                changeVolume(Number(e.target.value));
+                void changeVolume(Number(e.target.value));
               }}
+              title={
+                volumeLocked
+                  ? 'Adjusting volume switches from hi-fi unity gain to adjustable-volume mode.'
+                  : 'Playback volume'
+              }
               className="w-20 sm:w-28 h-1.5 bg-neutral-800 rounded-lg appearance-none cursor-pointer accent-amber-500"
             />
           </div>

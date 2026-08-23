@@ -33,8 +33,10 @@ interface NowPlayingBarProps {
   queueCount?: number;
   volume?: number;
   muted?: boolean;
-  onVolumeChange?: (volume: number) => void;
-  onToggleMute?: () => void;
+  onVolumeChange?: (volume: number) => void | Promise<void>;
+  onToggleMute?: () => void | Promise<void>;
+  volumeLocked?: boolean;
+  onUnlockVolume?: () => void | Promise<unknown>;
   spectrumAvailable?: boolean;
   frequencyDataProvider?: (outputArray: Uint8Array) => Uint8Array;
 }
@@ -89,6 +91,8 @@ export const NowPlayingBar: React.FC<NowPlayingBarProps> = ({
   muted: controlledMuted,
   onVolumeChange,
   onToggleMute,
+  volumeLocked = false,
+  onUnlockVolume,
   spectrumAvailable = true,
   frequencyDataProvider,
 }) => {
@@ -110,20 +114,54 @@ export const NowPlayingBar: React.FC<NowPlayingBarProps> = ({
     return generateCompactWaveform(currentTrack, 75);
   }, [currentTrack?.id, currentTrack?.title, currentTrack?.artist]);
 
-  if (!currentTrack) return null;
-
   const volume = controlledVolume === undefined ? localVolume : Math.round(controlledVolume * 100);
   const isMuted = controlledMuted ?? localMuted;
-  const changeVolume = (nextVolume: number) => {
-    if (onVolumeChange) onVolumeChange(nextVolume / 100);
+  const changeVolume = async (nextVolume: number) => {
+    if (volumeLocked && nextVolume !== 100) await onUnlockVolume?.();
+    if (onVolumeChange) await onVolumeChange(nextVolume / 100);
     else setLocalVolume(nextVolume);
     if (onVolumeChange && isMuted) onToggleMute?.();
     else if (!onVolumeChange && isMuted) setLocalMuted(false);
   };
-  const toggleMute = () => {
-    if (onToggleMute) onToggleMute();
+  const toggleMute = async () => {
+    if (volumeLocked && !isMuted) await onUnlockVolume?.();
+    if (onToggleMute) await onToggleMute();
     else setLocalMuted((muted) => !muted);
   };
+
+  if (!currentTrack) {
+    return (
+      <footer
+        id="now-playing-bar"
+        style={{
+          backgroundColor: `${currentTheme.bgCard}fa`,
+          borderColor: currentTheme.borderColor,
+        }}
+        className="fixed bottom-0 left-0 right-0 z-40 flex min-h-[5.5rem] items-center justify-between border-t px-4 font-sans shadow-[0_-10px_30px_rgba(0,0,0,0.8)] backdrop-blur-xl sm:px-6 lg:px-10 2xl:px-14"
+      >
+        <div className="flex min-w-[200px] items-center gap-3 text-neutral-400">
+          <span className="flex h-12 w-12 items-center justify-center rounded-lg border border-neutral-700 bg-neutral-900">
+            <Disc3 className="h-6 w-6" />
+          </span>
+          <div>
+            <p className="text-sm font-semibold text-neutral-200">Nothing playing</p>
+            <p className="mt-0.5 text-xs">Choose a scanned track to begin.</p>
+          </div>
+        </div>
+        <div
+          className="hidden items-center gap-4 text-neutral-600 sm:flex"
+          aria-label="Playback inactive"
+        >
+          <SkipBack className="h-4 w-4" />
+          <span className="flex h-9 w-9 items-center justify-center rounded-full border border-neutral-700">
+            <Play className="ml-0.5 h-4 w-4" />
+          </span>
+          <SkipForward className="h-4 w-4" />
+        </div>
+        <span className="text-right text-xs text-neutral-500">Native playback ready</span>
+      </footer>
+    );
+  }
 
   const formatTime = (secs: number) => {
     const m = Math.floor(secs / 60);
@@ -169,7 +207,7 @@ export const NowPlayingBar: React.FC<NowPlayingBarProps> = ({
         backgroundColor: `${currentTheme.bgCard}fa`,
         borderColor: currentTheme.borderColor,
       }}
-      className="fixed bottom-0 left-0 right-0 h-22 backdrop-blur-xl border-t px-4 sm:px-6 lg:px-10 2xl:px-14 flex items-center justify-between z-40 select-none shadow-[0_-10px_30px_rgba(0,0,0,0.8)] font-sans overflow-hidden transition-colors duration-300"
+      className="fixed bottom-0 left-0 right-0 z-40 flex min-h-[5.5rem] select-none items-center justify-between overflow-hidden border-t px-4 font-sans shadow-[0_-10px_30px_rgba(0,0,0,0.8)] backdrop-blur-xl transition-colors duration-300 sm:px-6 lg:px-10 2xl:px-14"
     >
       {/* Full-Width Monstercat Visualizer expanding across the entire Now Playing Bar */}
       <div className="absolute inset-0 pointer-events-none opacity-25 z-0 flex items-end">
@@ -517,7 +555,7 @@ export const NowPlayingBar: React.FC<NowPlayingBarProps> = ({
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={toggleMute}
+            onClick={() => void toggleMute()}
             className="hover:text-white cursor-pointer"
             aria-label="Toggle Mute"
           >
@@ -534,10 +572,20 @@ export const NowPlayingBar: React.FC<NowPlayingBarProps> = ({
             max="100"
             value={isMuted ? 0 : volume}
             onChange={(e) => {
-              changeVolume(Number(e.target.value));
+              void changeVolume(Number(e.target.value));
             }}
+            title={
+              volumeLocked
+                ? 'Adjusting volume switches from hi-fi unity gain to adjustable-volume mode.'
+                : 'Playback volume'
+            }
             className="w-16 sm:w-20 h-1.5 bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-amber-500"
           />
+          {volumeLocked && (
+            <span className="hidden text-[10px] font-medium text-amber-300 xl:inline">
+              unity gain
+            </span>
+          )}
         </div>
 
         {/* Fullscreen Expand Icon Button */}

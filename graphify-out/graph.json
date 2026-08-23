@@ -4,71 +4,6 @@
   "graph": {},
   "nodes": [
     {
-      "id": "apps_frontend_src_components_organisms_fullscreennowplaying_fullscreennowplayingprops",
-      "label": "FullscreenNowPlayingProps",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 1,
-      "community_name": "useTheme",
-      "file_type": "code",
-      "norm_label": "fullscreennowplayingprops",
-      "source_file": "apps/frontend/src/components/organisms/FullscreenNowPlaying.tsx",
-      "source_location": "L22"
-    },
-    {
-      "id": "apps_frontend_src_components_organisms_monstercatvisualizer_monstercatvisualizerprops",
-      "label": "MonstercatVisualizerProps",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 1,
-      "community_name": "useTheme",
-      "file_type": "code",
-      "norm_label": "monstercatvisualizerprops",
-      "source_file": "apps/frontend/src/components/organisms/MonstercatVisualizer.tsx",
-      "source_location": "L3"
-    },
-    {
-      "id": "apps_frontend_src_components_organisms_nowplayingbar_nowplayingbarprops",
-      "label": "NowPlayingBarProps",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 1,
-      "community_name": "useTheme",
-      "file_type": "code",
-      "norm_label": "nowplayingbarprops",
-      "source_file": "apps/frontend/src/components/organisms/NowPlayingBar.tsx",
-      "source_location": "L20"
-    },
-    {
-      "id": "apps_frontend_src_components_organisms_waveformscrubber_waveformscrubberprops",
-      "label": "WaveformScrubberProps",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 1,
-      "community_name": "useTheme",
-      "file_type": "code",
-      "norm_label": "waveformscrubberprops",
-      "source_file": "apps/frontend/src/components/organisms/WaveformScrubber.tsx",
-      "source_location": "L5"
-    },
-    {
-      "id": "apps_frontend_src_services_lyricsdata_lyricline",
-      "label": "LyricLine",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 1,
-      "community_name": "useTheme",
-      "file_type": "code",
-      "norm_label": "lyricline",
-      "source_file": "apps/frontend/src/services/lyricsData.ts",
-      "source_location": "L1"
-    },
-    {
       "id": "apps_frontend_src_services_themeservice_ambientorbconfig",
       "label": "AmbientOrbConfig",
       "_callable": true,
@@ -329,69 +264,56 @@
       "source_location": "L93"
     },
     {
-      "id": "apps_frontend_src_components_molecules_universaltracklist_columndefinition",
-      "label": "ColumnDefinition",
+      "id": "apps_frontend_src_pages_musicplayerpage_demoaudioengine",
+      "label": "DemoAudioEngine",
       "_callable": true,
       "_callable_class": true,
       "_origin": "ast",
       "community": 34,
-      "community_name": "UniversalTracklist.tsx",
+      "community_name": "MusicPlayerPage.tsx",
       "file_type": "code",
-      "norm_label": "columndefinition",
-      "source_file": "apps/frontend/src/components/molecules/UniversalTracklist.tsx",
-      "source_location": "L30"
+      "norm_label": "demoaudioengine",
+      "source_file": "apps/frontend/src/pages/MusicPlayerPage.tsx",
+      "source_location": "L36"
     },
     {
-      "id": "apps_frontend_src_components_molecules_universaltracklist_columnkey",
-      "label": "ColumnKey",
+      "id": "apps_frontend_src_components_organisms_fullscreennowplaying_fullscreennowplayingprops",
+      "label": "FullscreenNowPlayingProps",
       "_callable": true,
       "_callable_class": true,
       "_origin": "ast",
-      "community": 34,
-      "community_name": "UniversalTracklist.tsx",
+      "community": 35,
+      "community_name": "FullscreenNowPlaying.tsx",
       "file_type": "code",
-      "norm_label": "columnkey",
-      "source_file": "apps/frontend/src/components/molecules/UniversalTracklist.tsx",
-      "source_location": "L14"
+      "norm_label": "fullscreennowplayingprops",
+      "source_file": "apps/frontend/src/components/organisms/FullscreenNowPlaying.tsx",
+      "source_location": "L22"
     },
     {
-      "id": "apps_frontend_src_components_molecules_universaltracklist_universaltracklistprops",
-      "label": "UniversalTracklistProps",
+      "id": "apps_frontend_src_components_organisms_waveformscrubber_waveformscrubberprops",
+      "label": "WaveformScrubberProps",
       "_callable": true,
       "_callable_class": true,
       "_origin": "ast",
-      "community": 34,
-      "community_name": "UniversalTracklist.tsx",
+      "community": 35,
+      "community_name": "FullscreenNowPlaying.tsx",
       "file_type": "code",
-      "norm_label": "universaltracklistprops",
-      "source_file": "apps/frontend/src/components/molecules/UniversalTracklist.tsx",
-      "source_location": "L97"
-    },
-    {
-      "id": "apps_frontend_src_components_organisms_trackstableview_trackstableviewprops",
-      "label": "TracksTableViewProps",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 34,
-      "community_name": "UniversalTracklist.tsx",
-      "file_type": "code",
-      "norm_label": "trackstableviewprops",
-      "source_file": "apps/frontend/src/components/organisms/TracksTableView.tsx",
+      "norm_label": "waveformscrubberprops",
+      "source_file": "apps/frontend/src/components/organisms/WaveformScrubber.tsx",
       "source_location": "L5"
     },
     {
-      "id": "apps_frontend_src_types_columnvisibility",
-      "label": "ColumnVisibility",
+      "id": "apps_frontend_src_services_lyricsdata_lyricline",
+      "label": "LyricLine",
       "_callable": true,
       "_callable_class": true,
       "_origin": "ast",
-      "community": 34,
-      "community_name": "UniversalTracklist.tsx",
+      "community": 35,
+      "community_name": "FullscreenNowPlaying.tsx",
       "file_type": "code",
-      "norm_label": "columnvisibility",
-      "source_file": "apps/frontend/src/types.ts",
-      "source_location": "L234"
+      "norm_label": "lyricline",
+      "source_file": "apps/frontend/src/services/lyricsData.ts",
+      "source_location": "L1"
     },
     {
       "id": "apps_frontend_src_components_atoms_emptystate_emptystateprops",
@@ -405,32 +327,6 @@
       "norm_label": "emptystateprops",
       "source_file": "apps/frontend/src/components/atoms/EmptyState.tsx",
       "source_location": "L3"
-    },
-    {
-      "id": "apps_frontend_src_components_molecules_listeningstats_listeningstatsprops",
-      "label": "ListeningStatsProps",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 36,
-      "community_name": "DesktopLibraryPage.tsx",
-      "file_type": "code",
-      "norm_label": "listeningstatsprops",
-      "source_file": "apps/frontend/src/components/molecules/ListeningStats.tsx",
-      "source_location": "L42"
-    },
-    {
-      "id": "apps_frontend_src_components_organisms_nowplayingqueuemodal_nowplayingqueuemodalprops",
-      "label": "NowPlayingQueueModalProps",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 36,
-      "community_name": "DesktopLibraryPage.tsx",
-      "file_type": "code",
-      "norm_label": "nowplayingqueuemodalprops",
-      "source_file": "apps/frontend/src/components/organisms/NowPlayingQueueModal.tsx",
-      "source_location": "L17"
     },
     {
       "id": "apps_frontend_src_components_templates_appshell_appshellprops",
@@ -472,26 +368,13 @@
       "source_location": "L59"
     },
     {
-      "id": "apps_frontend_src_types_listeningstatsdata",
-      "label": "ListeningStatsData",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 36,
-      "community_name": "DesktopLibraryPage.tsx",
-      "file_type": "code",
-      "norm_label": "listeningstatsdata",
-      "source_file": "apps/frontend/src/types.ts",
-      "source_location": "L24"
-    },
-    {
       "id": "apps_frontend_src_components_organisms_antraqueuedrawer_antraqueuedrawerprops",
       "label": "AntraQueueDrawerProps",
       "_callable": true,
       "_callable_class": true,
       "_origin": "ast",
       "community": 37,
-      "community_name": "types.ts",
+      "community_name": "antraEngineService.tsx",
       "file_type": "code",
       "norm_label": "antraqueuedrawerprops",
       "source_file": "apps/frontend/src/components/organisms/AntraQueueDrawer.tsx",
@@ -504,7 +387,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 37,
-      "community_name": "types.ts",
+      "community_name": "antraEngineService.tsx",
       "file_type": "code",
       "norm_label": "antraenginecontexttype",
       "source_file": "apps/frontend/src/services/antraEngineService.tsx",
@@ -517,7 +400,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 37,
-      "community_name": "types.ts",
+      "community_name": "antraEngineService.tsx",
       "file_type": "code",
       "norm_label": "antraingeststatus",
       "source_file": "apps/frontend/src/types.ts",
@@ -530,7 +413,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 37,
-      "community_name": "types.ts",
+      "community_name": "antraEngineService.tsx",
       "file_type": "code",
       "norm_label": "antraqueueitem",
       "source_file": "apps/frontend/src/types.ts",
@@ -543,50 +426,11 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 37,
-      "community_name": "types.ts",
+      "community_name": "antraEngineService.tsx",
       "file_type": "code",
       "norm_label": "artistdiscographyalbum",
       "source_file": "apps/frontend/src/types.ts",
       "source_location": "L154"
-    },
-    {
-      "id": "apps_frontend_src_types_artisttoptrack",
-      "label": "ArtistTopTrack",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 37,
-      "community_name": "types.ts",
-      "file_type": "code",
-      "norm_label": "artisttoptrack",
-      "source_file": "apps/frontend/src/types.ts",
-      "source_location": "L140"
-    },
-    {
-      "id": "apps_frontend_src_types_continuelisteningtype",
-      "label": "ContinueListeningType",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 37,
-      "community_name": "types.ts",
-      "file_type": "code",
-      "norm_label": "continuelisteningtype",
-      "source_file": "apps/frontend/src/types.ts",
-      "source_location": "L45"
-    },
-    {
-      "id": "apps_frontend_src_types_metriccarddata",
-      "label": "MetricCardData",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 37,
-      "community_name": "types.ts",
-      "file_type": "code",
-      "norm_label": "metriccarddata",
-      "source_file": "apps/frontend/src/types.ts",
-      "source_location": "L15"
     },
     {
       "id": "apps_frontend_src_types_navtab",
@@ -595,24 +439,11 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 37,
-      "community_name": "types.ts",
+      "community_name": "antraEngineService.tsx",
       "file_type": "code",
       "norm_label": "navtab",
       "source_file": "apps/frontend/src/types.ts",
       "source_location": "L1"
-    },
-    {
-      "id": "apps_frontend_src_types_rediscovertype",
-      "label": "RediscoverType",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 37,
-      "community_name": "types.ts",
-      "file_type": "code",
-      "norm_label": "rediscovertype",
-      "source_file": "apps/frontend/src/types.ts",
-      "source_location": "L95"
     },
     {
       "id": "apps_frontend_src_types_topnavrailprops",
@@ -621,11 +452,89 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 37,
-      "community_name": "types.ts",
+      "community_name": "antraEngineService.tsx",
       "file_type": "code",
       "norm_label": "topnavrailprops",
       "source_file": "apps/frontend/src/types.ts",
       "source_location": "L3"
+    },
+    {
+      "id": "apps_frontend_src_components_organisms_monstercatvisualizer_monstercatvisualizerprops",
+      "label": "MonstercatVisualizerProps",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 38,
+      "community_name": "NowPlayingBar.tsx",
+      "file_type": "code",
+      "norm_label": "monstercatvisualizerprops",
+      "source_file": "apps/frontend/src/components/organisms/MonstercatVisualizer.tsx",
+      "source_location": "L3"
+    },
+    {
+      "id": "apps_frontend_src_components_molecules_listeningstats_listeningstatsprops",
+      "label": "ListeningStatsProps",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 39,
+      "community_name": "ListeningStats.tsx",
+      "file_type": "code",
+      "norm_label": "listeningstatsprops",
+      "source_file": "apps/frontend/src/components/molecules/ListeningStats.tsx",
+      "source_location": "L42"
+    },
+    {
+      "id": "apps_frontend_src_types_listeningstatsdata",
+      "label": "ListeningStatsData",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 39,
+      "community_name": "ListeningStats.tsx",
+      "file_type": "code",
+      "norm_label": "listeningstatsdata",
+      "source_file": "apps/frontend/src/types.ts",
+      "source_location": "L24"
+    },
+    {
+      "id": "apps_frontend_src_components_molecules_universaltracklist_columndefinition",
+      "label": "ColumnDefinition",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 4,
+      "community_name": "TrackItem",
+      "file_type": "code",
+      "norm_label": "columndefinition",
+      "source_file": "apps/frontend/src/components/molecules/UniversalTracklist.tsx",
+      "source_location": "L30"
+    },
+    {
+      "id": "apps_frontend_src_components_molecules_universaltracklist_columnkey",
+      "label": "ColumnKey",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 4,
+      "community_name": "TrackItem",
+      "file_type": "code",
+      "norm_label": "columnkey",
+      "source_file": "apps/frontend/src/components/molecules/UniversalTracklist.tsx",
+      "source_location": "L14"
+    },
+    {
+      "id": "apps_frontend_src_components_molecules_universaltracklist_universaltracklistprops",
+      "label": "UniversalTracklistProps",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 4,
+      "community_name": "TrackItem",
+      "file_type": "code",
+      "norm_label": "universaltracklistprops",
+      "source_file": "apps/frontend/src/components/molecules/UniversalTracklist.tsx",
+      "source_location": "L97"
     },
     {
       "id": "apps_frontend_src_components_organisms_albumdetailpage_albumdetailpageprops",
@@ -745,6 +654,45 @@
       "source_location": "L8"
     },
     {
+      "id": "apps_frontend_src_components_organisms_nowplayingbar_nowplayingbarprops",
+      "label": "NowPlayingBarProps",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 4,
+      "community_name": "TrackItem",
+      "file_type": "code",
+      "norm_label": "nowplayingbarprops",
+      "source_file": "apps/frontend/src/components/organisms/NowPlayingBar.tsx",
+      "source_location": "L20"
+    },
+    {
+      "id": "apps_frontend_src_components_organisms_nowplayingqueuemodal_nowplayingqueuemodalprops",
+      "label": "NowPlayingQueueModalProps",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 4,
+      "community_name": "TrackItem",
+      "file_type": "code",
+      "norm_label": "nowplayingqueuemodalprops",
+      "source_file": "apps/frontend/src/components/organisms/NowPlayingQueueModal.tsx",
+      "source_location": "L17"
+    },
+    {
+      "id": "apps_frontend_src_components_organisms_trackstableview_trackstableviewprops",
+      "label": "TracksTableViewProps",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 4,
+      "community_name": "TrackItem",
+      "file_type": "code",
+      "norm_label": "trackstableviewprops",
+      "source_file": "apps/frontend/src/components/organisms/TracksTableView.tsx",
+      "source_location": "L5"
+    },
+    {
       "id": "apps_frontend_src_types_albumitem",
       "label": "AlbumItem",
       "_callable": true,
@@ -769,6 +717,32 @@
       "norm_label": "artistitem",
       "source_file": "apps/frontend/src/types.ts",
       "source_location": "L191"
+    },
+    {
+      "id": "apps_frontend_src_types_artisttoptrack",
+      "label": "ArtistTopTrack",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 4,
+      "community_name": "TrackItem",
+      "file_type": "code",
+      "norm_label": "artisttoptrack",
+      "source_file": "apps/frontend/src/types.ts",
+      "source_location": "L140"
+    },
+    {
+      "id": "apps_frontend_src_types_columnvisibility",
+      "label": "ColumnVisibility",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 4,
+      "community_name": "TrackItem",
+      "file_type": "code",
+      "norm_label": "columnvisibility",
+      "source_file": "apps/frontend/src/types.ts",
+      "source_location": "L234"
     },
     {
       "id": "apps_frontend_src_types_librarysubtab",
@@ -797,30 +771,43 @@
       "source_location": "L121"
     },
     {
-      "id": "apps_frontend_src_pages_musicplayerpage_demoaudioengine",
-      "label": "DemoAudioEngine",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 5,
-      "community_name": "MusicPlayerPage.tsx",
-      "file_type": "code",
-      "norm_label": "demoaudioengine",
-      "source_file": "apps/frontend/src/pages/MusicPlayerPage.tsx",
-      "source_location": "L36"
-    },
-    {
       "id": "apps_frontend_src_types_audioformat",
       "label": "AudioFormat",
       "_callable": true,
       "_callable_class": true,
       "_origin": "ast",
       "community": 5,
-      "community_name": "MusicPlayerPage.tsx",
+      "community_name": "types.ts",
       "file_type": "code",
       "norm_label": "audioformat",
       "source_file": "apps/frontend/src/types.ts",
       "source_location": "L70"
+    },
+    {
+      "id": "apps_frontend_src_types_continuelisteningtype",
+      "label": "ContinueListeningType",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 5,
+      "community_name": "types.ts",
+      "file_type": "code",
+      "norm_label": "continuelisteningtype",
+      "source_file": "apps/frontend/src/types.ts",
+      "source_location": "L45"
+    },
+    {
+      "id": "apps_frontend_src_types_metriccarddata",
+      "label": "MetricCardData",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 5,
+      "community_name": "types.ts",
+      "file_type": "code",
+      "norm_label": "metriccarddata",
+      "source_file": "apps/frontend/src/types.ts",
+      "source_location": "L15"
     },
     {
       "id": "apps_frontend_src_types_recentlyaddeditem",
@@ -829,7 +816,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 5,
-      "community_name": "MusicPlayerPage.tsx",
+      "community_name": "types.ts",
       "file_type": "code",
       "norm_label": "recentlyaddeditem",
       "source_file": "apps/frontend/src/types.ts",
@@ -842,7 +829,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 5,
-      "community_name": "MusicPlayerPage.tsx",
+      "community_name": "types.ts",
       "file_type": "code",
       "norm_label": "recentlyaddedrailprops",
       "source_file": "apps/frontend/src/types.ts",
@@ -855,7 +842,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 5,
-      "community_name": "MusicPlayerPage.tsx",
+      "community_name": "types.ts",
       "file_type": "code",
       "norm_label": "rediscoveritem",
       "source_file": "apps/frontend/src/types.ts",
@@ -868,11 +855,24 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 5,
-      "community_name": "MusicPlayerPage.tsx",
+      "community_name": "types.ts",
       "file_type": "code",
       "norm_label": "rediscoverrailprops",
       "source_file": "apps/frontend/src/types.ts",
       "source_location": "L111"
+    },
+    {
+      "id": "apps_frontend_src_types_rediscovertype",
+      "label": "RediscoverType",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 5,
+      "community_name": "types.ts",
+      "file_type": "code",
+      "norm_label": "rediscovertype",
+      "source_file": "apps/frontend/src/types.ts",
+      "source_location": "L95"
     },
     {
       "id": "apps_frontend_src_services_realaudioengine_realaudioengine",
@@ -900,66 +900,6 @@
       "source_location": "L31"
     },
     {
-      "id": "apps_frontend_src_components_organisms_discoverview_discoverview",
-      "label": "DiscoverView()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 1,
-      "community_name": "useTheme",
-      "file_type": "code",
-      "norm_label": "discoverview()",
-      "source_file": "apps/frontend/src/components/organisms/DiscoverView.tsx",
-      "source_location": "L14"
-    },
-    {
-      "id": "apps_frontend_src_components_organisms_fullscreennowplaying_fullscreennowplaying",
-      "label": "FullscreenNowPlaying()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 1,
-      "community_name": "useTheme",
-      "file_type": "code",
-      "norm_label": "fullscreennowplaying()",
-      "source_file": "apps/frontend/src/components/organisms/FullscreenNowPlaying.tsx",
-      "source_location": "L44"
-    },
-    {
-      "id": "apps_frontend_src_components_organisms_monstercatvisualizer_monstercatvisualizer",
-      "label": "MonstercatVisualizer()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 1,
-      "community_name": "useTheme",
-      "file_type": "code",
-      "norm_label": "monstercatvisualizer()",
-      "source_file": "apps/frontend/src/components/organisms/MonstercatVisualizer.tsx",
-      "source_location": "L29"
-    },
-    {
-      "id": "apps_frontend_src_components_organisms_nowplayingbar_generatecompactwaveform",
-      "label": "generateCompactWaveform()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 1,
-      "community_name": "useTheme",
-      "file_type": "code",
-      "norm_label": "generatecompactwaveform()",
-      "source_file": "apps/frontend/src/components/organisms/NowPlayingBar.tsx",
-      "source_location": "L43"
-    },
-    {
-      "id": "apps_frontend_src_components_organisms_nowplayingbar_nowplayingbar",
-      "label": "NowPlayingBar()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 1,
-      "community_name": "useTheme",
-      "file_type": "code",
-      "norm_label": "nowplayingbar()",
-      "source_file": "apps/frontend/src/components/organisms/NowPlayingBar.tsx",
-      "source_location": "L74"
-    },
-    {
       "id": "apps_frontend_src_components_organisms_settingsview_settingsview",
       "label": "SettingsView()",
       "_callable": true,
@@ -972,52 +912,16 @@
       "source_location": "L20"
     },
     {
-      "id": "apps_frontend_src_components_organisms_waveformscrubber_generatesoundcloudwaveform",
-      "label": "generateSoundcloudWaveform()",
+      "id": "apps_frontend_src_components_organisms_themeselectormodal_themeselectormodal",
+      "label": "ThemeSelectorModal()",
       "_callable": true,
       "_origin": "ast",
       "community": 1,
       "community_name": "useTheme",
       "file_type": "code",
-      "norm_label": "generatesoundcloudwaveform()",
-      "source_file": "apps/frontend/src/components/organisms/WaveformScrubber.tsx",
-      "source_location": "L22"
-    },
-    {
-      "id": "apps_frontend_src_components_organisms_waveformscrubber_pseudorandom",
-      "label": "pseudoRandom()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 1,
-      "community_name": "useTheme",
-      "file_type": "code",
-      "norm_label": "pseudorandom()",
-      "source_file": "apps/frontend/src/components/organisms/WaveformScrubber.tsx",
-      "source_location": "L16"
-    },
-    {
-      "id": "apps_frontend_src_components_organisms_waveformscrubber_waveformscrubber",
-      "label": "WaveformScrubber()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 1,
-      "community_name": "useTheme",
-      "file_type": "code",
-      "norm_label": "waveformscrubber()",
-      "source_file": "apps/frontend/src/components/organisms/WaveformScrubber.tsx",
-      "source_location": "L69"
-    },
-    {
-      "id": "apps_frontend_src_services_lyricsdata_getlyricsfortrack",
-      "label": "getLyricsForTrack()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 1,
-      "community_name": "useTheme",
-      "file_type": "code",
-      "norm_label": "getlyricsfortrack()",
-      "source_file": "apps/frontend/src/services/lyricsData.ts",
-      "source_location": "L101"
+      "norm_label": "themeselectormodal()",
+      "source_file": "apps/frontend/src/components/organisms/ThemeSelectorModal.tsx",
+      "source_location": "L18"
     },
     {
       "id": "apps_frontend_src_services_themeservice_themeprovider",
@@ -1296,28 +1200,112 @@
       "source_location": "L106"
     },
     {
-      "id": "apps_frontend_src_components_molecules_universaltracklist_universaltracklist",
-      "label": "UniversalTracklist()",
+      "id": "apps_frontend_src_app_app",
+      "label": "App()",
       "_callable": true,
       "_origin": "ast",
       "community": 34,
-      "community_name": "UniversalTracklist.tsx",
+      "community_name": "MusicPlayerPage.tsx",
       "file_type": "code",
-      "norm_label": "universaltracklist()",
-      "source_file": "apps/frontend/src/components/molecules/UniversalTracklist.tsx",
-      "source_location": "L111"
+      "norm_label": "app()",
+      "source_file": "apps/frontend/src/App.tsx",
+      "source_location": "L3"
     },
     {
-      "id": "apps_frontend_src_components_organisms_trackstableview_trackstableview",
-      "label": "TracksTableView()",
+      "id": "apps_frontend_src_hooks_usedemomode_usedemomode",
+      "label": "useDemoMode()",
       "_callable": true,
       "_origin": "ast",
       "community": 34,
-      "community_name": "UniversalTracklist.tsx",
+      "community_name": "MusicPlayerPage.tsx",
       "file_type": "code",
-      "norm_label": "trackstableview()",
-      "source_file": "apps/frontend/src/components/organisms/TracksTableView.tsx",
+      "norm_label": "usedemomode()",
+      "source_file": "apps/frontend/src/hooks/useDemoMode.ts",
+      "source_location": "L4"
+    },
+    {
+      "id": "apps_frontend_src_pages_musicplayerpage_demomusicplayer",
+      "label": "DemoMusicPlayer()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 34,
+      "community_name": "MusicPlayerPage.tsx",
+      "file_type": "code",
+      "norm_label": "demomusicplayer()",
+      "source_file": "apps/frontend/src/pages/MusicPlayerPage.tsx",
+      "source_location": "L50"
+    },
+    {
+      "id": "apps_frontend_src_pages_musicplayerpage_musicplayerpage",
+      "label": "MusicPlayerPage()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 34,
+      "community_name": "MusicPlayerPage.tsx",
+      "file_type": "code",
+      "norm_label": "musicplayerpage()",
+      "source_file": "apps/frontend/src/pages/MusicPlayerPage.tsx",
+      "source_location": "L38"
+    },
+    {
+      "id": "apps_frontend_src_components_organisms_fullscreennowplaying_fullscreennowplaying",
+      "label": "FullscreenNowPlaying()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 35,
+      "community_name": "FullscreenNowPlaying.tsx",
+      "file_type": "code",
+      "norm_label": "fullscreennowplaying()",
+      "source_file": "apps/frontend/src/components/organisms/FullscreenNowPlaying.tsx",
+      "source_location": "L46"
+    },
+    {
+      "id": "apps_frontend_src_components_organisms_waveformscrubber_generatesoundcloudwaveform",
+      "label": "generateSoundcloudWaveform()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 35,
+      "community_name": "FullscreenNowPlaying.tsx",
+      "file_type": "code",
+      "norm_label": "generatesoundcloudwaveform()",
+      "source_file": "apps/frontend/src/components/organisms/WaveformScrubber.tsx",
+      "source_location": "L22"
+    },
+    {
+      "id": "apps_frontend_src_components_organisms_waveformscrubber_pseudorandom",
+      "label": "pseudoRandom()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 35,
+      "community_name": "FullscreenNowPlaying.tsx",
+      "file_type": "code",
+      "norm_label": "pseudorandom()",
+      "source_file": "apps/frontend/src/components/organisms/WaveformScrubber.tsx",
       "source_location": "L16"
+    },
+    {
+      "id": "apps_frontend_src_components_organisms_waveformscrubber_waveformscrubber",
+      "label": "WaveformScrubber()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 35,
+      "community_name": "FullscreenNowPlaying.tsx",
+      "file_type": "code",
+      "norm_label": "waveformscrubber()",
+      "source_file": "apps/frontend/src/components/organisms/WaveformScrubber.tsx",
+      "source_location": "L69"
+    },
+    {
+      "id": "apps_frontend_src_services_lyricsdata_getlyricsfortrack",
+      "label": "getLyricsForTrack()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 35,
+      "community_name": "FullscreenNowPlaying.tsx",
+      "file_type": "code",
+      "norm_label": "getlyricsfortrack()",
+      "source_file": "apps/frontend/src/services/lyricsData.ts",
+      "source_location": "L101"
     },
     {
       "id": "apps_frontend_src_components_atoms_emptystate_emptystate",
@@ -1344,16 +1332,16 @@
       "source_location": "L90"
     },
     {
-      "id": "apps_frontend_src_components_molecules_listeningstats_listeningstats",
-      "label": "ListeningStats()",
+      "id": "apps_frontend_src_components_organisms_libraryview_libraryview",
+      "label": "LibraryView()",
       "_callable": true,
       "_origin": "ast",
       "community": 36,
       "community_name": "DesktopLibraryPage.tsx",
       "file_type": "code",
-      "norm_label": "listeningstats()",
-      "source_file": "apps/frontend/src/components/molecules/ListeningStats.tsx",
-      "source_location": "L48"
+      "norm_label": "libraryview()",
+      "source_file": "apps/frontend/src/components/organisms/LibraryView.tsx",
+      "source_location": "L22"
     },
     {
       "id": "apps_frontend_src_components_organisms_nowplayingqueuemodal_nowplayingqueuemodal",
@@ -1366,18 +1354,6 @@
       "norm_label": "nowplayingqueuemodal()",
       "source_file": "apps/frontend/src/components/organisms/NowPlayingQueueModal.tsx",
       "source_location": "L32"
-    },
-    {
-      "id": "apps_frontend_src_components_organisms_themeselectormodal_themeselectormodal",
-      "label": "ThemeSelectorModal()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 36,
-      "community_name": "DesktopLibraryPage.tsx",
-      "file_type": "code",
-      "norm_label": "themeselectormodal()",
-      "source_file": "apps/frontend/src/components/organisms/ThemeSelectorModal.tsx",
-      "source_location": "L18"
     },
     {
       "id": "apps_frontend_src_components_templates_appshell_appshell",
@@ -1421,7 +1397,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 37,
-      "community_name": "types.ts",
+      "community_name": "antraEngineService.tsx",
       "file_type": "code",
       "norm_label": "topnavrail()",
       "source_file": "apps/frontend/src/components/molecules/TopNavRail.tsx",
@@ -1433,7 +1409,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 37,
-      "community_name": "types.ts",
+      "community_name": "antraEngineService.tsx",
       "file_type": "code",
       "norm_label": "antraqueuedrawer()",
       "source_file": "apps/frontend/src/components/organisms/AntraQueueDrawer.tsx",
@@ -1445,7 +1421,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 37,
-      "community_name": "types.ts",
+      "community_name": "antraEngineService.tsx",
       "file_type": "code",
       "norm_label": "artistdetailpage()",
       "source_file": "apps/frontend/src/components/organisms/ArtistDetailPage.tsx",
@@ -1457,7 +1433,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 37,
-      "community_name": "types.ts",
+      "community_name": "antraEngineService.tsx",
       "file_type": "code",
       "norm_label": "antraengineprovider()",
       "source_file": "apps/frontend/src/services/antraEngineService.tsx",
@@ -1469,11 +1445,71 @@
       "_callable": true,
       "_origin": "ast",
       "community": 37,
-      "community_name": "types.ts",
+      "community_name": "antraEngineService.tsx",
       "file_type": "code",
       "norm_label": "useantraengine()",
       "source_file": "apps/frontend/src/services/antraEngineService.tsx",
       "source_location": "L245"
+    },
+    {
+      "id": "apps_frontend_src_components_organisms_monstercatvisualizer_monstercatvisualizer",
+      "label": "MonstercatVisualizer()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 38,
+      "community_name": "NowPlayingBar.tsx",
+      "file_type": "code",
+      "norm_label": "monstercatvisualizer()",
+      "source_file": "apps/frontend/src/components/organisms/MonstercatVisualizer.tsx",
+      "source_location": "L29"
+    },
+    {
+      "id": "apps_frontend_src_components_organisms_nowplayingbar_generatecompactwaveform",
+      "label": "generateCompactWaveform()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 38,
+      "community_name": "NowPlayingBar.tsx",
+      "file_type": "code",
+      "norm_label": "generatecompactwaveform()",
+      "source_file": "apps/frontend/src/components/organisms/NowPlayingBar.tsx",
+      "source_location": "L45"
+    },
+    {
+      "id": "apps_frontend_src_components_organisms_nowplayingbar_nowplayingbar",
+      "label": "NowPlayingBar()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 38,
+      "community_name": "NowPlayingBar.tsx",
+      "file_type": "code",
+      "norm_label": "nowplayingbar()",
+      "source_file": "apps/frontend/src/components/organisms/NowPlayingBar.tsx",
+      "source_location": "L76"
+    },
+    {
+      "id": "apps_frontend_src_components_molecules_listeningstats_listeningstats",
+      "label": "ListeningStats()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 39,
+      "community_name": "ListeningStats.tsx",
+      "file_type": "code",
+      "norm_label": "listeningstats()",
+      "source_file": "apps/frontend/src/components/molecules/ListeningStats.tsx",
+      "source_location": "L48"
+    },
+    {
+      "id": "apps_frontend_src_components_molecules_universaltracklist_universaltracklist",
+      "label": "UniversalTracklist()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 4,
+      "community_name": "TrackItem",
+      "file_type": "code",
+      "norm_label": "universaltracklist()",
+      "source_file": "apps/frontend/src/components/molecules/UniversalTracklist.tsx",
+      "source_location": "L111"
     },
     {
       "id": "apps_frontend_src_components_organisms_albumsgridview_albumsgridview",
@@ -1512,6 +1548,18 @@
       "source_location": "L12"
     },
     {
+      "id": "apps_frontend_src_components_organisms_discoverview_discoverview",
+      "label": "DiscoverView()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 4,
+      "community_name": "TrackItem",
+      "file_type": "code",
+      "norm_label": "discoverview()",
+      "source_file": "apps/frontend/src/components/organisms/DiscoverView.tsx",
+      "source_location": "L14"
+    },
+    {
       "id": "apps_frontend_src_components_organisms_genresgridview_genresgridview",
       "label": "GenresGridView()",
       "_callable": true,
@@ -1524,28 +1572,16 @@
       "source_location": "L85"
     },
     {
-      "id": "apps_frontend_src_components_organisms_libraryview_libraryview",
-      "label": "LibraryView()",
+      "id": "apps_frontend_src_components_organisms_trackstableview_trackstableview",
+      "label": "TracksTableView()",
       "_callable": true,
       "_origin": "ast",
       "community": 4,
       "community_name": "TrackItem",
       "file_type": "code",
-      "norm_label": "libraryview()",
-      "source_file": "apps/frontend/src/components/organisms/LibraryView.tsx",
-      "source_location": "L22"
-    },
-    {
-      "id": "apps_frontend_src_app_app",
-      "label": "App()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 5,
-      "community_name": "MusicPlayerPage.tsx",
-      "file_type": "code",
-      "norm_label": "app()",
-      "source_file": "apps/frontend/src/App.tsx",
-      "source_location": "L3"
+      "norm_label": "trackstableview()",
+      "source_file": "apps/frontend/src/components/organisms/TracksTableView.tsx",
+      "source_location": "L16"
     },
     {
       "id": "apps_frontend_src_components_molecules_recentlyaddedrail_recentlyaddedrail",
@@ -1553,7 +1589,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 5,
-      "community_name": "MusicPlayerPage.tsx",
+      "community_name": "types.ts",
       "file_type": "code",
       "norm_label": "recentlyaddedrail()",
       "source_file": "apps/frontend/src/components/molecules/RecentlyAddedRail.tsx",
@@ -1565,47 +1601,11 @@
       "_callable": true,
       "_origin": "ast",
       "community": 5,
-      "community_name": "MusicPlayerPage.tsx",
+      "community_name": "types.ts",
       "file_type": "code",
       "norm_label": "rediscoverrail()",
       "source_file": "apps/frontend/src/components/molecules/RediscoverRail.tsx",
       "source_location": "L16"
-    },
-    {
-      "id": "apps_frontend_src_hooks_usedemomode_usedemomode",
-      "label": "useDemoMode()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 5,
-      "community_name": "MusicPlayerPage.tsx",
-      "file_type": "code",
-      "norm_label": "usedemomode()",
-      "source_file": "apps/frontend/src/hooks/useDemoMode.ts",
-      "source_location": "L4"
-    },
-    {
-      "id": "apps_frontend_src_pages_musicplayerpage_demomusicplayer",
-      "label": "DemoMusicPlayer()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 5,
-      "community_name": "MusicPlayerPage.tsx",
-      "file_type": "code",
-      "norm_label": "demomusicplayer()",
-      "source_file": "apps/frontend/src/pages/MusicPlayerPage.tsx",
-      "source_location": "L50"
-    },
-    {
-      "id": "apps_frontend_src_pages_musicplayerpage_musicplayerpage",
-      "label": "MusicPlayerPage()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 5,
-      "community_name": "MusicPlayerPage.tsx",
-      "file_type": "code",
-      "norm_label": "musicplayerpage()",
-      "source_file": "apps/frontend/src/pages/MusicPlayerPage.tsx",
-      "source_location": "L38"
     },
     {
       "id": "apps_frontend_src_services_realaudioengine_realaudioengine_constructor",
@@ -1972,7 +1972,7 @@
       "file_type": "code",
       "norm_label": "engine()",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L670"
+      "source_location": "L676"
     },
     {
       "id": "src_tauri_src_audio_fake_backend_drives_transport_and_error_states",
@@ -1983,7 +1983,7 @@
       "file_type": "code",
       "norm_label": "fake_backend_drives_transport_and_error_states()",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L770"
+      "source_location": "L796"
     },
     {
       "id": "src_tauri_src_audio_fake_devices",
@@ -1994,7 +1994,7 @@
       "file_type": "code",
       "norm_label": "fake_devices()",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L570"
+      "source_location": "L576"
     },
     {
       "id": "src_tauri_src_audio_fakebackend",
@@ -2005,7 +2005,7 @@
       "file_type": "code",
       "norm_label": "fakebackend",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L565"
+      "source_location": "L571"
     },
     {
       "id": "src_tauri_src_audio_fakebackend_is_finished",
@@ -2016,7 +2016,7 @@
       "file_type": "code",
       "norm_label": ".is_finished()",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L665"
+      "source_location": "L671"
     },
     {
       "id": "src_tauri_src_audio_fakebackend_load",
@@ -2027,7 +2027,7 @@
       "file_type": "code",
       "norm_label": ".load()",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L588"
+      "source_location": "L594"
     },
     {
       "id": "src_tauri_src_audio_fakebackend_output_devices",
@@ -2038,7 +2038,7 @@
       "file_type": "code",
       "norm_label": ".output_devices()",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L636"
+      "source_location": "L642"
     },
     {
       "id": "src_tauri_src_audio_fakebackend_pause",
@@ -2049,7 +2049,7 @@
       "file_type": "code",
       "norm_label": ".pause()",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L640"
+      "source_location": "L646"
     },
     {
       "id": "src_tauri_src_audio_fakebackend_position_ms",
@@ -2060,7 +2060,7 @@
       "file_type": "code",
       "norm_label": ".position_ms()",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L661"
+      "source_location": "L667"
     },
     {
       "id": "src_tauri_src_audio_fakebackend_resume",
@@ -2071,7 +2071,7 @@
       "file_type": "code",
       "norm_label": ".resume()",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L644"
+      "source_location": "L650"
     },
     {
       "id": "src_tauri_src_audio_fakebackend_seek",
@@ -2082,7 +2082,7 @@
       "file_type": "code",
       "norm_label": ".seek()",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L652"
+      "source_location": "L658"
     },
     {
       "id": "src_tauri_src_audio_fakebackend_set_volume",
@@ -2093,7 +2093,7 @@
       "file_type": "code",
       "norm_label": ".set_volume()",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L657"
+      "source_location": "L663"
     },
     {
       "id": "src_tauri_src_audio_fakebackend_stop",
@@ -2104,7 +2104,7 @@
       "file_type": "code",
       "norm_label": ".stop()",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L648"
+      "source_location": "L654"
     },
     {
       "id": "src_tauri_src_audio_fakestate",
@@ -2115,7 +2115,7 @@
       "file_type": "code",
       "norm_label": "fakestate",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L553"
+      "source_location": "L559"
     },
     {
       "id": "src_tauri_src_audio_hifi_mode_falls_back_when_the_source_rate_is_unavailable",
@@ -2126,7 +2126,7 @@
       "file_type": "code",
       "norm_label": "hifi_mode_falls_back_when_the_source_rate_is_unavailable()",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L716"
+      "source_location": "L742"
     },
     {
       "id": "src_tauri_src_audio_hifi_mode_requests_native_rate_and_locks_software_gain",
@@ -2137,7 +2137,18 @@
       "file_type": "code",
       "norm_label": "hifi_mode_requests_native_rate_and_locks_software_gain()",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L683"
+      "source_location": "L689"
+    },
+    {
+      "id": "src_tauri_src_audio_leaving_hifi_mode_keeps_the_current_track_running_for_volume_changes",
+      "label": "leaving_hifi_mode_keeps_the_current_track_running_for_volume_changes()",
+      "_origin": "ast",
+      "community": 0,
+      "community_name": "PlaybackEngine",
+      "file_type": "code",
+      "norm_label": "leaving_hifi_mode_keeps_the_current_track_running_for_volume_changes()",
+      "source_file": "src-tauri/src/audio.rs",
+      "source_location": "L722"
     },
     {
       "id": "src_tauri_src_audio_loadedaudio",
@@ -2181,7 +2192,7 @@
       "file_type": "code",
       "norm_label": "output_device_selection_is_validated_and_used()",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L733"
+      "source_location": "L759"
     },
     {
       "id": "src_tauri_src_audio_playbackengine",
@@ -2236,7 +2247,7 @@
       "file_type": "code",
       "norm_label": ".pause()",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L440"
+      "source_location": "L446"
     },
     {
       "id": "src_tauri_src_audio_playbackengine_prepare_track",
@@ -2258,7 +2269,7 @@
       "file_type": "code",
       "norm_label": ".resume()",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L448"
+      "source_location": "L454"
     },
     {
       "id": "src_tauri_src_audio_playbackengine_seek",
@@ -2269,7 +2280,7 @@
       "file_type": "code",
       "norm_label": ".seek()",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L473"
+      "source_location": "L479"
     },
     {
       "id": "src_tauri_src_audio_playbackengine_select_output_device",
@@ -2302,7 +2313,7 @@
       "file_type": "code",
       "norm_label": ".set_volume()",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L493"
+      "source_location": "L499"
     },
     {
       "id": "src_tauri_src_audio_playbackengine_shutdown",
@@ -2313,7 +2324,7 @@
       "file_type": "code",
       "norm_label": ".shutdown()",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L468"
+      "source_location": "L474"
     },
     {
       "id": "src_tauri_src_audio_playbackengine_start_prepared_track",
@@ -2335,7 +2346,7 @@
       "file_type": "code",
       "norm_label": ".stop()",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L455"
+      "source_location": "L461"
     },
     {
       "id": "src_tauri_src_audio_playbackengine_synchronize",
@@ -2346,7 +2357,7 @@
       "file_type": "code",
       "norm_label": ".synchronize()",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L520"
+      "source_location": "L526"
     },
     {
       "id": "src_tauri_src_audio_playbackengine_synchronize_position",
@@ -2357,7 +2368,7 @@
       "file_type": "code",
       "norm_label": ".synchronize_position()",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L537"
+      "source_location": "L543"
     },
     {
       "id": "src_tauri_src_audio_resolve_output_device",
@@ -2610,7 +2621,7 @@
       "file_type": "code",
       "norm_label": "shared_mode_reports_resampling_and_allows_volume()",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L700"
+      "source_location": "L706"
     },
     {
       "id": "src_tauri_src_audio_signal_path_disclosure",
@@ -2622,39 +2633,6 @@
       "norm_label": "signal_path_disclosure()",
       "source_file": "src-tauri/src/audio.rs",
       "source_location": "L191"
-    },
-    {
-      "id": "apps_frontend_src_components_organisms_fullscreennowplaying",
-      "label": "FullscreenNowPlaying.tsx",
-      "_origin": "ast",
-      "community": 1,
-      "community_name": "useTheme",
-      "file_type": "code",
-      "norm_label": "fullscreennowplaying.tsx",
-      "source_file": "apps/frontend/src/components/organisms/FullscreenNowPlaying.tsx",
-      "source_location": "L1"
-    },
-    {
-      "id": "apps_frontend_src_components_organisms_monstercatvisualizer",
-      "label": "MonstercatVisualizer.tsx",
-      "_origin": "ast",
-      "community": 1,
-      "community_name": "useTheme",
-      "file_type": "code",
-      "norm_label": "monstercatvisualizer.tsx",
-      "source_file": "apps/frontend/src/components/organisms/MonstercatVisualizer.tsx",
-      "source_location": "L1"
-    },
-    {
-      "id": "apps_frontend_src_components_organisms_nowplayingbar",
-      "label": "NowPlayingBar.tsx",
-      "_origin": "ast",
-      "community": 1,
-      "community_name": "useTheme",
-      "file_type": "code",
-      "norm_label": "nowplayingbar.tsx",
-      "source_file": "apps/frontend/src/components/organisms/NowPlayingBar.tsx",
-      "source_location": "L1"
     },
     {
       "id": "apps_frontend_src_components_organisms_settingsview",
@@ -2677,39 +2655,6 @@
       "norm_label": "themeselectormodal.tsx",
       "source_file": "apps/frontend/src/components/organisms/ThemeSelectorModal.tsx",
       "source_location": "L1"
-    },
-    {
-      "id": "apps_frontend_src_components_organisms_waveformscrubber",
-      "label": "WaveformScrubber.tsx",
-      "_origin": "ast",
-      "community": 1,
-      "community_name": "useTheme",
-      "file_type": "code",
-      "norm_label": "waveformscrubber.tsx",
-      "source_file": "apps/frontend/src/components/organisms/WaveformScrubber.tsx",
-      "source_location": "L1"
-    },
-    {
-      "id": "apps_frontend_src_services_lyricsdata",
-      "label": "lyricsData.ts",
-      "_origin": "ast",
-      "community": 1,
-      "community_name": "useTheme",
-      "file_type": "code",
-      "norm_label": "lyricsdata.ts",
-      "source_file": "apps/frontend/src/services/lyricsData.ts",
-      "source_location": "L1"
-    },
-    {
-      "id": "apps_frontend_src_services_lyricsdata_track_lyrics",
-      "label": "TRACK_LYRICS",
-      "_origin": "ast",
-      "community": 1,
-      "community_name": "useTheme",
-      "file_type": "code",
-      "norm_label": "track_lyrics",
-      "source_file": "apps/frontend/src/services/lyricsData.ts",
-      "source_location": "L6"
     },
     {
       "id": "apps_frontend_src_services_themeservice",
@@ -3854,6 +3799,17 @@
       "source_location": "L30"
     },
     {
+      "id": "src_tauri_tauri_conf_bundle_icon",
+      "label": "icon",
+      "_origin": "ast",
+      "community": 18,
+      "community_name": "tauri.conf.json",
+      "file_type": "code",
+      "norm_label": "icon",
+      "source_file": "src-tauri/tauri.conf.json",
+      "source_location": "L31"
+    },
+    {
       "id": "src_tauri_tauri_conf_bundle_targets",
       "label": "targets",
       "_origin": "ast",
@@ -3862,7 +3818,7 @@
       "file_type": "code",
       "norm_label": "targets",
       "source_file": "src-tauri/tauri.conf.json",
-      "source_location": "L31"
+      "source_location": "L32"
     },
     {
       "id": "src_tauri_tauri_conf_identifier",
@@ -3918,6 +3874,39 @@
       "norm_label": "version",
       "source_file": "src-tauri/tauri.conf.json",
       "source_location": "L4"
+    },
+    {
+      "id": "ref_deb",
+      "label": "deb",
+      "_origin": "ast",
+      "community": 18,
+      "community_name": "tauri.conf.json",
+      "file_type": "concept",
+      "norm_label": "deb",
+      "source_file": "src-tauri/tauri.conf.json",
+      "source_location": "L32"
+    },
+    {
+      "id": "ref_icons_icon_png",
+      "label": "icons/icon.png",
+      "_origin": "ast",
+      "community": 18,
+      "community_name": "tauri.conf.json",
+      "file_type": "concept",
+      "norm_label": "icons/icon.png",
+      "source_file": "src-tauri/tauri.conf.json",
+      "source_location": "L31"
+    },
+    {
+      "id": "ref_rpm",
+      "label": "rpm",
+      "_origin": "ast",
+      "community": 18,
+      "community_name": "tauri.conf.json",
+      "file_type": "concept",
+      "norm_label": "rpm",
+      "source_file": "src-tauri/tauri.conf.json",
+      "source_location": "L32"
     },
     {
       "id": "package",
@@ -5588,37 +5577,125 @@
       "source_location": "L1"
     },
     {
-      "id": "apps_frontend_src_components_molecules_universaltracklist",
-      "label": "UniversalTracklist.tsx",
+      "id": "apps_frontend_src_app",
+      "label": "App.tsx",
       "_origin": "ast",
       "community": 34,
-      "community_name": "UniversalTracklist.tsx",
+      "community_name": "MusicPlayerPage.tsx",
       "file_type": "code",
-      "norm_label": "universaltracklist.tsx",
-      "source_file": "apps/frontend/src/components/molecules/UniversalTracklist.tsx",
+      "norm_label": "app.tsx",
+      "source_file": "apps/frontend/src/App.tsx",
       "source_location": "L1"
     },
     {
-      "id": "apps_frontend_src_components_molecules_universaltracklist_all_available_columns",
-      "label": "ALL_AVAILABLE_COLUMNS",
+      "id": "apps_frontend_src_demo_mode",
+      "label": "mode.ts",
       "_origin": "ast",
       "community": 34,
-      "community_name": "UniversalTracklist.tsx",
+      "community_name": "MusicPlayerPage.tsx",
       "file_type": "code",
-      "norm_label": "all_available_columns",
-      "source_file": "apps/frontend/src/components/molecules/UniversalTracklist.tsx",
-      "source_location": "L40"
+      "norm_label": "mode.ts",
+      "source_file": "apps/frontend/src/demo/mode.ts",
+      "source_location": "L1"
     },
     {
-      "id": "apps_frontend_src_components_organisms_trackstableview",
-      "label": "TracksTableView.tsx",
+      "id": "apps_frontend_src_demo_mode_isdemomode",
+      "label": "isDemoMode",
       "_origin": "ast",
       "community": 34,
-      "community_name": "UniversalTracklist.tsx",
+      "community_name": "MusicPlayerPage.tsx",
       "file_type": "code",
-      "norm_label": "trackstableview.tsx",
-      "source_file": "apps/frontend/src/components/organisms/TracksTableView.tsx",
+      "norm_label": "isdemomode",
+      "source_file": "apps/frontend/src/demo/mode.ts",
+      "source_location": "L2"
+    },
+    {
+      "id": "apps_frontend_src_hooks_usedemomode",
+      "label": "useDemoMode.ts",
+      "_origin": "ast",
+      "community": 34,
+      "community_name": "MusicPlayerPage.tsx",
+      "file_type": "code",
+      "norm_label": "usedemomode.ts",
+      "source_file": "apps/frontend/src/hooks/useDemoMode.ts",
       "source_location": "L1"
+    },
+    {
+      "id": "apps_frontend_src_main",
+      "label": "main.tsx",
+      "_origin": "ast",
+      "community": 34,
+      "community_name": "MusicPlayerPage.tsx",
+      "file_type": "code",
+      "norm_label": "main.tsx",
+      "source_file": "apps/frontend/src/main.tsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "apps_frontend_src_pages_musicplayerpage",
+      "label": "MusicPlayerPage.tsx",
+      "_origin": "ast",
+      "community": 34,
+      "community_name": "MusicPlayerPage.tsx",
+      "file_type": "code",
+      "norm_label": "musicplayerpage.tsx",
+      "source_file": "apps/frontend/src/pages/MusicPlayerPage.tsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "apps_frontend_src_services_realaudioengine",
+      "label": "realAudioEngine.ts",
+      "_origin": "ast",
+      "community": 34,
+      "community_name": "MusicPlayerPage.tsx",
+      "file_type": "code",
+      "norm_label": "realaudioengine.ts",
+      "source_file": "apps/frontend/src/services/realAudioEngine.ts",
+      "source_location": "L1"
+    },
+    {
+      "id": "apps_frontend_src_components_organisms_fullscreennowplaying",
+      "label": "FullscreenNowPlaying.tsx",
+      "_origin": "ast",
+      "community": 35,
+      "community_name": "FullscreenNowPlaying.tsx",
+      "file_type": "code",
+      "norm_label": "fullscreennowplaying.tsx",
+      "source_file": "apps/frontend/src/components/organisms/FullscreenNowPlaying.tsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "apps_frontend_src_components_organisms_waveformscrubber",
+      "label": "WaveformScrubber.tsx",
+      "_origin": "ast",
+      "community": 35,
+      "community_name": "FullscreenNowPlaying.tsx",
+      "file_type": "code",
+      "norm_label": "waveformscrubber.tsx",
+      "source_file": "apps/frontend/src/components/organisms/WaveformScrubber.tsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "apps_frontend_src_services_lyricsdata",
+      "label": "lyricsData.ts",
+      "_origin": "ast",
+      "community": 35,
+      "community_name": "FullscreenNowPlaying.tsx",
+      "file_type": "code",
+      "norm_label": "lyricsdata.ts",
+      "source_file": "apps/frontend/src/services/lyricsData.ts",
+      "source_location": "L1"
+    },
+    {
+      "id": "apps_frontend_src_services_lyricsdata_track_lyrics",
+      "label": "TRACK_LYRICS",
+      "_origin": "ast",
+      "community": 35,
+      "community_name": "FullscreenNowPlaying.tsx",
+      "file_type": "code",
+      "norm_label": "track_lyrics",
+      "source_file": "apps/frontend/src/services/lyricsData.ts",
+      "source_location": "L6"
     },
     {
       "id": "apps_frontend_src_components_atoms_emptystate",
@@ -5652,28 +5729,6 @@
       "norm_label": "sample_continue_items",
       "source_file": "apps/frontend/src/components/molecules/ContinueListeningRail.tsx",
       "source_location": "L15"
-    },
-    {
-      "id": "apps_frontend_src_components_molecules_listeningstats",
-      "label": "ListeningStats.tsx",
-      "_origin": "ast",
-      "community": 36,
-      "community_name": "DesktopLibraryPage.tsx",
-      "file_type": "code",
-      "norm_label": "listeningstats.tsx",
-      "source_file": "apps/frontend/src/components/molecules/ListeningStats.tsx",
-      "source_location": "L1"
-    },
-    {
-      "id": "apps_frontend_src_components_molecules_listeningstats_default_stats",
-      "label": "DEFAULT_STATS",
-      "_origin": "ast",
-      "community": 36,
-      "community_name": "DesktopLibraryPage.tsx",
-      "file_type": "code",
-      "norm_label": "default_stats",
-      "source_file": "apps/frontend/src/components/molecules/ListeningStats.tsx",
-      "source_location": "L21"
     },
     {
       "id": "apps_frontend_src_components_organisms_nowplayingqueuemodal",
@@ -5735,7 +5790,7 @@
       "label": "TopNavRail.tsx",
       "_origin": "ast",
       "community": 37,
-      "community_name": "types.ts",
+      "community_name": "antraEngineService.tsx",
       "file_type": "code",
       "norm_label": "topnavrail.tsx",
       "source_file": "apps/frontend/src/components/molecules/TopNavRail.tsx",
@@ -5746,7 +5801,7 @@
       "label": "MAIN_NAV_ITEMS",
       "_origin": "ast",
       "community": 37,
-      "community_name": "types.ts",
+      "community_name": "antraEngineService.tsx",
       "file_type": "code",
       "norm_label": "main_nav_items",
       "source_file": "apps/frontend/src/components/molecules/TopNavRail.tsx",
@@ -5757,21 +5812,10 @@
       "label": "AntraQueueDrawer.tsx",
       "_origin": "ast",
       "community": 37,
-      "community_name": "types.ts",
+      "community_name": "antraEngineService.tsx",
       "file_type": "code",
       "norm_label": "antraqueuedrawer.tsx",
       "source_file": "apps/frontend/src/components/organisms/AntraQueueDrawer.tsx",
-      "source_location": "L1"
-    },
-    {
-      "id": "apps_frontend_src_components_organisms_artistdetailpage",
-      "label": "ArtistDetailPage.tsx",
-      "_origin": "ast",
-      "community": 37,
-      "community_name": "types.ts",
-      "file_type": "code",
-      "norm_label": "artistdetailpage.tsx",
-      "source_file": "apps/frontend/src/components/organisms/ArtistDetailPage.tsx",
       "source_location": "L1"
     },
     {
@@ -5779,7 +5823,7 @@
       "label": "antraEngineService.tsx",
       "_origin": "ast",
       "community": 37,
-      "community_name": "types.ts",
+      "community_name": "antraEngineService.tsx",
       "file_type": "code",
       "norm_label": "antraengineservice.tsx",
       "source_file": "apps/frontend/src/services/antraEngineService.tsx",
@@ -5790,22 +5834,77 @@
       "label": "AntraEngineContext",
       "_origin": "ast",
       "community": 37,
-      "community_name": "types.ts",
+      "community_name": "antraEngineService.tsx",
       "file_type": "code",
       "norm_label": "antraenginecontext",
       "source_file": "apps/frontend/src/services/antraEngineService.tsx",
       "source_location": "L21"
     },
     {
-      "id": "apps_frontend_src_types",
-      "label": "types.ts",
+      "id": "apps_frontend_src_components_organisms_monstercatvisualizer",
+      "label": "MonstercatVisualizer.tsx",
       "_origin": "ast",
-      "community": 37,
-      "community_name": "types.ts",
+      "community": 38,
+      "community_name": "NowPlayingBar.tsx",
       "file_type": "code",
-      "norm_label": "types.ts",
-      "source_file": "apps/frontend/src/types.ts",
+      "norm_label": "monstercatvisualizer.tsx",
+      "source_file": "apps/frontend/src/components/organisms/MonstercatVisualizer.tsx",
       "source_location": "L1"
+    },
+    {
+      "id": "apps_frontend_src_components_organisms_nowplayingbar",
+      "label": "NowPlayingBar.tsx",
+      "_origin": "ast",
+      "community": 38,
+      "community_name": "NowPlayingBar.tsx",
+      "file_type": "code",
+      "norm_label": "nowplayingbar.tsx",
+      "source_file": "apps/frontend/src/components/organisms/NowPlayingBar.tsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "apps_frontend_src_components_molecules_listeningstats",
+      "label": "ListeningStats.tsx",
+      "_origin": "ast",
+      "community": 39,
+      "community_name": "ListeningStats.tsx",
+      "file_type": "code",
+      "norm_label": "listeningstats.tsx",
+      "source_file": "apps/frontend/src/components/molecules/ListeningStats.tsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "apps_frontend_src_components_molecules_listeningstats_default_stats",
+      "label": "DEFAULT_STATS",
+      "_origin": "ast",
+      "community": 39,
+      "community_name": "ListeningStats.tsx",
+      "file_type": "code",
+      "norm_label": "default_stats",
+      "source_file": "apps/frontend/src/components/molecules/ListeningStats.tsx",
+      "source_location": "L21"
+    },
+    {
+      "id": "apps_frontend_src_components_molecules_universaltracklist",
+      "label": "UniversalTracklist.tsx",
+      "_origin": "ast",
+      "community": 4,
+      "community_name": "TrackItem",
+      "file_type": "code",
+      "norm_label": "universaltracklist.tsx",
+      "source_file": "apps/frontend/src/components/molecules/UniversalTracklist.tsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "apps_frontend_src_components_molecules_universaltracklist_all_available_columns",
+      "label": "ALL_AVAILABLE_COLUMNS",
+      "_origin": "ast",
+      "community": 4,
+      "community_name": "TrackItem",
+      "file_type": "code",
+      "norm_label": "all_available_columns",
+      "source_file": "apps/frontend/src/components/molecules/UniversalTracklist.tsx",
+      "source_location": "L40"
     },
     {
       "id": "apps_frontend_src_components_organisms_albumdetailpage",
@@ -5838,6 +5937,17 @@
       "file_type": "code",
       "norm_label": "albumslistview.tsx",
       "source_file": "apps/frontend/src/components/organisms/AlbumsListView.tsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "apps_frontend_src_components_organisms_artistdetailpage",
+      "label": "ArtistDetailPage.tsx",
+      "_origin": "ast",
+      "community": 4,
+      "community_name": "TrackItem",
+      "file_type": "code",
+      "norm_label": "artistdetailpage.tsx",
+      "source_file": "apps/frontend/src/components/organisms/ArtistDetailPage.tsx",
       "source_location": "L1"
     },
     {
@@ -5893,6 +6003,17 @@
       "file_type": "code",
       "norm_label": "libraryview.tsx",
       "source_file": "apps/frontend/src/components/organisms/LibraryView.tsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "apps_frontend_src_components_organisms_trackstableview",
+      "label": "TracksTableView.tsx",
+      "_origin": "ast",
+      "community": 4,
+      "community_name": "TrackItem",
+      "file_type": "code",
+      "norm_label": "trackstableview.tsx",
+      "source_file": "apps/frontend/src/components/organisms/TracksTableView.tsx",
       "source_location": "L1"
     },
     {
@@ -6209,22 +6330,11 @@
       "source_location": "L7"
     },
     {
-      "id": "apps_frontend_src_app",
-      "label": "App.tsx",
-      "_origin": "ast",
-      "community": 5,
-      "community_name": "MusicPlayerPage.tsx",
-      "file_type": "code",
-      "norm_label": "app.tsx",
-      "source_file": "apps/frontend/src/App.tsx",
-      "source_location": "L1"
-    },
-    {
       "id": "apps_frontend_src_components_molecules_recentlyaddedrail",
       "label": "RecentlyAddedRail.tsx",
       "_origin": "ast",
       "community": 5,
-      "community_name": "MusicPlayerPage.tsx",
+      "community_name": "types.ts",
       "file_type": "code",
       "norm_label": "recentlyaddedrail.tsx",
       "source_file": "apps/frontend/src/components/molecules/RecentlyAddedRail.tsx",
@@ -6235,7 +6345,7 @@
       "label": "RediscoverRail.tsx",
       "_origin": "ast",
       "community": 5,
-      "community_name": "MusicPlayerPage.tsx",
+      "community_name": "types.ts",
       "file_type": "code",
       "norm_label": "rediscoverrail.tsx",
       "source_file": "apps/frontend/src/components/molecules/RediscoverRail.tsx",
@@ -6246,7 +6356,7 @@
       "label": "library.ts",
       "_origin": "ast",
       "community": 5,
-      "community_name": "MusicPlayerPage.tsx",
+      "community_name": "types.ts",
       "file_type": "code",
       "norm_label": "library.ts",
       "source_file": "apps/frontend/src/demo/library.ts",
@@ -6257,7 +6367,7 @@
       "label": "DEMO_RECENTLY_ADDED",
       "_origin": "ast",
       "community": 5,
-      "community_name": "MusicPlayerPage.tsx",
+      "community_name": "types.ts",
       "file_type": "code",
       "norm_label": "demo_recently_added",
       "source_file": "apps/frontend/src/demo/library.ts",
@@ -6268,7 +6378,7 @@
       "label": "DEMO_REDISCOVER_ITEMS",
       "_origin": "ast",
       "community": 5,
-      "community_name": "MusicPlayerPage.tsx",
+      "community_name": "types.ts",
       "file_type": "code",
       "norm_label": "demo_rediscover_items",
       "source_file": "apps/frontend/src/demo/library.ts",
@@ -6279,7 +6389,7 @@
       "label": "LOCAL_RECENTLY_ADDED",
       "_origin": "ast",
       "community": 5,
-      "community_name": "MusicPlayerPage.tsx",
+      "community_name": "types.ts",
       "file_type": "code",
       "norm_label": "local_recently_added",
       "source_file": "apps/frontend/src/demo/library.ts",
@@ -6290,76 +6400,21 @@
       "label": "LOCAL_REDISCOVER_ITEMS",
       "_origin": "ast",
       "community": 5,
-      "community_name": "MusicPlayerPage.tsx",
+      "community_name": "types.ts",
       "file_type": "code",
       "norm_label": "local_rediscover_items",
       "source_file": "apps/frontend/src/demo/library.ts",
       "source_location": "L168"
     },
     {
-      "id": "apps_frontend_src_demo_mode",
-      "label": "mode.ts",
+      "id": "apps_frontend_src_types",
+      "label": "types.ts",
       "_origin": "ast",
       "community": 5,
-      "community_name": "MusicPlayerPage.tsx",
+      "community_name": "types.ts",
       "file_type": "code",
-      "norm_label": "mode.ts",
-      "source_file": "apps/frontend/src/demo/mode.ts",
-      "source_location": "L1"
-    },
-    {
-      "id": "apps_frontend_src_demo_mode_isdemomode",
-      "label": "isDemoMode",
-      "_origin": "ast",
-      "community": 5,
-      "community_name": "MusicPlayerPage.tsx",
-      "file_type": "code",
-      "norm_label": "isdemomode",
-      "source_file": "apps/frontend/src/demo/mode.ts",
-      "source_location": "L2"
-    },
-    {
-      "id": "apps_frontend_src_hooks_usedemomode",
-      "label": "useDemoMode.ts",
-      "_origin": "ast",
-      "community": 5,
-      "community_name": "MusicPlayerPage.tsx",
-      "file_type": "code",
-      "norm_label": "usedemomode.ts",
-      "source_file": "apps/frontend/src/hooks/useDemoMode.ts",
-      "source_location": "L1"
-    },
-    {
-      "id": "apps_frontend_src_main",
-      "label": "main.tsx",
-      "_origin": "ast",
-      "community": 5,
-      "community_name": "MusicPlayerPage.tsx",
-      "file_type": "code",
-      "norm_label": "main.tsx",
-      "source_file": "apps/frontend/src/main.tsx",
-      "source_location": "L1"
-    },
-    {
-      "id": "apps_frontend_src_pages_musicplayerpage",
-      "label": "MusicPlayerPage.tsx",
-      "_origin": "ast",
-      "community": 5,
-      "community_name": "MusicPlayerPage.tsx",
-      "file_type": "code",
-      "norm_label": "musicplayerpage.tsx",
-      "source_file": "apps/frontend/src/pages/MusicPlayerPage.tsx",
-      "source_location": "L1"
-    },
-    {
-      "id": "apps_frontend_src_services_realaudioengine",
-      "label": "realAudioEngine.ts",
-      "_origin": "ast",
-      "community": 5,
-      "community_name": "MusicPlayerPage.tsx",
-      "file_type": "code",
-      "norm_label": "realaudioengine.ts",
-      "source_file": "apps/frontend/src/services/realAudioEngine.ts",
+      "norm_label": "types.ts",
+      "source_file": "apps/frontend/src/types.ts",
       "source_location": "L1"
     },
     {
@@ -7289,7 +7344,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "apps/frontend/src/components/organisms/FullscreenNowPlaying.tsx",
-      "source_location": "L65",
+      "source_location": "L69",
       "weight": 1.0
     },
     {
@@ -7301,7 +7356,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "apps/frontend/src/components/organisms/FullscreenNowPlaying.tsx",
-      "source_location": "L83",
+      "source_location": "L87",
       "weight": 1.0
     },
     {
@@ -7313,7 +7368,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "apps/frontend/src/components/organisms/NowPlayingBar.tsx",
-      "source_location": "L110",
+      "source_location": "L114",
       "weight": 1.0
     },
     {
@@ -7325,7 +7380,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "apps/frontend/src/components/organisms/NowPlayingBar.tsx",
-      "source_location": "L95",
+      "source_location": "L99",
       "weight": 1.0
     },
     {
@@ -7853,7 +7908,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L671",
+      "source_location": "L677",
       "weight": 1.0
     },
     {
@@ -7865,7 +7920,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L673",
+      "source_location": "L679",
       "weight": 1.0
     },
     {
@@ -7877,7 +7932,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L771",
+      "source_location": "L797",
       "weight": 1.0
     },
     {
@@ -7889,7 +7944,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L772",
+      "source_location": "L798",
       "weight": 1.0
     },
     {
@@ -7901,7 +7956,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L773",
+      "source_location": "L799",
       "weight": 1.0
     },
     {
@@ -7913,7 +7968,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L774",
+      "source_location": "L800",
       "weight": 1.0
     },
     {
@@ -7925,7 +7980,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L777",
+      "source_location": "L803",
       "weight": 1.0
     },
     {
@@ -7937,7 +7992,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L779",
+      "source_location": "L805",
       "weight": 1.0
     },
     {
@@ -7949,7 +8004,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L780",
+      "source_location": "L806",
       "weight": 1.0
     },
     {
@@ -7961,7 +8016,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L594",
+      "source_location": "L600",
       "weight": 1.0
     },
     {
@@ -7973,7 +8028,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L627",
+      "source_location": "L633",
       "weight": 1.0
     },
     {
@@ -7985,7 +8040,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L637",
+      "source_location": "L643",
       "weight": 1.0
     },
     {
@@ -7997,7 +8052,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L717",
+      "source_location": "L743",
       "weight": 1.0
     },
     {
@@ -8009,7 +8064,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L719",
+      "source_location": "L745",
       "weight": 1.0
     },
     {
@@ -8021,7 +8076,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L720",
+      "source_location": "L746",
       "weight": 1.0
     },
     {
@@ -8033,7 +8088,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L721",
+      "source_location": "L747",
       "weight": 1.0
     },
     {
@@ -8045,7 +8100,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L684",
+      "source_location": "L690",
       "weight": 1.0
     },
     {
@@ -8057,7 +8112,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L685",
+      "source_location": "L691",
       "weight": 1.0
     },
     {
@@ -8069,7 +8124,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L686",
+      "source_location": "L692",
       "weight": 1.0
     },
     {
@@ -8081,7 +8136,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L687",
+      "source_location": "L693",
       "weight": 1.0
     },
     {
@@ -8093,7 +8148,79 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L695",
+      "source_location": "L701",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_audio_leaving_hifi_mode_keeps_the_current_track_running_for_volume_changes",
+      "target": "src_tauri_src_audio_engine",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "src-tauri/src/audio.rs",
+      "source_location": "L723",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_audio_leaving_hifi_mode_keeps_the_current_track_running_for_volume_changes",
+      "target": "src_tauri_src_audio_playbackengine_new",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "src-tauri/src/audio.rs",
+      "source_location": "L724",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_audio_leaving_hifi_mode_keeps_the_current_track_running_for_volume_changes",
+      "target": "src_tauri_src_audio_playbackengine_prepare_track",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "src-tauri/src/audio.rs",
+      "source_location": "L725",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_audio_leaving_hifi_mode_keeps_the_current_track_running_for_volume_changes",
+      "target": "src_tauri_src_audio_playbackengine_start_prepared_track",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "src-tauri/src/audio.rs",
+      "source_location": "L726",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_audio_leaving_hifi_mode_keeps_the_current_track_running_for_volume_changes",
+      "target": "src_tauri_src_audio_playbackengine_set_hifi_mode",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "src-tauri/src/audio.rs",
+      "source_location": "L730",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_audio_leaving_hifi_mode_keeps_the_current_track_running_for_volume_changes",
+      "target": "src_tauri_src_audio_fakebackend_set_volume",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "src-tauri/src/audio.rs",
+      "source_location": "L731",
       "weight": 1.0
     },
     {
@@ -8141,7 +8268,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L734",
+      "source_location": "L760",
       "weight": 1.0
     },
     {
@@ -8153,7 +8280,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L735",
+      "source_location": "L761",
       "weight": 1.0
     },
     {
@@ -8165,7 +8292,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L737",
+      "source_location": "L763",
       "weight": 1.0
     },
     {
@@ -8177,7 +8304,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L747",
+      "source_location": "L773",
       "weight": 1.0
     },
     {
@@ -8189,7 +8316,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L748",
+      "source_location": "L774",
       "weight": 1.0
     },
     {
@@ -8201,7 +8328,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L749",
+      "source_location": "L775",
       "weight": 1.0
     },
     {
@@ -8237,7 +8364,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L442",
+      "source_location": "L448",
       "weight": 1.0
     },
     {
@@ -8249,7 +8376,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L443",
+      "source_location": "L449",
       "weight": 1.0
     },
     {
@@ -8273,7 +8400,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L450",
+      "source_location": "L456",
       "weight": 1.0
     },
     {
@@ -8285,7 +8412,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L478",
+      "source_location": "L484",
       "weight": 1.0
     },
     {
@@ -8297,7 +8424,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L488",
+      "source_location": "L494",
       "weight": 1.0
     },
     {
@@ -8338,18 +8465,6 @@
     },
     {
       "source": "src_tauri_src_audio_playbackengine_set_hifi_mode",
-      "target": "src_tauri_src_audio_fakebackend_stop",
-      "relation": "calls",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "context": "call",
-      "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L430",
-      "weight": 1.0
-    },
-    {
-      "source": "src_tauri_src_audio_playbackengine_set_hifi_mode",
       "target": "src_tauri_src_audio_fakebackend_set_volume",
       "relation": "calls",
       "_origin": "ast",
@@ -8357,7 +8472,19 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L436",
+      "source_location": "L433",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_audio_playbackengine_set_hifi_mode",
+      "target": "src_tauri_src_audio_signal_path_disclosure",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "src-tauri/src/audio.rs",
+      "source_location": "L438",
       "weight": 1.0
     },
     {
@@ -8369,7 +8496,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L500",
+      "source_location": "L506",
       "weight": 1.0
     },
     {
@@ -8381,7 +8508,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L507",
+      "source_location": "L513",
       "weight": 1.0
     },
     {
@@ -8393,7 +8520,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L511",
+      "source_location": "L517",
       "weight": 1.0
     },
     {
@@ -8405,7 +8532,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L470",
+      "source_location": "L476",
       "weight": 1.0
     },
     {
@@ -8441,7 +8568,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L456",
+      "source_location": "L462",
       "weight": 1.0
     },
     {
@@ -8453,7 +8580,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L464",
+      "source_location": "L470",
       "weight": 1.0
     },
     {
@@ -8465,7 +8592,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L525",
+      "source_location": "L531",
       "weight": 1.0
     },
     {
@@ -8477,7 +8604,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L527",
+      "source_location": "L533",
       "weight": 1.0
     },
     {
@@ -8489,7 +8616,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L538",
+      "source_location": "L544",
       "weight": 1.0
     },
     {
@@ -8669,7 +8796,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L701",
+      "source_location": "L707",
       "weight": 1.0
     },
     {
@@ -8681,7 +8808,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L702",
+      "source_location": "L708",
       "weight": 1.0
     },
     {
@@ -8693,7 +8820,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L703",
+      "source_location": "L709",
       "weight": 1.0
     },
     {
@@ -8705,7 +8832,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L704",
+      "source_location": "L710",
       "weight": 1.0
     },
     {
@@ -8717,7 +8844,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L705",
+      "source_location": "L711",
       "weight": 1.0
     },
     {
@@ -8729,7 +8856,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L708",
+      "source_location": "L714",
       "weight": 1.0
     },
     {
@@ -9785,7 +9912,7 @@
       "confidence_score": 1.0,
       "context": "field",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L566",
+      "source_location": "L572",
       "weight": 1.0
     },
     {
@@ -9797,7 +9924,7 @@
       "confidence_score": 1.0,
       "context": "field",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L562",
+      "source_location": "L568",
       "weight": 1.0
     },
     {
@@ -10133,7 +10260,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L670",
+      "source_location": "L676",
       "weight": 1.0
     },
     {
@@ -10145,7 +10272,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L670",
+      "source_location": "L676",
       "weight": 1.0
     },
     {
@@ -10157,7 +10284,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L570",
+      "source_location": "L576",
       "weight": 1.0
     },
     {
@@ -10169,7 +10296,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L566",
+      "source_location": "L572",
       "weight": 1.0
     },
     {
@@ -10181,7 +10308,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L566",
+      "source_location": "L572",
       "weight": 1.0
     },
     {
@@ -10193,7 +10320,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L588",
+      "source_location": "L594",
       "weight": 1.0
     },
     {
@@ -10205,7 +10332,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L588",
+      "source_location": "L594",
       "weight": 1.0
     },
     {
@@ -10217,7 +10344,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L636",
+      "source_location": "L642",
       "weight": 1.0
     },
     {
@@ -10229,7 +10356,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L636",
+      "source_location": "L642",
       "weight": 1.0
     },
     {
@@ -10241,7 +10368,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L636",
+      "source_location": "L642",
       "weight": 1.0
     },
     {
@@ -10253,7 +10380,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L652",
+      "source_location": "L658",
       "weight": 1.0
     },
     {
@@ -10265,7 +10392,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L562",
+      "source_location": "L568",
       "weight": 1.0
     },
     {
@@ -10373,7 +10500,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L473",
+      "source_location": "L479",
       "weight": 1.0
     },
     {
@@ -10409,7 +10536,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L493",
+      "source_location": "L499",
       "weight": 1.0
     },
     {
@@ -11467,6 +11594,42 @@
       "context": "import",
       "source_file": "src-tauri/capabilities/main.json",
       "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_tauri_conf_bundle_icon",
+      "target": "ref_icons_icon_png",
+      "relation": "extends",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "src-tauri/tauri.conf.json",
+      "source_location": "L31",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_tauri_conf_bundle_targets",
+      "target": "ref_deb",
+      "relation": "extends",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "src-tauri/tauri.conf.json",
+      "source_location": "L32",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_tauri_conf_bundle_targets",
+      "target": "ref_rpm",
+      "relation": "extends",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "src-tauri/tauri.conf.json",
+      "source_location": "L32",
       "weight": 1.0
     },
     {
@@ -15546,7 +15709,7 @@
       "confidence_score": 1.0,
       "context": "parameter_type",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L588",
+      "source_location": "L594",
       "weight": 1.0
     },
     {
@@ -16242,7 +16405,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L670",
+      "source_location": "L676",
       "weight": 1.0
     },
     {
@@ -16254,7 +16417,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L670",
+      "source_location": "L676",
       "weight": 1.0
     },
     {
@@ -16266,7 +16429,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L570",
+      "source_location": "L576",
       "weight": 1.0
     },
     {
@@ -16278,7 +16441,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L588",
+      "source_location": "L594",
       "weight": 1.0
     },
     {
@@ -16290,7 +16453,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L636",
+      "source_location": "L642",
       "weight": 1.0
     },
     {
@@ -16302,7 +16465,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L652",
+      "source_location": "L658",
       "weight": 1.0
     },
     {
@@ -16374,7 +16537,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L473",
+      "source_location": "L479",
       "weight": 1.0
     },
     {
@@ -16398,7 +16561,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L493",
+      "source_location": "L499",
       "weight": 1.0
     },
     {
@@ -17718,7 +17881,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/frontend/src/components/organisms/FullscreenNowPlaying.tsx",
-      "source_location": "L44",
+      "source_location": "L46",
       "weight": 1.0
     },
     {
@@ -17828,7 +17991,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/frontend/src/components/organisms/NowPlayingBar.tsx",
-      "source_location": "L43",
+      "source_location": "L45",
       "weight": 1.0
     },
     {
@@ -17839,7 +18002,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "apps/frontend/src/components/organisms/NowPlayingBar.tsx",
-      "source_location": "L74",
+      "source_location": "L76",
       "weight": 1.0
     },
     {
@@ -20490,18 +20653,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L553",
-      "weight": 1.0
-    },
-    {
-      "source": "src_tauri_src_audio",
-      "target": "src_tauri_src_audio_fakebackend",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L565",
+      "source_location": "L559",
       "weight": 1.0
     },
     {
@@ -20517,13 +20669,24 @@
     },
     {
       "source": "src_tauri_src_audio",
+      "target": "src_tauri_src_audio_fakebackend",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src-tauri/src/audio.rs",
+      "source_location": "L571",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_audio",
       "target": "src_tauri_src_audio_fake_devices",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L570",
+      "source_location": "L576",
       "weight": 1.0
     },
     {
@@ -20545,7 +20708,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L670",
+      "source_location": "L676",
       "weight": 1.0
     },
     {
@@ -20556,7 +20719,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L683",
+      "source_location": "L689",
       "weight": 1.0
     },
     {
@@ -20578,7 +20741,18 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L700",
+      "source_location": "L706",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_audio",
+      "target": "src_tauri_src_audio_leaving_hifi_mode_keeps_the_current_track_running_for_volume_changes",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src-tauri/src/audio.rs",
+      "source_location": "L722",
       "weight": 1.0
     },
     {
@@ -20589,7 +20763,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L716",
+      "source_location": "L742",
       "weight": 1.0
     },
     {
@@ -20600,7 +20774,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L733",
+      "source_location": "L759",
       "weight": 1.0
     },
     {
@@ -20611,7 +20785,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L770",
+      "source_location": "L796",
       "weight": 1.0
     },
     {
@@ -21265,13 +21439,24 @@
     },
     {
       "source": "src_tauri_tauri_conf_bundle",
-      "target": "src_tauri_tauri_conf_bundle_targets",
+      "target": "src_tauri_tauri_conf_bundle_icon",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-tauri/tauri.conf.json",
       "source_location": "L31",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_tauri_conf_bundle",
+      "target": "src_tauri_tauri_conf_bundle_targets",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src-tauri/tauri.conf.json",
+      "source_location": "L32",
       "weight": 1.0
     },
     {
@@ -21291,7 +21476,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L587",
+      "source_location": "L593",
       "weight": 1.0
     },
     {
@@ -21533,7 +21718,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L588",
+      "source_location": "L594",
       "weight": 1.0
     },
     {
@@ -21544,7 +21729,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L636",
+      "source_location": "L642",
       "weight": 1.0
     },
     {
@@ -21555,7 +21740,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L640",
+      "source_location": "L646",
       "weight": 1.0
     },
     {
@@ -21566,7 +21751,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L644",
+      "source_location": "L650",
       "weight": 1.0
     },
     {
@@ -21577,7 +21762,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L648",
+      "source_location": "L654",
       "weight": 1.0
     },
     {
@@ -21588,7 +21773,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L652",
+      "source_location": "L658",
       "weight": 1.0
     },
     {
@@ -21599,7 +21784,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L657",
+      "source_location": "L663",
       "weight": 1.0
     },
     {
@@ -21610,7 +21795,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L661",
+      "source_location": "L667",
       "weight": 1.0
     },
     {
@@ -21621,7 +21806,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L665",
+      "source_location": "L671",
       "weight": 1.0
     },
     {
@@ -21709,7 +21894,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L440",
+      "source_location": "L446",
       "weight": 1.0
     },
     {
@@ -21720,7 +21905,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L448",
+      "source_location": "L454",
       "weight": 1.0
     },
     {
@@ -21731,7 +21916,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L455",
+      "source_location": "L461",
       "weight": 1.0
     },
     {
@@ -21742,7 +21927,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L468",
+      "source_location": "L474",
       "weight": 1.0
     },
     {
@@ -21753,7 +21938,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L473",
+      "source_location": "L479",
       "weight": 1.0
     },
     {
@@ -21764,7 +21949,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L493",
+      "source_location": "L499",
       "weight": 1.0
     },
     {
@@ -21775,7 +21960,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L520",
+      "source_location": "L526",
       "weight": 1.0
     },
     {
@@ -21786,7 +21971,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L537",
+      "source_location": "L543",
       "weight": 1.0
     },
     {
@@ -22013,5 +22198,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "18b3d5b21ca0aca525f5b0eacf2f6ee4e16882a9"
+  "built_at_commit": "88a0178cb1ba62d61a9b8c8e1a42822d70e2b9d3"
 }

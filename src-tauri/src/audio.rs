@@ -426,14 +426,20 @@ impl PlaybackEngine {
     }
 
     pub(crate) fn set_hifi_mode(&mut self, enabled: bool) {
-        if self.state.hifi_mode != enabled {
-            self.stop();
-        }
         self.state.hifi_mode = enabled;
         if enabled {
             self.state.volume = 1.0;
             self.state.muted = false;
             self.backend.set_volume(1.0);
+        }
+        if let Some(output) = &mut self.state.output {
+            output.software_gain = self.state.volume != 1.0;
+            output.bit_perfect = false;
+            output.disclosure = signal_path_disclosure(
+                self.state.hifi_mode,
+                output.native_sample_rate,
+                output.software_gain,
+            );
         }
     }
 
@@ -710,6 +716,26 @@ mod tests {
         assert!(output.resampling);
         assert!(output.software_gain);
         assert!(!output.bit_perfect);
+    }
+
+    #[test]
+    fn leaving_hifi_mode_keeps_the_current_track_running_for_volume_changes() {
+        let (mut engine, shared) = engine(120_000);
+        let path = Path::new("/music/example.flac");
+        engine.prepare_track(path, "track-one".into());
+        engine
+            .start_prepared_track(path, Some(24))
+            .expect("starts playback");
+
+        engine.set_hifi_mode(false);
+        engine
+            .set_volume(0.5)
+            .expect("adjustable volume is enabled without stopping playback");
+
+        assert!(matches!(engine.state.status, PlaybackStatus::Playing));
+        assert_eq!(engine.state.volume, 0.5);
+        assert!(!engine.state.hifi_mode);
+        assert_eq!(shared.lock().expect("fake backend").volume, 0.5);
     }
 
     #[test]

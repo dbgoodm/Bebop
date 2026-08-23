@@ -483,6 +483,8 @@ export function DesktopLibraryPage() {
         muted={nativePlayback.playback.muted}
         onVolumeChange={(volume) => void nativePlayback.setVolume(volume)}
         onToggleMute={() => void nativePlayback.toggleMute()}
+        volumeLocked={nativePlayback.playback.hifiMode}
+        onUnlockVolume={() => nativePlayback.setHifi(false)}
         spectrumAvailable={false}
       />
 
@@ -515,6 +517,8 @@ export function DesktopLibraryPage() {
         muted={nativePlayback.playback.muted}
         onVolumeChange={(volume) => void nativePlayback.setVolume(volume)}
         onToggleMute={() => void nativePlayback.toggleMute()}
+        volumeLocked={nativePlayback.playback.hifiMode}
+        onUnlockVolume={() => nativePlayback.setHifi(false)}
         spectrumAvailable={false}
       />
       <ThemeSelectorModal />
