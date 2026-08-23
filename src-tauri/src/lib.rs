@@ -1,9 +1,8 @@
 use std::{
     collections::BTreeMap,
-    fs::File,
     path::{Path, PathBuf},
     sync::{
-        Arc, Mutex, RwLock,
+        Arc, Mutex,
         atomic::{AtomicBool, Ordering},
     },
     thread,
@@ -11,22 +10,26 @@ use std::{
 };
 
 mod audio;
+mod catalog;
+mod persistence;
 
 use serde::{Deserialize, Serialize};
-use sha2::{Digest, Sha256};
 use specta::Type;
 #[cfg(any(debug_assertions, test))]
 use specta_typescript::Typescript;
-use symphonia::core::{
-    formats::FormatOptions, io::MediaSourceStream, meta::MetadataOptions, probe::Hint,
-};
 use tauri::{AppHandle, Emitter, Manager, State, WindowEvent};
 use tauri_specta::{Builder, collect_commands};
-use walkdir::{DirEntry, WalkDir};
 
 use audio::{AudioBackendError, PlaybackEngine};
+pub use catalog::{
+    AudioExtension, CatalogQuery, LibraryRoot, LibraryScan, RootAvailability, ScanProgress,
+    SortDirection, TrackPage, TrackSort, TrackSummary, WatchMode,
+};
+use catalog::{probe_audio_metadata, scan_library_at};
+use persistence::DatabaseWorker;
 
 const SCAN_PROGRESS_EVENT: &str = "library://scan-progress";
+const LIBRARY_CHANGED_EVENT: &str = "library://changed";
 const PLAYBACK_STATE_EVENT: &str = "playback://state";
 const PLAYBACK_POSITION_EVENT: &str = "playback://position";
 const PLAYBACK_ENDED_EVENT: &str = "playback://ended";
@@ -43,6 +46,30 @@ pub struct AppError {
 }
 
 impl AppError {
+    fn new(code: impl Into<String>, message: impl Into<String>) -> Self {
+        Self {
+            code: code.into(),
+            message: message.into(),
+            context: None,
+        }
+    }
+
+    fn with_context(mut self, key: impl Into<String>, value: impl ToString) -> Self {
+        self.context
+            .get_or_insert_with(BTreeMap::new)
+            .insert(key.into(), value.to_string());
+        self
+    }
+
+    fn persistence(action: &'static str, reason: String) -> Self {
+        Self::new(
+            "database-error",
+            "Bebop could not update its local catalog database.",
+        )
+        .with_context("action", action)
+        .with_context("reason", reason)
+    }
+
     fn state_unavailable(resource: &str) -> Self {
         Self {
             code: "state-unavailable".into(),
@@ -62,14 +89,6 @@ impl AppError {
         }
     }
 
-    fn library_not_selected() -> Self {
-        Self {
-            code: "library-not-selected".into(),
-            message: "Select and scan a music library before starting playback.".into(),
-            context: None,
-        }
-    }
-
     fn from_audio(error: AudioBackendError, path: Option<&Path>) -> Self {
         Self {
             code: error.code.into(),
@@ -78,49 +97,6 @@ impl AppError {
                 .map(|path| BTreeMap::from([("path".into(), path.to_string_lossy().into_owned())])),
         }
     }
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize, Type)]
-#[serde(rename_all = "lowercase")]
-pub enum AudioExtension {
-    Flac,
-    Wav,
-    Mp3,
-    Ogg,
-}
-
-impl AudioExtension {
-    fn from_path(path: &Path) -> Option<Self> {
-        match path.extension()?.to_str()?.to_ascii_lowercase().as_str() {
-            "flac" => Some(Self::Flac),
-            "wav" => Some(Self::Wav),
-            "mp3" => Some(Self::Mp3),
-            "ogg" => Some(Self::Ogg),
-            _ => None,
-        }
-    }
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize, Type)]
-#[serde(rename_all = "camelCase")]
-pub struct TrackSummary {
-    pub id: String,
-    pub path: String,
-    pub title: String,
-    pub extension: AudioExtension,
-    pub file_size: u64,
-    pub duration_ms: Option<u64>,
-    pub sample_rate: Option<u32>,
-    pub channels: Option<u16>,
-    pub bit_depth: Option<u16>,
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize, Type)]
-#[serde(rename_all = "camelCase")]
-pub struct LibraryScan {
-    pub root: String,
-    pub tracks: Vec<TrackSummary>,
-    pub warnings: Vec<String>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, Type)]
@@ -192,207 +168,192 @@ impl Default for PlaybackState {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize, Type)]
-#[serde(rename_all = "camelCase")]
-pub struct ScanProgress {
-    pub scanned_files: u64,
-    pub discovered_tracks: u64,
-    pub current_path: Option<String>,
-}
-
 #[derive(Clone, Debug, Serialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct DesktopState {
     pub library_root: Option<String>,
+    pub library_roots: Vec<LibraryRoot>,
     pub playback: PlaybackState,
 }
 
-/// Shared state owns the canonical library root and the sole native playback engine.
+#[derive(Clone, Debug, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct LibraryChanged {
+    pub kind: String,
+    pub root_id: Option<String>,
+    pub track_ids: Vec<String>,
+}
+
+/// Shared state owns the database worker and the sole native playback engine.
 pub struct AppState {
-    library_root: Arc<RwLock<Option<PathBuf>>>,
+    database: DatabaseWorker,
     playback: Arc<Mutex<PlaybackEngine>>,
     running: Arc<AtomicBool>,
 }
 
-impl Default for AppState {
-    fn default() -> Self {
+impl AppState {
+    fn new(database: DatabaseWorker) -> Self {
         Self {
-            library_root: Arc::new(RwLock::new(None)),
+            database,
             playback: Arc::new(Mutex::new(PlaybackEngine::default())),
             running: Arc::new(AtomicBool::new(true)),
         }
     }
 }
 
-#[derive(Default)]
-struct AudioMetadata {
-    duration_ms: Option<u64>,
-    sample_rate: Option<u32>,
-    channels: Option<u16>,
-    bit_depth: Option<u16>,
+#[tauri::command]
+#[specta::specta]
+async fn scan_library(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    root: String,
+) -> Result<LibraryScan, AppError> {
+    let database = state.database.clone();
+    tauri::async_runtime::spawn_blocking(move || add_and_scan_root(&app, &database, root, None))
+        .await
+        .map_err(|error| AppError::new("background-task-failed", error.to_string()))?
 }
 
-fn is_hidden(entry: &DirEntry) -> bool {
-    entry
-        .file_name()
-        .to_str()
-        .is_some_and(|name| name.starts_with('.'))
+#[tauri::command]
+#[specta::specta]
+fn list_library_roots(state: State<'_, AppState>) -> Result<Vec<LibraryRoot>, AppError> {
+    state.database.list_roots()
 }
 
-fn track_id(path: &Path) -> String {
-    let mut hasher = Sha256::new();
-    hasher.update(path.as_os_str().as_encoded_bytes());
-    format!("track-{:x}", hasher.finalize())
+#[tauri::command]
+#[specta::specta]
+async fn add_library_root(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    path: String,
+    label: Option<String>,
+) -> Result<LibraryScan, AppError> {
+    let database = state.database.clone();
+    tauri::async_runtime::spawn_blocking(move || add_and_scan_root(&app, &database, path, label))
+        .await
+        .map_err(|error| AppError::new("background-task-failed", error.to_string()))?
 }
 
-fn display_title(path: &Path) -> String {
-    path.file_stem()
-        .and_then(|name| name.to_str())
-        .filter(|name| !name.trim().is_empty())
-        .unwrap_or("Untitled track")
-        .to_owned()
-}
-
-fn probe_audio_metadata(path: &Path, extension: &AudioExtension) -> AudioMetadata {
-    let Ok(file) = File::open(path) else {
-        return AudioMetadata::default();
-    };
-    let mut hint = Hint::new();
-    hint.with_extension(match extension {
-        AudioExtension::Flac => "flac",
-        AudioExtension::Wav => "wav",
-        AudioExtension::Mp3 => "mp3",
-        AudioExtension::Ogg => "ogg",
-    });
-    let source = MediaSourceStream::new(Box::new(file), Default::default());
-    let Ok(probed) = symphonia::default::get_probe().format(
-        &hint,
-        source,
-        &FormatOptions::default(),
-        &MetadataOptions::default(),
-    ) else {
-        return AudioMetadata::default();
-    };
-    let Some(track) = probed.format.default_track() else {
-        return AudioMetadata::default();
-    };
-    let params = &track.codec_params;
-    let duration_ms = params.time_base.zip(params.n_frames).map(|(base, frames)| {
-        let time = base.calc_time(frames);
-        time.seconds.saturating_mul(1_000) + (time.frac * 1_000.0) as u64
-    });
-    AudioMetadata {
-        duration_ms,
-        sample_rate: params.sample_rate,
-        channels: params.channels.map(|channels| channels.count() as u16),
-        bit_depth: params.bits_per_sample.map(|bits| bits as u16),
-    }
-}
-
-fn canonical_track_path(root: &Path, requested_path: &str) -> Result<PathBuf, AppError> {
-    let path = Path::new(requested_path)
+fn add_and_scan_root(
+    app: &AppHandle,
+    database: &DatabaseWorker,
+    path: String,
+    label: Option<String>,
+) -> Result<LibraryScan, AppError> {
+    let canonical = Path::new(&path)
         .canonicalize()
-        .map_err(|error| AppError {
-            code: "track-unavailable".into(),
-            message: "The requested track could not be accessed.".into(),
-            context: Some(BTreeMap::from([("reason".into(), error.to_string())])),
-        })?;
-    if !path.starts_with(root) {
-        return Err(AppError {
-            code: "track-outside-library".into(),
-            message: "The requested track is outside the active music library.".into(),
-            context: None,
-        });
+        .map_err(|error| AppError::invalid_library_root(&path, error))?;
+    if !canonical.is_dir() {
+        return Err(AppError::new(
+            "library-root-not-directory",
+            "Please select a folder containing your music files.",
+        ));
     }
-    Ok(path)
+    let label = label
+        .filter(|value| !value.trim().is_empty())
+        .unwrap_or_else(|| {
+            canonical
+                .file_name()
+                .and_then(|value| value.to_str())
+                .unwrap_or("Music")
+                .to_owned()
+        });
+    let root = database.add_root(canonical.to_string_lossy().into_owned(), label)?;
+    scan_root(app, database, root)
 }
 
-fn scan_library_at<F>(root: &Path, mut emit_progress: F) -> Result<LibraryScan, AppError>
-where
-    F: FnMut(&ScanProgress),
-{
-    let root = root
-        .canonicalize()
-        .map_err(|error| AppError::invalid_library_root(&root.to_string_lossy(), error))?;
-    if !root.is_dir() {
-        return Err(AppError {
-            code: "library-root-not-directory".into(),
-            message: "Please select a folder containing your music files.".into(),
-            context: Some(BTreeMap::from([(
-                "root".into(),
-                root.to_string_lossy().into_owned(),
-            )])),
-        });
+#[tauri::command]
+#[specta::specta]
+fn set_library_root_enabled(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    root_id: String,
+    enabled: bool,
+) -> Result<LibraryRoot, AppError> {
+    let root = state.database.set_root_enabled(root_id.clone(), enabled)?;
+    emit_library_changed(&app, "root-updated", Some(root_id), Vec::new());
+    Ok(root)
+}
+
+#[tauri::command]
+#[specta::specta]
+fn remove_library_root(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    root_id: String,
+    confirmed: bool,
+) -> Result<(), AppError> {
+    if !confirmed {
+        return Err(AppError::new(
+            "library-root-removal-not-confirmed",
+            "Removing a library root requires confirmation. Music files are never deleted.",
+        ));
     }
-    let mut tracks = Vec::new();
-    let mut warnings = Vec::new();
-    let mut scanned_files = 0;
-    let walker = WalkDir::new(&root)
-        .follow_links(false)
-        .sort_by_file_name()
-        .into_iter()
-        .filter_entry(|entry| entry.path() == root || !is_hidden(entry));
-    for entry in walker {
-        let entry = match entry {
-            Ok(entry) => entry,
-            Err(error) => {
-                warnings.push(format!("Skipped unreadable path: {error}"));
-                continue;
-            }
-        };
-        if !entry.file_type().is_file() {
-            continue;
+    state.database.remove_root(root_id.clone())?;
+    emit_library_changed(&app, "root-removed", Some(root_id), Vec::new());
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+async fn rescan_library_root(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    root_id: String,
+) -> Result<LibraryScan, AppError> {
+    let database = state.database.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let root = database.get_root(root_id)?;
+        scan_root(&app, &database, root)
+    })
+    .await
+    .map_err(|error| AppError::new("background-task-failed", error.to_string()))?
+}
+
+#[tauri::command]
+#[specta::specta]
+async fn restore_library_root(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    root_id: String,
+) -> Result<LibraryScan, AppError> {
+    let database = state.database.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let root = database.set_root_enabled(root_id, true)?;
+        scan_root(&app, &database, root)
+    })
+    .await
+    .map_err(|error| AppError::new("background-task-failed", error.to_string()))?
+}
+
+fn scan_root(
+    app: &AppHandle,
+    database: &DatabaseWorker,
+    root: LibraryRoot,
+) -> Result<LibraryScan, AppError> {
+    let scanned = match scan_library_at(Path::new(&root.path), |progress| {
+        let _ = app.emit(SCAN_PROGRESS_EVENT, progress);
+    }) {
+        Ok(scanned) => scanned,
+        Err(error) => {
+            let availability = if Path::new(&root.path).exists() {
+                RootAvailability::PermissionError
+            } else {
+                RootAvailability::Offline
+            };
+            let _ = database.mark_root_unavailable(root.id.clone(), availability);
+            emit_library_changed(app, "root-unavailable", Some(root.id), Vec::new());
+            return Err(error);
         }
-        scanned_files += 1;
-        let current_path = entry.path().to_string_lossy().into_owned();
-        let Some(extension) = AudioExtension::from_path(entry.path()) else {
-            emit_progress(&ScanProgress {
-                scanned_files,
-                discovered_tracks: tracks.len() as u64,
-                current_path: Some(current_path),
-            });
-            continue;
-        };
-        let canonical_path = match canonical_track_path(&root, &current_path) {
-            Ok(path) => path,
-            Err(error) => {
-                warnings.push(format!("Skipped file {current_path}: {}", error.message));
-                continue;
-            }
-        };
-        let metadata = match canonical_path.metadata() {
-            Ok(metadata) => metadata,
-            Err(error) => {
-                warnings.push(format!("Skipped unreadable file {current_path}: {error}"));
-                continue;
-            }
-        };
-        let audio = probe_audio_metadata(&canonical_path, &extension);
-        tracks.push(TrackSummary {
-            id: track_id(&canonical_path),
-            path: canonical_path.to_string_lossy().into_owned(),
-            title: display_title(&canonical_path),
-            extension,
-            file_size: metadata.len(),
-            duration_ms: audio.duration_ms,
-            sample_rate: audio.sample_rate,
-            channels: audio.channels,
-            bit_depth: audio.bit_depth,
-        });
-        emit_progress(&ScanProgress {
-            scanned_files,
-            discovered_tracks: tracks.len() as u64,
-            current_path: Some(current_path),
-        });
-    }
-    tracks.sort_by(|left, right| left.path.cmp(&right.path));
-    emit_progress(&ScanProgress {
-        scanned_files,
-        discovered_tracks: tracks.len() as u64,
-        current_path: None,
-    });
+    };
+    let warnings = scanned.warnings.clone();
+    let canonical_root = scanned.canonical_root.clone();
+    let tracks = database.reconcile(root.id.clone(), scanned)?;
+    let track_ids = tracks.iter().map(|track| track.id.clone()).collect();
+    emit_library_changed(app, "root-reconciled", Some(root.id.clone()), track_ids);
     Ok(LibraryScan {
-        root: root.to_string_lossy().into_owned(),
+        root_id: root.id,
+        root: canonical_root,
         tracks,
         warnings,
     })
@@ -400,29 +361,43 @@ where
 
 #[tauri::command]
 #[specta::specta]
-fn scan_library(
-    app: AppHandle,
+fn query_catalog_tracks(
     state: State<'_, AppState>,
-    root: String,
-) -> Result<LibraryScan, AppError> {
-    let scan = scan_library_at(Path::new(&root), |progress| {
-        let _ = app.emit(SCAN_PROGRESS_EVENT, progress);
-    })?;
-    *state
-        .library_root
-        .write()
-        .map_err(|_| AppError::state_unavailable("library-root"))? =
-        Some(PathBuf::from(&scan.root));
-    Ok(scan)
+    query: CatalogQuery,
+) -> Result<TrackPage, AppError> {
+    state.database.query_tracks(query)
 }
 
-fn active_library_root(state: &AppState) -> Result<PathBuf, AppError> {
+fn emit_library_changed(
+    app: &AppHandle,
+    kind: &str,
+    root_id: Option<String>,
+    track_ids: Vec<String>,
+) {
+    let _ = app.emit(
+        LIBRARY_CHANGED_EVENT,
+        LibraryChanged {
+            kind: kind.to_owned(),
+            root_id,
+            track_ids,
+        },
+    );
+}
+
+fn resolve_playback_track(
+    state: &AppState,
+    requested_path: &str,
+) -> Result<(String, PathBuf), AppError> {
+    let canonical = Path::new(requested_path).canonicalize().map_err(|error| {
+        AppError::new(
+            "track-unavailable",
+            "The requested track could not be accessed.",
+        )
+        .with_context("reason", error)
+    })?;
     state
-        .library_root
-        .read()
-        .map_err(|_| AppError::state_unavailable("library-root"))?
-        .clone()
-        .ok_or_else(AppError::library_not_selected)
+        .database
+        .resolve_track(canonical.to_string_lossy().into_owned())
 }
 
 fn emit_playback_state(app: &AppHandle, state: &PlaybackState) {
@@ -440,15 +415,8 @@ fn play_track(
     state: State<'_, AppState>,
     path: String,
 ) -> Result<PlaybackState, AppError> {
-    let root = match active_library_root(&state) {
-        Ok(root) => root,
-        Err(error) => {
-            emit_playback_error(&app, &error);
-            return Err(error);
-        }
-    };
-    let path = match canonical_track_path(&root, &path) {
-        Ok(path) => path,
+    let (track_id, path) = match resolve_playback_track(&state, &path) {
+        Ok(track) => track,
         Err(error) => {
             emit_playback_error(&app, &error);
             return Err(error);
@@ -475,7 +443,7 @@ fn play_track(
         .playback
         .lock()
         .map_err(|_| AppError::state_unavailable("playback-engine"))?;
-    engine.prepare_track(&path, track_id(&path));
+    engine.prepare_track(&path, track_id);
     emit_playback_state(&app, &engine.state);
     if let Err(error) = engine.start_prepared_track(&path, source_bit_depth) {
         let error = AppError::from_audio(error, Some(&path));
@@ -628,12 +596,11 @@ fn get_playback_state(state: State<'_, AppState>) -> Result<PlaybackState, AppEr
 #[tauri::command]
 #[specta::specta]
 fn get_desktop_state(state: State<'_, AppState>) -> Result<DesktopState, AppError> {
-    let library_root = state
-        .library_root
-        .read()
-        .map_err(|_| AppError::state_unavailable("library-root"))?
-        .as_ref()
-        .map(|path| path.to_string_lossy().into_owned());
+    let library_roots = state.database.list_roots()?;
+    let library_root = library_roots
+        .iter()
+        .find(|root| root.enabled)
+        .map(|root| root.path.clone());
     let mut engine = state
         .playback
         .lock()
@@ -642,6 +609,7 @@ fn get_desktop_state(state: State<'_, AppState>) -> Result<DesktopState, AppErro
     let playback = engine.state.clone();
     Ok(DesktopState {
         library_root,
+        library_roots,
         playback,
     })
 }
@@ -683,26 +651,39 @@ fn shutdown_playback(state: &AppState) {
 fn ipc_bindings() -> Builder<tauri::Wry> {
     Builder::<tauri::Wry>::new()
         .commands(collect_commands![
+            add_library_root,
             get_desktop_state,
             get_playback_state,
+            list_library_roots,
             list_audio_output_devices,
             pause_playback,
             play_track,
+            query_catalog_tracks,
+            remove_library_root,
+            rescan_library_root,
             resume_playback,
+            restore_library_root,
             scan_library,
             select_audio_output_device,
             seek_playback,
             set_hifi_mode,
+            set_library_root_enabled,
             set_volume,
             stop_playback
         ])
         .typ::<AppError>()
         .typ::<AudioOutputDevice>()
         .typ::<AudioOutputState>()
+        .typ::<CatalogQuery>()
+        .typ::<LibraryChanged>()
+        .typ::<LibraryRoot>()
         .typ::<LibraryScan>()
-        .typ::<TrackSummary>()
         .typ::<PlaybackState>()
         .typ::<ScanProgress>()
+        .typ::<SortDirection>()
+        .typ::<TrackPage>()
+        .typ::<TrackSort>()
+        .typ::<TrackSummary>()
         .dangerously_cast_bigints_to_number()
 }
 
@@ -725,8 +706,11 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
-        .manage(AppState::default())
         .setup(|app| {
+            let app_data = app.path().app_data_dir()?;
+            let database = DatabaseWorker::start(app_data.join("bebop.sqlite3"))
+                .map_err(|error| std::io::Error::other(error.message))?;
+            app.manage(AppState::new(database));
             let state = app.state::<AppState>();
             spawn_playback_monitor(app.handle().clone(), &state);
             Ok(())
@@ -779,32 +763,44 @@ mod tests {
         assert!(
             scan.tracks
                 .iter()
-                .all(|track| track.id.starts_with("track-"))
+                .all(|track| !track.relative_path.starts_with('.'))
         );
         assert!(
             scan.tracks
                 .iter()
-                .all(|track| Path::new(&track.path).is_absolute())
+                .all(|track| Path::new(&track.canonical_path).is_absolute())
         );
         fs::remove_dir_all(root).expect("remove fixture");
     }
 
     #[test]
-    fn canonical_track_paths_cannot_escape_the_active_library() {
-        let root = temporary_directory("root");
-        let outside_root = temporary_directory("outside");
-        let inside = root.join("inside.mp3");
-        let outside = outside_root.join("outside.mp3");
-        fs::write(&inside, b"inside").expect("write inside fixture");
-        fs::write(&outside, b"outside").expect("write outside fixture");
-        let canonical_root = root.canonicalize().expect("canonical root");
-        assert!(canonical_track_path(&canonical_root, &inside.to_string_lossy()).is_ok());
-        assert!(matches!(
-            canonical_track_path(&canonical_root, &outside.to_string_lossy()),
-            Err(AppError { code, .. }) if code == "track-outside-library"
-        ));
+    fn reconciliation_preserves_database_track_ids_across_rescans() {
+        let root = temporary_directory("persistent-ids");
+        fs::write(root.join("inside.mp3"), b"inside").expect("write fixture");
+        let database = DatabaseWorker::in_memory().expect("database starts");
+        let library_root = database
+            .add_root(
+                root.canonicalize()
+                    .expect("canonical root")
+                    .to_string_lossy()
+                    .into_owned(),
+                "Music".into(),
+            )
+            .expect("root added");
+        let first = database
+            .reconcile(
+                library_root.id.clone(),
+                scan_library_at(&root, |_| {}).expect("first scan"),
+            )
+            .expect("first reconciliation");
+        let second = database
+            .reconcile(
+                library_root.id,
+                scan_library_at(&root, |_| {}).expect("second scan"),
+            )
+            .expect("second reconciliation");
+        assert_eq!(first[0].id, second[0].id);
         fs::remove_dir_all(root).expect("remove root fixture");
-        fs::remove_dir_all(outside_root).expect("remove outside fixture");
     }
 
     #[test]

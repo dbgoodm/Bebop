@@ -35,7 +35,9 @@ vi.mock('@/hooks/useLibraryScan', () => ({
     library: {
       phase: 'complete',
       root: '/music',
+      roots: [],
       tracks: [mocks.track],
+      totalTracks: 1,
       warnings: [],
       progress: null,
       error: null,

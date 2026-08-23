@@ -1,14 +1,15 @@
-# Bebop vertical-slice architecture
+# Bebop persistent-catalog architecture
 
 ## Scope
 
-This milestone is deliberately local-first. A user selects a folder, Rust scans supported audio
-files, React renders the returned summaries, and Rust owns decoding/playback. There is no media
-upload, database, watcher, tag editor, cloud catalog, or acquisition service.
+This milestone remains local-first. Rust owns a persistent SQLite catalog in Tauri's application
+data directory, indexes multiple user-selected roots, and owns decoding/playback. Music folders
+contain only the user's media; Bebop never places its database inside a library root.
 
 ```text
 React pages/hooks
-  ├─ Tauri dialog → scan_library(root) → Rust scanner → TrackSummary[]
+  ├─ root commands → Rust scanner → reconciliation transaction → SQLite worker
+  ├─ bounded catalog queries ← pagination/search/sort/filter ← SQLite worker
   └─ generated IPC → playback commands → Rust PlaybackEngine → Rodio / CPAL → output device
                          ↑                                      │
                          └──── Tauri events: state, position, ended, error ────┘
@@ -20,10 +21,16 @@ the UI's source of truth.
 
 ## Library boundaries
 
-`scan_library` canonicalizes the selected root before storing it. It walks recursively without
-following symlink loops and skips hidden, unreadable, and unsupported files. Each track ID is
-derived from its canonical path. Before playback, Rust canonicalizes the requested path again and
-rejects anything outside the active root.
+Root paths are canonicalized before storage. Scans walk recursively without following symlink
+loops and skip hidden, unreadable, and unsupported files. Reconciliation upserts by root and
+relative path while public track identities remain database UUIDs. Before playback, Rust
+canonicalizes the opaque frontend path and resolves it against an available track in an enabled
+root. Temporarily unavailable roots and their identities remain in the catalog.
+
+SQLite is bundled through `rusqlite` and owned by one worker thread/connection. Foreign keys and
+WAL mode are enabled on startup. Schema changes use ordered migrations, and an existing database is
+backed up in the application-data directory before an upgrade. Catalog queries are limited to 500
+rows and use stable identity tie-breakers; React restores a bounded first page on startup.
 
 Supported extensions are `flac`, `wav`, `mp3`, and `ogg`. Scans return filename-derived titles,
 path, extension, file size, and available duration/sample-rate/channel/bit-depth data.
@@ -52,8 +59,8 @@ matching the decoded track's rate and channel count; it falls back to the device
 when necessary. Switching tracks or stopping releases the previous decoder, sink, and stream.
 
 Hi-fi mode locks Bebop software gain to unity. To change volume or mute, choose **Allow software
-volume** in the output-path notice; this switches out of hi-fi mode and stops the active track so
-the next selection uses the new policy. The UI reports whether Rodio is resampling and never
+volume** in the output-path notice; this switches the running stream to adjustable software gain
+without interrupting the active track. The UI reports whether Rodio is resampling and never
 labels a shared PipeWire/PulseAudio or Windows shared-mode path as bit-perfect.
 
 The visualizer is intentionally passive for native playback. Spectrum transport is deferred;
@@ -90,6 +97,6 @@ and Windows NSIS bundle. Hardware audio is intentionally outside CI coverage.
 
 ## Deferred work
 
-SQLite persistence, embedded tag editing, MusicBrainz, file watching, native spectrum samples,
-Last.fm, Discord presence, acquisition, installers beyond CI bundles, code signing, and
-auto-updates remain deferred.
+Embedded tag indexing/editing, MusicBrainz, file watching, native spectrum samples, Last.fm,
+Discord presence, acquisition, installers beyond CI bundles, code signing, and auto-updates remain
+deferred to later stages in the V2 plan.

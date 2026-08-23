@@ -4,16 +4,23 @@ import { invoke as __TAURI_INVOKE } from "@tauri-apps/api/core";
 
 /** Commands */
 export const commands = {
+	addLibraryRoot: (path: string, label: string | null) => typedError<LibraryScan, AppError_Serialize>(__TAURI_INVOKE("add_library_root", { path, label })),
 	getDesktopState: () => typedError<DesktopState, AppError_Serialize>(__TAURI_INVOKE("get_desktop_state")),
 	getPlaybackState: () => typedError<PlaybackState, AppError_Serialize>(__TAURI_INVOKE("get_playback_state")),
+	listLibraryRoots: () => typedError<LibraryRoot[], AppError_Serialize>(__TAURI_INVOKE("list_library_roots")),
 	listAudioOutputDevices: () => typedError<AudioOutputDevice[], AppError_Serialize>(__TAURI_INVOKE("list_audio_output_devices")),
 	pausePlayback: () => typedError<PlaybackState, AppError_Serialize>(__TAURI_INVOKE("pause_playback")),
 	playTrack: (path: string) => typedError<PlaybackState, AppError_Serialize>(__TAURI_INVOKE("play_track", { path })),
+	queryCatalogTracks: (query: CatalogQuery) => typedError<TrackPage, AppError_Serialize>(__TAURI_INVOKE("query_catalog_tracks", { query })),
+	removeLibraryRoot: (rootId: string, confirmed: boolean) => typedError<null, AppError_Serialize>(__TAURI_INVOKE("remove_library_root", { rootId, confirmed })),
+	rescanLibraryRoot: (rootId: string) => typedError<LibraryScan, AppError_Serialize>(__TAURI_INVOKE("rescan_library_root", { rootId })),
 	resumePlayback: () => typedError<PlaybackState, AppError_Serialize>(__TAURI_INVOKE("resume_playback")),
+	restoreLibraryRoot: (rootId: string) => typedError<LibraryScan, AppError_Serialize>(__TAURI_INVOKE("restore_library_root", { rootId })),
 	scanLibrary: (root: string) => typedError<LibraryScan, AppError_Serialize>(__TAURI_INVOKE("scan_library", { root })),
 	selectAudioOutputDevice: (deviceId: string | null) => typedError<AudioOutputDevice[], AppError_Serialize>(__TAURI_INVOKE("select_audio_output_device", { deviceId })),
 	seekPlayback: (positionMs: number) => typedError<PlaybackState, AppError_Serialize>(__TAURI_INVOKE("seek_playback", { positionMs })),
 	setHifiMode: (enabled: boolean) => typedError<PlaybackState, AppError_Serialize>(__TAURI_INVOKE("set_hifi_mode", { enabled })),
+	setLibraryRootEnabled: (rootId: string, enabled: boolean) => typedError<LibraryRoot, AppError_Serialize>(__TAURI_INVOKE("set_library_root_enabled", { rootId, enabled })),
 	setVolume: (volume: number | null) => typedError<PlaybackState, AppError_Serialize>(__TAURI_INVOKE("set_volume", { volume })),
 	stopPlayback: () => typedError<PlaybackState, AppError_Serialize>(__TAURI_INVOKE("stop_playback")),
 };
@@ -59,12 +66,41 @@ export type AudioOutputState = {
 	disclosure: string,
 };
 
+export type CatalogQuery = {
+	rootId: string | null,
+	search: string | null,
+	available: boolean | null,
+	sort: TrackSort,
+	direction: SortDirection,
+	offset: number,
+	limit: number,
+};
+
 export type DesktopState = {
 	libraryRoot: string | null,
+	libraryRoots: LibraryRoot[],
 	playback: PlaybackState,
 };
 
+export type LibraryChanged = {
+	kind: string,
+	rootId: string | null,
+	trackIds: string[],
+};
+
+export type LibraryRoot = {
+	id: string,
+	path: string,
+	label: string,
+	enabled: boolean,
+	availability: RootAvailability,
+	watchMode: WatchMode,
+	trackCount: number,
+	lastScanAt: string | null,
+};
+
 export type LibraryScan = {
+	rootId: string,
 	root: string,
 	tracks: TrackSummary[],
 	warnings: string[],
@@ -84,15 +120,30 @@ export type PlaybackState = {
 
 export type PlaybackStatus = "stopped" | "loading" | "playing" | "paused" | "ended" | "error";
 
+export type RootAvailability = "online" | "offline" | "permission-error";
+
 export type ScanProgress = {
 	scannedFiles: number,
 	discoveredTracks: number,
 	currentPath: string | null,
 };
 
+export type SortDirection = "ascending" | "descending";
+
+export type TrackPage = {
+	items: TrackSummary[],
+	total: number,
+	offset: number,
+	limit: number,
+};
+
+export type TrackSort = "title" | "path" | "date-added" | "last-modified";
+
 export type TrackSummary = {
 	id: string,
+	rootId: string,
 	path: string,
+	relativePath: string,
 	title: string,
 	extension: AudioExtension,
 	fileSize: number,
@@ -100,7 +151,10 @@ export type TrackSummary = {
 	sampleRate: number | null,
 	channels: number | null,
 	bitDepth: number | null,
+	available: boolean,
 };
+
+export type WatchMode = "native" | "poll" | "manual";
 
 /* Tauri Specta runtime */
 async function typedError<T, E>(result: Promise<T>): Promise<{ status: "ok"; data: T } | { status: "error"; error: E }> {

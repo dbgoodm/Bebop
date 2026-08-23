@@ -27,7 +27,7 @@ function formatDuration(seconds: number, zeroLabel = '0m') {
 
 export function DesktopLibraryPage() {
   const { currentTheme } = useTheme();
-  const { library, selectAndScan } = useLibraryScan();
+  const { library, selectAndScan, setRootEnabled, rescanRoot, removeRoot } = useLibraryScan();
   const nativePlayback = useNativePlayback();
   const [activeTab, setActiveTab] = useState<NavTab>('HOME');
   const [searchQuery, setSearchQuery] = useState('');
@@ -358,6 +358,66 @@ export function DesktopLibraryPage() {
                 {library.root ? 'Choose another folder' : 'Select music folder'}
               </button>
             </header>
+
+            {library.roots.length > 0 && (
+              <section aria-label="Library roots" className="grid gap-3 lg:grid-cols-2">
+                {library.roots.map((root) => (
+                  <article
+                    key={root.id}
+                    className="rounded border border-neutral-800 bg-neutral-950/50 p-4 text-sm"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="min-w-0">
+                        <p className="truncate font-semibold text-white">{root.label}</p>
+                        <p className="mt-1 truncate font-mono text-xs text-neutral-500">
+                          {root.path}
+                        </p>
+                        <p className="mt-2 text-xs text-neutral-400">
+                          {root.trackCount.toLocaleString()} tracks · {root.availability}
+                        </p>
+                      </div>
+                      <span
+                        className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${
+                          root.availability === 'online' ? 'bg-emerald-400' : 'bg-amber-400'
+                        }`}
+                        aria-label={root.availability}
+                      />
+                    </div>
+                    <div className="mt-4 flex flex-wrap gap-3 text-xs font-semibold">
+                      <button
+                        type="button"
+                        className="text-amber-300 underline"
+                        onClick={() => void rescanRoot(root.id)}
+                      >
+                        Rescan
+                      </button>
+                      <button
+                        type="button"
+                        className="text-neutral-300 underline"
+                        onClick={() => void setRootEnabled(root.id, !root.enabled)}
+                      >
+                        {root.enabled ? 'Disable' : 'Restore'}
+                      </button>
+                      <button
+                        type="button"
+                        className="text-red-300 underline"
+                        onClick={() => {
+                          if (
+                            window.confirm(
+                              `Remove ${root.label} from Bebop? Music files will not be deleted.`,
+                            )
+                          ) {
+                            void removeRoot(root.id);
+                          }
+                        }}
+                      >
+                        Remove from catalog
+                      </button>
+                    </div>
+                  </article>
+                ))}
+              </section>
+            )}
 
             {isScanning && (
               <div

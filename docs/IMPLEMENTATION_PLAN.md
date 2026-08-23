@@ -1,5 +1,7 @@
 # Bebop clean rebuild and vertical-slice plan
 
+The completed vertical slice continues in the [Bebop V2 implementation plan](IMPLEMENTATION_PLAN_V2.md).
+
 ## Goal
 
 Rebuild Bebop as a local-first Tauri 2 music player. `Bebop-Qwen/` is an immutable,

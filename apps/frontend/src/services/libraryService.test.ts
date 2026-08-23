@@ -3,7 +3,9 @@ import { toLibrarySnapshot, toTrackItem } from './libraryService';
 
 const scannedTrack = {
   id: 'track-abc',
+  rootId: 'root-abc',
   path: '/music/Artist/Example.flac',
+  relativePath: 'Artist/Example.flac',
   title: 'Example',
   extension: 'flac' as const,
   fileSize: 9_600_000,
@@ -11,6 +13,7 @@ const scannedTrack = {
   sampleRate: 96_000,
   channels: 2,
   bitDepth: 24,
+  available: true,
 };
 
 describe('library scan adapter', () => {
@@ -29,7 +32,12 @@ describe('library scan adapter', () => {
 
   it('reports a partial result when Rust skips inaccessible paths', () => {
     const snapshot = toLibrarySnapshot(
-      { root: '/music', tracks: [scannedTrack], warnings: ['Skipped unreadable file'] },
+      {
+        rootId: 'root-abc',
+        root: '/music',
+        tracks: [scannedTrack],
+        warnings: ['Skipped unreadable file'],
+      },
       null,
     );
     expect(snapshot.phase).toBe('partial-error');

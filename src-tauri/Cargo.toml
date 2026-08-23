@@ -18,7 +18,9 @@ path = "src/main.rs"
 tauri-build = { version = "2.6.3", features = [] }
 
 [dependencies]
+chrono = { version = "0.4.42", default-features = false, features = ["clock", "serde"] }
 rodio = { version = "=0.21.1", default-features = false, features = ["playback", "flac", "mp3", "vorbis", "wav"] }
+rusqlite = { version = "0.37.0", features = ["backup", "bundled"] }
 serde = { version = "1", features = ["derive"] }
 sha2 = "0.10.9"
 specta = { version = "=2.0.0-rc.25", features = ["derive"] }
@@ -28,4 +30,5 @@ tauri = { version = "2.11.5", features = [] }
 tauri-plugin-dialog = "2.7.2"
 tauri-plugin-fs = "2.5.1"
 tauri-specta = { version = "=2.0.0-rc.25", features = ["typescript"] }
+uuid = { version = "1.18.1", features = ["v4", "serde"] }
 walkdir = "2.5.0"
