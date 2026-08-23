@@ -129,6 +129,18 @@ vi.mock('@/services/playerStateService', () => ({
   saveLibraryViewPreference: vi.fn(),
 }));
 
+vi.mock('@/services/integrationService', () => ({
+  loadIntegrations: () =>
+    Promise.resolve({
+      settings: { lastfmEnabled: false, discordEnabled: false, discordDetail: 'full' },
+      statuses: [],
+    }),
+  saveIntegrationSettings: vi.fn(),
+  connectLastFm: vi.fn(),
+  disconnectLastFm: vi.fn(),
+  subscribeIntegrationStatus: () => Promise.resolve(() => undefined),
+}));
+
 vi.mock('@/components/molecules/TopNavRail', () => ({
   TopNavRail: ({
     onTabChange,

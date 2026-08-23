@@ -33,6 +33,14 @@ import {
   setTrackFavorite,
 } from '@/services/playerStateService';
 import type { HomeSnapshot, PlaylistSummary } from '@/services/tauri-bindings';
+import type { IntegrationSettings, IntegrationStatus } from '@/services/tauri-bindings';
+import {
+  connectLastFm,
+  disconnectLastFm,
+  loadIntegrations,
+  saveIntegrationSettings,
+  subscribeIntegrationStatus,
+} from '@/services/integrationService';
 import type {
   AlbumItem,
   ArtistItem,
@@ -79,6 +87,13 @@ export function DesktopLibraryPage() {
   const [playlists, setPlaylists] = useState<PlaylistSummary[]>([]);
   const [playlistName, setPlaylistName] = useState('');
   const [visualizationEnabled, setVisualizationEnabled] = useState(true);
+  const [integrationSettings, setIntegrationSettings] = useState<IntegrationSettings>({
+    lastfmEnabled: false,
+    discordEnabled: false,
+    discordDetail: 'full',
+  });
+  const [integrationStatuses, setIntegrationStatuses] = useState<IntegrationStatus[]>([]);
+  const [lastFmSessionKey, setLastFmSessionKey] = useState('');
   const [librarySubTab, setLibrarySubTab] = useState<LibrarySubTab>('tracks');
   const resumeRef = useRef<{ trackId: string | null; positionMs: number }>({
     trackId: null,
@@ -221,6 +236,58 @@ export function DesktopLibraryPage() {
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    let disposed = false;
+    let unlisten: (() => void) | undefined;
+    void subscribeIntegrationStatus((next) => {
+      setIntegrationStatuses((current) => [
+        ...current.filter((status) => status.service !== next.service),
+        next,
+      ]);
+    })
+      .then((cleanup) => {
+        if (disposed) cleanup();
+        else unlisten = cleanup;
+      })
+      .catch(() => undefined);
+    return () => {
+      disposed = true;
+      unlisten?.();
+    };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    void loadIntegrations()
+      .then(({ settings, statuses }) => {
+        if (!active) return;
+        setIntegrationSettings(settings);
+        setIntegrationStatuses(statuses);
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const updateIntegrations = useCallback(async (next: IntegrationSettings) => {
+    setIntegrationSettings(next);
+    try {
+      setIntegrationSettings(await saveIntegrationSettings(next));
+      const refreshed = await loadIntegrations();
+      setIntegrationStatuses(refreshed.statuses);
+    } catch {
+      const restored = await loadIntegrations().catch(() => null);
+      if (restored) {
+        setIntegrationSettings(restored.settings);
+        setIntegrationStatuses(restored.statuses);
+      }
+    }
+  }, []);
+
+  const lastFmStatus = integrationStatuses.find((status) => status.service === 'lastfm');
+  const discordStatus = integrationStatuses.find((status) => status.service === 'discord');
 
   useEffect(() => {
     if (!playerStateLoaded) return;
@@ -699,6 +766,105 @@ export function DesktopLibraryPage() {
                   ))}
                 </div>
               )}
+            </div>
+            <div className="rounded border border-neutral-800 bg-neutral-950/50 p-5 text-sm text-neutral-300">
+              <h2 className="text-sm font-semibold text-white">Optional online integrations</h2>
+              <p className="mt-1 text-xs text-neutral-500">
+                Disabled by default. Integration failures never interrupt local playback.
+              </p>
+              <div className="mt-4 space-y-4">
+                <div className="rounded border border-neutral-800 p-3">
+                  <label className="flex items-center justify-between gap-3">
+                    <span>
+                      <span className="block font-semibold text-white">Last.fm scrobbling</span>
+                      <span className="text-xs text-neutral-500">
+                        {lastFmStatus?.configured
+                          ? `${lastFmStatus.pendingJobs} queued scrobbles`
+                          : 'Requires a release API key and account session'}
+                      </span>
+                    </span>
+                    <input
+                      type="checkbox"
+                      checked={integrationSettings.lastfmEnabled ?? false}
+                      onChange={(event) =>
+                        void updateIntegrations({
+                          ...integrationSettings,
+                          lastfmEnabled: event.target.checked,
+                        })
+                      }
+                    />
+                  </label>
+                  <div className="mt-3 flex gap-2">
+                    <input
+                      type="password"
+                      value={lastFmSessionKey}
+                      onChange={(event) => setLastFmSessionKey(event.target.value)}
+                      placeholder="Last.fm session key"
+                      autoComplete="off"
+                      className="min-w-0 flex-1 rounded border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs text-white"
+                    />
+                    <button
+                      type="button"
+                      disabled={!lastFmSessionKey.trim()}
+                      onClick={() => {
+                        const key = lastFmSessionKey;
+                        setLastFmSessionKey('');
+                        void connectLastFm(key).then(setIntegrationStatuses);
+                      }}
+                      className="rounded border border-neutral-700 px-3 py-2 text-xs disabled:opacity-40"
+                    >
+                      Store in OS credentials
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void disconnectLastFm().then(setIntegrationStatuses)}
+                      className="rounded border border-neutral-700 px-3 py-2 text-xs"
+                    >
+                      Disconnect
+                    </button>
+                  </div>
+                </div>
+                <div className="rounded border border-neutral-800 p-3">
+                  <label className="flex items-center justify-between gap-3">
+                    <span>
+                      <span className="block font-semibold text-white">Discord Rich Presence</span>
+                      <span className="text-xs text-neutral-500">
+                        {discordStatus?.configured
+                          ? discordStatus.connected
+                            ? 'Connected'
+                            : 'Ready when Discord is running'
+                          : 'Requires a release application ID'}
+                      </span>
+                    </span>
+                    <input
+                      type="checkbox"
+                      checked={integrationSettings.discordEnabled ?? false}
+                      onChange={(event) =>
+                        void updateIntegrations({
+                          ...integrationSettings,
+                          discordEnabled: event.target.checked,
+                        })
+                      }
+                    />
+                  </label>
+                  <label className="mt-3 block text-xs text-neutral-500">
+                    Shared detail
+                    <select
+                      value={integrationSettings.discordDetail ?? 'full'}
+                      onChange={(event) =>
+                        void updateIntegrations({
+                          ...integrationSettings,
+                          discordDetail: event.target.value,
+                        })
+                      }
+                      className="mt-1 block rounded border border-neutral-700 bg-neutral-900 px-2 py-1 text-neutral-200"
+                    >
+                      <option value="full">Title, artist, album, and time</option>
+                      <option value="private">Only “Listening locally”</option>
+                    </select>
+                  </label>
+                </div>
+              </div>
             </div>
           </div>
         )}

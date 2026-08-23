@@ -7,7 +7,9 @@ export const commands = {
 	addLibraryRoot: (path: string, label: string | null) => typedError<LibraryScan, AppError_Serialize>(__TAURI_INVOKE("add_library_root", { path, label })),
 	applyMusicbrainzCandidate: (trackId: string, candidate: EnrichmentCandidate) => typedError<MetadataPatch, AppError_Serialize>(__TAURI_INVOKE("apply_musicbrainz_candidate", { trackId, candidate })),
 	cleanupMissingTracks: (rootId: string | null, confirmed: boolean) => typedError<number, AppError_Serialize>(__TAURI_INVOKE("cleanup_missing_tracks", { rootId, confirmed })),
+	configureLastfmSession: (sessionKey: string) => typedError<IntegrationStatus_Serialize[], AppError_Serialize>(__TAURI_INVOKE("configure_lastfm_session", { sessionKey })),
 	createPlaylist: (name: string) => typedError<PlaylistSummary, AppError_Serialize>(__TAURI_INVOKE("create_playlist", { name })),
+	disconnectLastfm: () => typedError<IntegrationStatus_Serialize[], AppError_Serialize>(__TAURI_INVOKE("disconnect_lastfm")),
 	getAlbumDetail: (albumId: string) => typedError<AlbumDetail, AppError_Serialize>(__TAURI_INVOKE("get_album_detail", { albumId })),
 	getArtistDetail: (artistId: string) => typedError<ArtistDetail, AppError_Serialize>(__TAURI_INVOKE("get_artist_detail", { artistId })),
 	getDesktopState: () => typedError<DesktopState, AppError_Serialize>(__TAURI_INVOKE("get_desktop_state")),
@@ -30,6 +32,8 @@ export const commands = {
 	artworkId: string | null,
 } | null, AppError_Serialize>(__TAURI_INVOKE("get_metadata_draft", { trackId })),
 	getHomeSnapshot: () => typedError<HomeSnapshot, AppError_Serialize>(__TAURI_INVOKE("get_home_snapshot")),
+	getIntegrationSettings: () => typedError<IntegrationSettings, AppError_Serialize>(__TAURI_INVOKE("get_integration_settings")),
+	getIntegrationStatuses: () => typedError<IntegrationStatus_Serialize[], AppError_Serialize>(__TAURI_INVOKE("get_integration_statuses")),
 	getPersistentPlayerState: () => typedError<PersistentPlayerState, AppError_Serialize>(__TAURI_INVOKE("get_persistent_player_state")),
 	getPlaylistTracks: (playlistId: string) => typedError<TrackSummary[], AppError_Serialize>(__TAURI_INVOKE("get_playlist_tracks", { playlistId })),
 	getMusicbrainzEnabled: () => __TAURI_INVOKE<boolean>("get_musicbrainz_enabled"),
@@ -58,6 +62,7 @@ export const commands = {
 	selectAudioOutputDevice: (deviceId: string | null) => typedError<AudioOutputDevice[], AppError_Serialize>(__TAURI_INVOKE("select_audio_output_device", { deviceId })),
 	seekPlayback: (positionMs: number) => typedError<PlaybackState, AppError_Serialize>(__TAURI_INVOKE("seek_playback", { positionMs })),
 	setHifiMode: (enabled: boolean) => typedError<PlaybackState, AppError_Serialize>(__TAURI_INVOKE("set_hifi_mode", { enabled })),
+	setIntegrationSettings: (settings: IntegrationSettings) => typedError<IntegrationSettings, AppError_Serialize>(__TAURI_INVOKE("set_integration_settings", { settings })),
 	setLibraryRootEnabled: (rootId: string, enabled: boolean) => typedError<LibraryRoot, AppError_Serialize>(__TAURI_INVOKE("set_library_root_enabled", { rootId, enabled })),
 	setLibraryViewPreference: (libraryView: string) => typedError<PlayerPreferences, AppError_Serialize>(__TAURI_INVOKE("set_library_view_preference", { libraryView })),
 	setMusicbrainzEnabled: (enabled: boolean) => __TAURI_INVOKE<boolean>("set_musicbrainz_enabled", { enabled }),
@@ -227,6 +232,32 @@ export type HomeSnapshot = {
 	continueListening: TrackSummary[],
 	recentlyAdded: TrackSummary[],
 	rediscover: TrackSummary[],
+};
+
+export type IntegrationSettings = {
+	lastfmEnabled?: boolean,
+	discordEnabled?: boolean,
+	discordDetail?: string,
+};
+
+export type IntegrationStatus = IntegrationStatus_Serialize | IntegrationStatus_Deserialize;
+
+export type IntegrationStatus_Deserialize = {
+	service: string,
+	enabled: boolean,
+	configured: boolean,
+	connected: boolean,
+	pendingJobs: number,
+	lastError: AppError_Deserialize | null,
+};
+
+export type IntegrationStatus_Serialize = {
+	service: string,
+	enabled: boolean,
+	configured: boolean,
+	connected: boolean,
+	pendingJobs: number,
+	lastError: AppError_Serialize | null,
 };
 
 export type LibraryChanged = {

@@ -149,6 +149,26 @@ persisted in SQLite. Settings list real devices and show per-track source bit de
 beside the active output sample format/rate/channels. If a previously selected device disappears,
 playback falls back to the system default and discloses that fallback rather than failing the track.
 
+## Optional integrations
+
+Last.fm and Discord are disabled by default and run on a dedicated integration worker. Release
+builds inject `BEBOP_LASTFM_API_KEY`, `BEBOP_LASTFM_API_SECRET`, and
+`BEBOP_DISCORD_APPLICATION_ID`; these identifiers are absent from ordinary development builds.
+The Last.fm session key is stored under the Bebop service in the operating system credential store
+and is never returned through IPC or written to SQLite.
+
+Starting or resuming a tagged track queues a non-blocking now-playing message. Rust-authoritative
+played time applies Last.fm's half-the-track-or-four-minutes threshold only to tracks longer than 30
+seconds. A listening-session UUID is also the persistent outbox key, so a retry or restart cannot
+create a duplicate scrobble. Offline and temporary failures use bounded exponential backoff; invalid
+payloads are retained as failed instead of retried forever. Filename-only tracks with an Unknown
+Artist are not sent online.
+
+Discord presence is created and cleared by Rust, not React. Full sharing includes title, artist,
+album, and a playback timestamp; private sharing reports only that local listening is active.
+Presence is cleared on pause, stop, disable, exit, and track end. Last.fm, Discord, credential-store,
+and IPC errors update `integration://status` but never propagate into the audio engine.
+
 ## Hardware-audio smoke tests
 
 CI compiles and packages the desktop app but cannot prove physical output, DAC sample-rate
@@ -180,5 +200,5 @@ and Windows NSIS bundle. Hardware audio is intentionally outside CI coverage.
 
 ## Deferred work
 
-Last.fm, Discord presence, acquisition, installers beyond CI bundles, code signing, and auto-updates
-remain deferred to later stages in the V2 plan.
+Acquisition, installers beyond CI bundles, code signing, and auto-updates remain deferred to later
+stages in the V2 plan.

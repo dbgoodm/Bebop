@@ -20,7 +20,10 @@ tauri-build = { version = "2.6.3", features = [] }
 [dependencies]
 chrono = { version = "0.4.42", default-features = false, features = ["clock", "serde"] }
 crossbeam-queue = "0.3.13"
+discord-presence = "3.2.0"
+keyring = "4.1.6"
 lofty = "=0.22.4"
+md5 = "0.8.0"
 notify = "=8.2.0"
 rodio = { version = "=0.21.1", default-features = false, features = ["playback", "flac", "mp3", "mp4", "symphonia-aiff", "symphonia-alac", "vorbis", "wav"] }
 reqwest = { version = "0.12.23", default-features = false, features = ["blocking", "json", "rustls-tls"] }

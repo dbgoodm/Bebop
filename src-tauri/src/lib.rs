@@ -12,12 +12,14 @@ use std::{
 mod audio;
 mod catalog;
 mod enrichment;
+mod integrations;
 mod metadata;
 mod persistence;
 mod spectrum;
 mod user_state;
 mod watcher;
 
+use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use specta::Type;
 #[cfg(any(debug_assertions, test))]
@@ -35,6 +37,10 @@ pub use catalog::{
 use catalog::{probe_audio_metadata, scan_library_at};
 pub use enrichment::{EnrichmentCandidate, EnrichmentJob};
 use enrichment::{MusicBrainzClient, enrich_track, patch_from_candidate};
+use integrations::{
+    IntegrationManager, clear_lastfm_session, qualifies_for_scrobble, set_lastfm_session,
+};
+pub use integrations::{IntegrationSettings, IntegrationStatus};
 pub use metadata::{MetadataPatch, MetadataWriteResult};
 use metadata::{cache_external_artwork, restore_backup, write_patch_atomically};
 use persistence::DatabaseWorker;
@@ -216,6 +222,7 @@ pub struct AppState {
     database: DatabaseWorker,
     artwork_cache: PathBuf,
     musicbrainz: Arc<MusicBrainzClient>,
+    integrations: IntegrationManager,
     watcher: LibraryWatcher,
     listening: Arc<Mutex<Option<ActiveListeningSession>>>,
     playback: Arc<Mutex<PlaybackEngine>>,
@@ -226,13 +233,17 @@ pub struct AppState {
 
 struct ActiveListeningSession {
     id: String,
+    track_id: String,
+    started_at: i64,
     played_ms: u64,
+    scrobble_queued: bool,
     last_tick: Instant,
     last_persisted: Instant,
 }
 
 impl AppState {
     fn new(
+        app: AppHandle,
         database: DatabaseWorker,
         artwork_cache: PathBuf,
         watcher: LibraryWatcher,
@@ -246,6 +257,7 @@ impl AppState {
         );
         playback.set_spectrum_enabled(preferences.visualization_enabled);
         Self {
+            integrations: IntegrationManager::start(app, database.clone()),
             database,
             artwork_cache,
             musicbrainz: Arc::new(MusicBrainzClient::default()),
@@ -477,6 +489,50 @@ fn update_spectrum_enabled(state: &AppState) -> Result<(), AppError> {
         .map_err(|_| AppError::state_unavailable("playback-engine"))?
         .set_spectrum_enabled(enabled);
     Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+fn get_integration_settings(state: State<'_, AppState>) -> Result<IntegrationSettings, AppError> {
+    state.integrations.settings()
+}
+
+#[tauri::command]
+#[specta::specta]
+fn set_integration_settings(
+    state: State<'_, AppState>,
+    settings: IntegrationSettings,
+) -> Result<IntegrationSettings, AppError> {
+    state
+        .integrations
+        .update_settings(&state.database, settings)
+}
+
+#[tauri::command]
+#[specta::specta]
+fn get_integration_statuses(
+    state: State<'_, AppState>,
+) -> Result<Vec<IntegrationStatus>, AppError> {
+    state.integrations.statuses()
+}
+
+#[tauri::command]
+#[specta::specta]
+fn configure_lastfm_session(
+    state: State<'_, AppState>,
+    session_key: String,
+) -> Result<Vec<IntegrationStatus>, AppError> {
+    set_lastfm_session(&session_key)?;
+    state.integrations.refresh();
+    state.integrations.statuses()
+}
+
+#[tauri::command]
+#[specta::specta]
+fn disconnect_lastfm(state: State<'_, AppState>) -> Result<Vec<IntegrationStatus>, AppError> {
+    clear_lastfm_session()?;
+    state.integrations.refresh();
+    state.integrations.statuses()
 }
 
 #[tauri::command]
@@ -1001,18 +1057,43 @@ fn start_active_session(state: &AppState, track_id: String, previous_was_playing
     let id = Uuid::new_v4().to_string();
     if state
         .database
-        .start_listening_session(id.clone(), track_id)
+        .start_listening_session(id.clone(), track_id.clone())
         .is_ok()
     {
         let now = Instant::now();
         if let Ok(mut active) = state.listening.lock() {
             *active = Some(ActiveListeningSession {
                 id,
+                track_id,
+                started_at: Utc::now().timestamp(),
                 played_ms: 0,
+                scrobble_queued: false,
                 last_tick: now,
                 last_persisted: now,
             });
         }
+    }
+}
+
+fn maybe_queue_scrobble(
+    listening: &Mutex<Option<ActiveListeningSession>>,
+    database: &DatabaseWorker,
+    integrations: &IntegrationManager,
+) {
+    let candidate = listening.lock().ok().and_then(|mut active| {
+        let session = active.as_mut()?;
+        if session.scrobble_queued {
+            return None;
+        }
+        let track = database.get_track(session.track_id.clone()).ok()?;
+        if !qualifies_for_scrobble(track.duration_ms.unwrap_or(0), session.played_ms) {
+            return None;
+        }
+        session.scrobble_queued = true;
+        Some((session.id.clone(), track, session.started_at))
+    });
+    if let Some((session_id, track, started_at)) = candidate {
+        integrations.queue_scrobble(session_id, track, started_at);
     }
 }
 
@@ -1087,6 +1168,11 @@ fn play_track(
     let snapshot = engine.state.clone();
     drop(engine);
     start_active_session(&state, track_id.clone(), previous_was_playing);
+    if let Ok(track) = state.database.get_track(track_id.clone()) {
+        state
+            .integrations
+            .now_playing(track, Utc::now().timestamp());
+    }
     let _ = state
         .database
         .save_playback_checkpoint(Some(track_id), snapshot.position_ms);
@@ -1106,6 +1192,7 @@ fn pause_playback(app: AppHandle, state: State<'_, AppState>) -> Result<Playback
     let snapshot = engine.state.clone();
     drop(engine);
     update_active_session(&state.listening, &state.database, was_playing, None);
+    state.integrations.clear_presence();
     let _ = state
         .database
         .save_playback_checkpoint(snapshot.track_id.clone(), snapshot.position_ms);
@@ -1124,6 +1211,13 @@ fn resume_playback(app: AppHandle, state: State<'_, AppState>) -> Result<Playbac
     let snapshot = engine.state.clone();
     drop(engine);
     update_active_session(&state.listening, &state.database, false, None);
+    if let Some(track_id) = &snapshot.track_id
+        && let Ok(track) = state.database.get_track(track_id.clone())
+    {
+        state
+            .integrations
+            .now_playing(track, Utc::now().timestamp());
+    }
     Ok(snapshot)
 }
 
@@ -1147,6 +1241,7 @@ fn stop_playback(app: AppHandle, state: State<'_, AppState>) -> Result<PlaybackS
         was_playing,
         Some((false, true)),
     );
+    state.integrations.clear_presence();
     let _ = state
         .database
         .save_playback_checkpoint(checkpoint_track, checkpoint_position);
@@ -1307,6 +1402,7 @@ fn spawn_playback_monitor(app: AppHandle, state: &AppState) {
     let running = Arc::clone(&state.running);
     let listening = Arc::clone(&state.listening);
     let database = state.database.clone();
+    let integrations = state.integrations.clone();
     thread::spawn(move || {
         let mut last_checkpoint = Instant::now();
         while running.load(Ordering::Acquire) {
@@ -1323,6 +1419,7 @@ fn spawn_playback_monitor(app: AppHandle, state: &AppState) {
             drop(engine);
             if ended {
                 update_active_session(&listening, &database, true, Some((true, false)));
+                integrations.clear_presence();
             } else {
                 update_active_session(
                     &listening,
@@ -1330,6 +1427,7 @@ fn spawn_playback_monitor(app: AppHandle, state: &AppState) {
                     matches!(snapshot.status, PlaybackStatus::Playing),
                     None,
                 );
+                maybe_queue_scrobble(&listening, &database, &integrations);
             }
             if last_checkpoint.elapsed() >= Duration::from_secs(5) {
                 let _ = database
@@ -1381,6 +1479,7 @@ fn spawn_spectrum_emitter(app: AppHandle, state: &AppState) {
 
 fn shutdown_playback(state: &AppState) {
     state.running.store(false, Ordering::Release);
+    state.integrations.shutdown();
     if let Ok(mut engine) = state.playback.lock() {
         let was_playing = matches!(engine.state.status, PlaybackStatus::Playing);
         let _ = state
@@ -1402,12 +1501,16 @@ fn ipc_bindings() -> Builder<tauri::Wry> {
             add_library_root,
             apply_musicbrainz_candidate,
             cleanup_missing_tracks,
+            configure_lastfm_session,
             create_playlist,
+            disconnect_lastfm,
             get_album_detail,
             get_artist_detail,
             get_desktop_state,
             get_metadata_draft,
             get_home_snapshot,
+            get_integration_settings,
+            get_integration_statuses,
             get_persistent_player_state,
             get_playlist_tracks,
             get_musicbrainz_enabled,
@@ -1436,6 +1539,7 @@ fn ipc_bindings() -> Builder<tauri::Wry> {
             select_audio_output_device,
             seek_playback,
             set_hifi_mode,
+            set_integration_settings,
             set_library_root_enabled,
             set_library_view_preference,
             set_musicbrainz_enabled,
@@ -1467,6 +1571,8 @@ fn ipc_bindings() -> Builder<tauri::Wry> {
         .typ::<LibraryRoot>()
         .typ::<LibraryScan>()
         .typ::<HomeSnapshot>()
+        .typ::<IntegrationSettings>()
+        .typ::<IntegrationStatus>()
         .typ::<MetadataPatch>()
         .typ::<MetadataWriteResult>()
         .typ::<PersistentPlayerState>()
@@ -1524,6 +1630,7 @@ pub fn run() {
                     .map_err(|error| std::io::Error::other(error.message))?;
             }
             app.manage(AppState::new(
+                app.handle().clone(),
                 database.clone(),
                 artwork_cache.clone(),
                 watcher,

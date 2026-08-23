@@ -17,6 +17,7 @@ use crate::{
         DiscoveryCatalog, DiscoveryQuery, GenreSummary, LibraryRoot, RootAvailability,
         ScannedLibrary, SortDirection, TrackPage, TrackSort, TrackSummary, WatchMode,
     },
+    integrations::IntegrationJob,
     metadata::{CachedArtwork, MetadataPatch},
     user_state::{
         FavoriteReference, HomeSnapshot, PersistentPlayerState, PlayerPreferences, PlaylistSummary,
@@ -189,6 +190,29 @@ enum Request {
     SetUiPreference {
         key: String,
         value: String,
+        reply: Sender<Result<(), AppError>>,
+    },
+    EnqueueIntegrationJob {
+        id: String,
+        integration: String,
+        kind: String,
+        payload_json: String,
+        reply: Sender<Result<(), AppError>>,
+    },
+    PendingIntegrationJobs {
+        integration: String,
+        limit: u32,
+        reply: Sender<Result<Vec<IntegrationJob>, AppError>>,
+    },
+    CompleteIntegrationJob {
+        id: String,
+        reply: Sender<Result<(), AppError>>,
+    },
+    FailIntegrationJob {
+        id: String,
+        attempts: u32,
+        error: AppError,
+        retry: bool,
         reply: Sender<Result<(), AppError>>,
     },
 }
@@ -521,6 +545,54 @@ impl DatabaseWorker {
     pub(crate) fn set_ui_preference(&self, key: String, value: String) -> Result<(), AppError> {
         self.request(|reply| Request::SetUiPreference { key, value, reply })
     }
+
+    pub(crate) fn enqueue_integration_job(
+        &self,
+        id: String,
+        integration: String,
+        kind: String,
+        payload_json: String,
+    ) -> Result<(), AppError> {
+        self.request(|reply| Request::EnqueueIntegrationJob {
+            id,
+            integration,
+            kind,
+            payload_json,
+            reply,
+        })
+    }
+
+    pub(crate) fn pending_integration_jobs(
+        &self,
+        integration: String,
+        limit: u32,
+    ) -> Result<Vec<IntegrationJob>, AppError> {
+        self.request(|reply| Request::PendingIntegrationJobs {
+            integration,
+            limit,
+            reply,
+        })
+    }
+
+    pub(crate) fn complete_integration_job(&self, id: String) -> Result<(), AppError> {
+        self.request(|reply| Request::CompleteIntegrationJob { id, reply })
+    }
+
+    pub(crate) fn fail_integration_job(
+        &self,
+        id: String,
+        attempts: u32,
+        error: AppError,
+        retry: bool,
+    ) -> Result<(), AppError> {
+        self.request(|reply| Request::FailIntegrationJob {
+            id,
+            attempts,
+            error,
+            retry,
+            reply,
+        })
+    }
 }
 
 fn backup_before_upgrade(database_path: &Path) -> Result<(), AppError> {
@@ -759,6 +831,37 @@ fn database_loop(mut connection: Connection, receiver: Receiver<Request>) {
             Request::SetUiPreference { key, value, reply } => send(
                 reply,
                 write_setting(&connection, &format!("ui.{key}"), &value),
+            ),
+            Request::EnqueueIntegrationJob {
+                id,
+                integration,
+                kind,
+                payload_json,
+                reply,
+            } => send(
+                reply,
+                enqueue_integration_job(&connection, &id, &integration, &kind, &payload_json),
+            ),
+            Request::PendingIntegrationJobs {
+                integration,
+                limit,
+                reply,
+            } => send(
+                reply,
+                pending_integration_jobs(&connection, &integration, limit),
+            ),
+            Request::CompleteIntegrationJob { id, reply } => {
+                send(reply, complete_integration_job(&connection, &id));
+            }
+            Request::FailIntegrationJob {
+                id,
+                attempts,
+                error,
+                retry,
+                reply,
+            } => send(
+                reply,
+                fail_integration_job(&connection, &id, attempts, &error, retry),
             ),
         }
     }
@@ -2442,6 +2545,91 @@ fn hydrate_track_ids(
         .collect()
 }
 
+fn enqueue_integration_job(
+    connection: &Connection,
+    id: &str,
+    integration: &str,
+    kind: &str,
+    payload_json: &str,
+) -> Result<(), AppError> {
+    let now = Utc::now().to_rfc3339();
+    connection
+        .execute(
+            "INSERT OR IGNORE INTO integration_jobs
+             (id, integration, kind, payload_json, status, attempts, available_at, created_at, updated_at)
+             VALUES (?1, ?2, ?3, ?4, 'queued', 0, ?5, ?5, ?5)",
+            params![id, integration, kind, payload_json, now],
+        )
+        .map_err(database_error("enqueue-integration-job"))?;
+    Ok(())
+}
+
+fn pending_integration_jobs(
+    connection: &Connection,
+    integration: &str,
+    limit: u32,
+) -> Result<Vec<IntegrationJob>, AppError> {
+    let mut statement = connection
+        .prepare(
+            "SELECT id, payload_json, attempts FROM integration_jobs
+             WHERE integration = ?1 AND status IN ('queued', 'error') AND available_at <= ?2
+             ORDER BY created_at, id LIMIT ?3",
+        )
+        .map_err(database_error("prepare-integration-jobs"))?;
+    statement
+        .query_map(
+            params![integration, Utc::now().to_rfc3339(), limit],
+            |row| {
+                Ok(IntegrationJob {
+                    id: row.get(0)?,
+                    payload_json: row.get(1)?,
+                    attempts: row.get(2)?,
+                })
+            },
+        )
+        .map_err(database_error("query-integration-jobs"))?
+        .collect::<rusqlite::Result<Vec<_>>>()
+        .map_err(database_error("read-integration-jobs"))
+}
+
+fn complete_integration_job(connection: &Connection, id: &str) -> Result<(), AppError> {
+    connection
+        .execute(
+            "UPDATE integration_jobs SET status = 'complete', last_error_json = NULL,
+             updated_at = ?2 WHERE id = ?1",
+            params![id, Utc::now().to_rfc3339()],
+        )
+        .map_err(database_error("complete-integration-job"))?;
+    Ok(())
+}
+
+fn fail_integration_job(
+    connection: &Connection,
+    id: &str,
+    attempts: u32,
+    error: &AppError,
+    retry: bool,
+) -> Result<(), AppError> {
+    let next_attempt = attempts.saturating_add(1);
+    let delay_seconds = 30_i64.saturating_mul(2_i64.pow(next_attempt.min(10)));
+    let available_at = (Utc::now() + chrono::Duration::seconds(delay_seconds)).to_rfc3339();
+    connection
+        .execute(
+            "UPDATE integration_jobs SET status = ?2, attempts = ?3, available_at = ?4,
+             last_error_json = ?5, updated_at = ?6 WHERE id = ?1",
+            params![
+                id,
+                if retry { "error" } else { "failed" },
+                next_attempt,
+                available_at,
+                serde_json::to_string(error).unwrap_or_else(|_| "{}".into()),
+                Utc::now().to_rfc3339()
+            ],
+        )
+        .map_err(database_error("fail-integration-job"))?;
+    Ok(())
+}
+
 fn resolve_track(
     connection: &Connection,
     canonical_path: &str,
@@ -2479,6 +2667,48 @@ mod tests {
         let worker = DatabaseWorker::in_memory().expect("database starts");
         let roots = worker.list_roots().expect("roots query");
         assert!(roots.is_empty());
+    }
+
+    #[test]
+    fn integration_outbox_is_persistent_and_idempotent() {
+        let worker = DatabaseWorker::in_memory().expect("database starts");
+        worker
+            .enqueue_integration_job(
+                "session-1".into(),
+                "lastfm".into(),
+                "scrobble".into(),
+                "{\"track_id\":\"track-1\"}".into(),
+            )
+            .expect("enqueue scrobble");
+        worker
+            .enqueue_integration_job(
+                "session-1".into(),
+                "lastfm".into(),
+                "scrobble".into(),
+                "{\"track_id\":\"track-1\"}".into(),
+            )
+            .expect("duplicate is ignored");
+        let pending = worker
+            .pending_integration_jobs("lastfm".into(), 50)
+            .expect("pending jobs");
+        assert_eq!(pending.len(), 1);
+        worker
+            .complete_integration_job("session-1".into())
+            .expect("complete job");
+        worker
+            .enqueue_integration_job(
+                "session-1".into(),
+                "lastfm".into(),
+                "scrobble".into(),
+                "{\"track_id\":\"track-1\"}".into(),
+            )
+            .expect("completed duplicate remains ignored");
+        assert!(
+            worker
+                .pending_integration_jobs("lastfm".into(), 50)
+                .expect("no pending jobs")
+                .is_empty()
+        );
     }
 
     #[test]
