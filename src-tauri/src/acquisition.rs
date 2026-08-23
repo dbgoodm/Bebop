@@ -867,6 +867,13 @@ fn ensure_decodable(path: &Path) -> Result<(), AppError> {
 }
 
 fn available_destination(root: &Path, basename: &str) -> Result<PathBuf, AppError> {
+    let relative = Path::new(basename);
+    if relative.components().count() != 1 || relative.file_name().is_none() {
+        return Err(AppError::new(
+            "acquisition-destination-invalid",
+            "The destination filename is not a single safe path component.",
+        ));
+    }
     let candidate = root.join(basename);
     if !candidate.starts_with(root) {
         return Err(AppError::new(
@@ -974,6 +981,25 @@ mod tests {
                 .expect_err("ambiguous files rejected")
                 .code,
             "acquisition-download-ambiguous"
+        );
+    }
+
+    #[test]
+    fn import_guards_reject_invalid_audio_and_escaped_destinations() {
+        let temp = tempfile::tempdir().expect("temp directory");
+        let invalid_audio = temp.path().join("download.flac");
+        fs::write(&invalid_audio, b"not audio").expect("invalid audio fixture");
+        assert_eq!(
+            ensure_decodable(&invalid_audio)
+                .expect_err("malformed download rejected")
+                .code,
+            "acquisition-audio-invalid"
+        );
+        assert_eq!(
+            available_destination(temp.path(), "../escaped.flac")
+                .expect_err("escaped path rejected")
+                .code,
+            "acquisition-destination-invalid"
         );
     }
 }

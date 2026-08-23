@@ -1,16 +1,16 @@
 # Graph Report - Bebop  (2026-08-23)
 
 ## Corpus Check
-- 111 files · ~95,873 words
+- 114 files · ~96,706 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1441 nodes · 4174 edges · 74 communities (55 shown, 19 thin omitted)
-- Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 45 edges (avg confidence: 0.85)
+- 1452 nodes · 4199 edges · 77 communities (56 shown, 21 thin omitted)
+- Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 46 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `d367c2e5`
+- Built from commit: `217d1291`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -82,6 +82,8 @@
 - Releases and signed updates
 - install-bebop
 - build-linux-release-docker
+- reset-local-data script
+- test-reset-local-data
 
 ## God Nodes (most connected - your core abstractions)
 1. `AppState` - 90 edges
@@ -110,7 +112,7 @@
 ## Import Cycles
 - None detected.
 
-## Communities (74 total, 19 thin omitted)
+## Communities (77 total, 21 thin omitted)
 
 ### Community 0 - "PlaybackEngine"
 Cohesion: 0.07
@@ -194,15 +196,15 @@ Nodes (3): For --cluster-only, For --update (incremental re-extraction), graphif
 
 ### Community 34 - "Result"
 Cohesion: 0.06
-Nodes (115): AlbumSummary, ArtistSummary, CatalogSignatures, Connection, GenreSummary, RootAvailability, Row, acquisition_jobs_round_trip_without_exposing_credentials() (+107 more)
+Nodes (120): AlbumSummary, ArtistSummary, CatalogSignatures, Connection, GenreSummary, RootAvailability, Row, AcquisitionRecord (+112 more)
 
 ### Community 35 - "catalog.rs"
 Cohesion: 0.10
 Nodes (42): DirEntry, F, SortDirection, AlbumDetail, AlbumSummary, ArtistDetail, ArtistReference, ArtistSummary (+34 more)
 
 ### Community 36 - "libraryService.ts"
-Cohesion: 0.18
-Nodes (22): AcquisitionPanelProps, useLibraryScan(), chooseLibraryFolder(), defaultCatalogQuery, errorSnapshot(), formatBitrate(), formatDuration(), formatSampleRate() (+14 more)
+Cohesion: 0.15
+Nodes (26): AcquisitionPanelProps, useLibraryScan(), chooseLibraryFolder(), defaultCatalogQuery, errorSnapshot(), formatBitrate(), formatDuration(), formatSampleRate() (+18 more)
 
 ### Community 37 - "MusicPlayerPage.tsx"
 Cohesion: 0.13
@@ -246,31 +248,31 @@ Nodes (13): AlbumsListViewProps, DiscoverView(), DiscoverViewProps, DEMO_ALBUMS,
 
 ### Community 55 - "enrichment.rs"
 Cohesion: 0.15
-Nodes (29): candidate_is_confident(), candidates_from_recording(), enrich_track(), EnrichmentCandidate, EnrichmentJob, MusicBrainzClient, normalized(), normalized_values() (+21 more)
+Nodes (30): candidate_is_confident(), candidates_from_recording(), enrich_track(), EnrichmentCandidate, EnrichmentJob, musicbrainz_requests_are_globally_spaced_by_at_least_one_second(), MusicBrainzClient, normalized() (+22 more)
 
 ### Community 56 - "tauri-bindings.ts"
 Cohesion: 0.05
-Nodes (37): AcquisitionJob_Deserialize, AcquisitionJob_Serialize, AcquisitionJobStatus, AcquisitionSearchGroup, AcquisitionStatus_Deserialize, AcquisitionStatus_Serialize, AlbumDetail, AppError_Deserialize (+29 more)
+Nodes (37): AcquisitionJob_Deserialize, AcquisitionJob_Serialize, AcquisitionJobStatus, AcquisitionSearch, AcquisitionSearchFile, AcquisitionSearchGroup, AcquisitionStatus, AcquisitionStatus_Deserialize (+29 more)
 
 ### Community 57 - "DesktopLibraryPage.tsx"
 Cohesion: 0.12
 Nodes (34): EmptyState(), EmptyStateProps, AppShell(), AppShellProps, useCatalogDiscovery(), DesktopLibraryPage(), EMPTY_SPECTRUM_BINS, formatBytes() (+26 more)
 
 ### Community 58 - "MetadataEditor.tsx"
-Cohesion: 0.23
-Nodes (17): MetadataEditor(), MetadataEditorProps, splitValues(), applyMusicBrainzCandidate(), getMusicBrainzEnabled(), loadTrackMetadata(), patchFromTrack(), patchFromTrackSummary() (+9 more)
+Cohesion: 0.25
+Nodes (16): MetadataEditor(), MetadataEditorProps, splitValues(), applyMusicBrainzCandidate(), getMusicBrainzEnabled(), loadTrackMetadata(), patchFromTrack(), patchFromTrackSummary() (+8 more)
 
 ### Community 59 - "acquisition.rs"
 Cohesion: 0.09
-Nodes (63): Method, RequestBuilder, AcquisitionJob, AcquisitionJobStatus, AcquisitionManager, AcquisitionRecord, AcquisitionSearch, AcquisitionSearchFile (+55 more)
+Nodes (62): Method, RequestBuilder, AcquisitionJob, AcquisitionJobStatus, AcquisitionManager, AcquisitionSearch, AcquisitionSearchFile, AcquisitionSearchGroup (+54 more)
 
 ### Community 60 - "user_state.rs"
 Cohesion: 0.28
 Nodes (11): FavoriteReference, HomeSnapshot, PersistentPlayerState, PlayerPreferences, PlaylistSummary, Default, Option, Self (+3 more)
 
 ### Community 61 - "AcquisitionPanel.tsx"
-Cohesion: 0.22
-Nodes (23): AcquisitionPanel(), DEFAULT_SETTINGS, message(), cancelAcquisition(), disconnectSlskd(), enqueueSlskdFile(), importAcquisition(), listAcquisitionJobs() (+15 more)
+Cohesion: 0.26
+Nodes (20): AcquisitionPanel(), DEFAULT_SETTINGS, message(), cancelAcquisition(), disconnectSlskd(), enqueueSlskdFile(), importAcquisition(), listAcquisitionJobs() (+12 more)
 
 ### Community 62 - "Online integrations"
 Cohesion: 0.40
@@ -307,21 +309,21 @@ Nodes (4): Client behavior, Omarchy and Arch-family install, Protected release c
 ## Knowledge Gaps
 - **280 isolated node(s):** `singleQuote`, `trailingComma`, `printWidth`, `name`, `private` (+275 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **19 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **21 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `DatabaseWorker` connect `Result` to `updates.rs`, `integrations.rs`, `lib.rs`, `LibraryWatcher`, `enrichment.rs`, `acquisition.rs`?**
-  _High betweenness centrality (0.114) - this node is a cross-community bridge._
-- **Why does `AppState` connect `lib.rs` to `PlaybackEngine`, `Result`, `integrations.rs`, `LibraryWatcher`, `enrichment.rs`, `acquisition.rs`?**
-  _High betweenness centrality (0.053) - this node is a cross-community bridge._
+  _High betweenness centrality (0.111) - this node is a cross-community bridge._
 - **Why does `devDependencies` connect `devDependencies` to `@testing-library/react`, `frontend/package.json`, `vite`, `eslint`, `@eslint/js`, `eslint-plugin-react-hooks`, `globals`, `jsdom`, `@testing-library/user-event`, `vitest`, `esbuild`?**
-  _High betweenness centrality (0.051) - this node is a cross-community bridge._
+  _High betweenness centrality (0.050) - this node is a cross-community bridge._
+- **Why does `typescript` connect `devDependencies` to `lib.rs`?**
+  _High betweenness centrality (0.048) - this node is a cross-community bridge._
 - **What connects `singleQuote`, `trailingComma`, `printWidth` to the rest of the system?**
   _280 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `PlaybackEngine` be split into smaller, more focused modules?**
-  _Cohesion score 0.06913367756741251 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.07023214810461358 - nodes in this community are weakly interconnected._
 - **Should `useTheme` be split into smaller, more focused modules?**
   _Cohesion score 0.0915915915915916 - nodes in this community are weakly interconnected._
 - **Should `devDependencies` be split into smaller, more focused modules?**

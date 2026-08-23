@@ -507,4 +507,13 @@ mod tests {
         );
         assert!(candidate[0].requires_review);
     }
+
+    #[test]
+    fn musicbrainz_requests_are_globally_spaced_by_at_least_one_second() {
+        let client = MusicBrainzClient::default();
+        client.wait_for_rate_limit().expect("first request slot");
+        let started = Instant::now();
+        client.wait_for_rate_limit().expect("second request slot");
+        assert!(started.elapsed() >= Duration::from_millis(950));
+    }
 }

@@ -72,5 +72,23 @@ jobs:
       - name: Test Rust
         run: cargo test
 
+      - name: Test recoverable Linux data reset
+        if: runner.os == 'Linux'
+        run: scripts/test-reset-local-data
+
+      - name: Test recoverable Windows data reset
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $fixtureParent = Join-Path $env:RUNNER_TEMP "bebop-reset-$([guid]::NewGuid())"
+          $fixture = Join-Path $fixtureParent "com.dbgoodm.bebop"
+          New-Item -ItemType Directory -Path $fixture | Out-Null
+          New-Item -ItemType File -Path (Join-Path $fixture "bebop.sqlite3") | Out-Null
+          ./scripts/reset-local-data.ps1 -DataDirectory $fixture -Confirmation RESET
+          if (Test-Path -LiteralPath $fixture) { throw "Reset fixture still exists." }
+          $backup = Get-ChildItem -Recurse -Filter bebop.sqlite3 (Join-Path $fixtureParent "bebop-reset-backups")
+          if (-not $backup) { throw "Recoverable reset backup was not created." }
+          Remove-Item -Recurse -Force $fixtureParent
+
       - name: Build Tauri bundle
         run: npm exec tauri -- build --config src-tauri/tauri.conf.json --config src-tauri/tauri.ci.conf.json --bundles ${{ matrix.bundle }}

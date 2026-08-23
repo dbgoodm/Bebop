@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+default_data_directory="${XDG_DATA_HOME:-${HOME}/.local/share}/com.dbgoodm.bebop"
+data_directory="${default_data_directory}"
+confirmation=""
+
+while (($#)); do
+  case "$1" in
+    --data-dir)
+      data_directory="${2:?--data-dir requires a path}"
+      shift 2
+      ;;
+    --confirm)
+      confirmation="${2:-}"
+      shift 2
+      ;;
+    *)
+      echo "Unknown argument: $1" >&2
+      exit 2
+      ;;
+  esac
+done
+
+if [[ "$(basename "${data_directory}")" != "com.dbgoodm.bebop" ]]; then
+  echo "Refusing to reset a directory not named com.dbgoodm.bebop." >&2
+  exit 1
+fi
+if [[ "${data_directory}" == "${default_data_directory}" ]] && pgrep -x bebop-desktop >/dev/null 2>&1; then
+  echo "Quit Bebop before resetting its local data." >&2
+  exit 1
+fi
+if [[ ! -d "${data_directory}" ]]; then
+  echo "No Bebop application-data directory exists at ${data_directory}."
+  exit 0
+fi
+if [[ "${confirmation}" != "RESET" ]]; then
+  echo "No data changed. Re-run with --confirm RESET after reviewing the path:" >&2
+  echo "  ${data_directory}" >&2
+  exit 1
+fi
+
+parent_directory="$(dirname "${data_directory}")"
+backup_directory="${parent_directory}/bebop-reset-backups"
+timestamp="$(date -u +%Y%m%dT%H%M%SZ)"
+destination="${backup_directory}/com.dbgoodm.bebop-${timestamp}-$$"
+mkdir -p "${backup_directory}"
+mv -- "${data_directory}" "${destination}"
+echo "Bebop local data moved to ${destination}. Music files were not changed."

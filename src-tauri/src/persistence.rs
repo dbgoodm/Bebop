@@ -4,6 +4,7 @@ use std::{
     path::{Path, PathBuf},
     sync::mpsc::{self, Receiver, Sender},
     thread,
+    time::Duration,
 };
 
 use chrono::Utc;
@@ -235,6 +236,7 @@ impl DatabaseWorker {
                 AppError::persistence("create-app-data-directory", error.to_string())
             })?;
         }
+        recover_corrupt_database(&database_path)?;
         backup_before_upgrade(&database_path)?;
         let (sender, receiver) = mpsc::channel();
         let (ready_sender, ready_receiver) = mpsc::sync_channel(1);
@@ -641,10 +643,84 @@ fn backup_before_upgrade(database_path: &Path) -> Result<(), AppError> {
         AppError::persistence("create-database-backup-directory", error.to_string())
     })?;
     let timestamp = Utc::now().format("%Y%m%dT%H%M%SZ");
-    let backup_path = backup_directory.join(format!("bebop-v{version}-{timestamp}.sqlite3"));
-    fs::copy(database_path, backup_path)
+    let backup_path = backup_directory.join(format!(
+        "bebop-v{version}-{timestamp}-{}.sqlite3",
+        Uuid::new_v4()
+    ));
+    let mut destination = Connection::open(&backup_path)
+        .map_err(|error| AppError::persistence("create-database-backup", error.to_string()))?;
+    let backup = rusqlite::backup::Backup::new(&read_only, &mut destination)
+        .map_err(|error| AppError::persistence("start-database-backup", error.to_string()))?;
+    backup
+        .run_to_completion(32, Duration::from_millis(25), None)
         .map_err(|error| AppError::persistence("backup-database", error.to_string()))?;
     Ok(())
+}
+
+fn recover_corrupt_database(database_path: &Path) -> Result<Option<PathBuf>, AppError> {
+    if !database_path.is_file() {
+        return Ok(None);
+    }
+    let inspection = Connection::open_with_flags(database_path, OpenFlags::SQLITE_OPEN_READ_ONLY)
+        .and_then(|connection| {
+            connection.query_row("PRAGMA quick_check(1)", [], |row| row.get::<_, String>(0))
+        });
+    match inspection {
+        Ok(result) if result.eq_ignore_ascii_case("ok") => return Ok(None),
+        Ok(_) => {}
+        Err(error) if is_corruption_error(&error) => {}
+        Err(error) => {
+            return Err(AppError::persistence(
+                "inspect-database-integrity",
+                error.to_string(),
+            ));
+        }
+    }
+
+    let recovery_directory = database_path
+        .parent()
+        .expect("database path has application-data parent")
+        .join("database-recovery")
+        .join(format!(
+            "{}-{}",
+            Utc::now().format("%Y%m%dT%H%M%SZ"),
+            Uuid::new_v4()
+        ));
+    fs::create_dir_all(&recovery_directory)
+        .map_err(|error| AppError::persistence("create-database-recovery", error.to_string()))?;
+    for source in database_files(database_path) {
+        if source.exists() {
+            let destination = recovery_directory.join(
+                source
+                    .file_name()
+                    .expect("database and sidecar paths have file names"),
+            );
+            fs::rename(&source, destination).map_err(|error| {
+                AppError::persistence("preserve-corrupt-database", error.to_string())
+            })?;
+        }
+    }
+    Ok(Some(recovery_directory))
+}
+
+fn database_files(database_path: &Path) -> [PathBuf; 3] {
+    let base = database_path.to_string_lossy();
+    [
+        database_path.to_path_buf(),
+        PathBuf::from(format!("{base}-wal")),
+        PathBuf::from(format!("{base}-shm")),
+    ]
+}
+
+fn is_corruption_error(error: &rusqlite::Error) -> bool {
+    matches!(
+        error,
+        rusqlite::Error::SqliteFailure(sqlite, _)
+            if matches!(
+                sqlite.code,
+                rusqlite::ErrorCode::DatabaseCorrupt | rusqlite::ErrorCode::NotADatabase
+            )
+    )
 }
 
 fn open_database(path: &Path) -> Result<Connection, AppError> {
@@ -2862,29 +2938,59 @@ mod tests {
     }
 
     #[test]
-    fn version_one_catalogs_upgrade_through_current_schema() {
-        let mut connection = Connection::open_in_memory().expect("open old database");
-        connection
-            .execute_batch(include_str!("migrations/0001_catalog.sql"))
-            .expect("install version one schema");
-        connection
-            .pragma_update(None, "user_version", 1)
-            .expect("set old schema version");
-        migrate(&mut connection).expect("upgrade schema");
-        let version: i64 = connection
-            .pragma_query_value(None, "user_version", |row| row.get(0))
-            .expect("read upgraded version");
-        let fingerprint_exists: bool = connection
-            .query_row(
-                "SELECT EXISTS(
-                   SELECT 1 FROM pragma_table_info('tracks') WHERE name = 'content_fingerprint'
-                 )",
-                [],
-                |row| row.get(0),
-            )
-            .expect("inspect upgraded tracks");
-        assert_eq!(version, 4);
-        assert!(fingerprint_exists);
+    fn every_historical_schema_version_upgrades_to_the_complete_current_schema() {
+        for starting_version in 0..=SCHEMA_VERSION {
+            let mut connection = Connection::open_in_memory().expect("open historical database");
+            connection
+                .execute_batch("PRAGMA foreign_keys = ON")
+                .expect("configure historical database");
+            for (version, sql) in MIGRATIONS
+                .iter()
+                .filter(|(version, _)| *version <= starting_version)
+            {
+                connection
+                    .execute_batch(sql)
+                    .unwrap_or_else(|error| panic!("install migration {version}: {error}"));
+                connection
+                    .pragma_update(None, "user_version", version)
+                    .expect("record historical version");
+            }
+
+            migrate(&mut connection).expect("upgrade historical schema");
+            let version: i64 = connection
+                .pragma_query_value(None, "user_version", |row| row.get(0))
+                .expect("read upgraded version");
+            assert_eq!(version, SCHEMA_VERSION, "upgrade from v{starting_version}");
+            for table in [
+                "library_roots",
+                "tracks",
+                "metadata_overrides",
+                "listening_sessions",
+                "integration_jobs",
+                "acquisition_jobs",
+            ] {
+                let exists: bool = connection
+                    .query_row(
+                        "SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?1)",
+                        [table],
+                        |row| row.get(0),
+                    )
+                    .expect("inspect upgraded schema");
+                assert!(
+                    exists,
+                    "{table} missing after upgrade from v{starting_version}"
+                );
+            }
+            let violations: i64 = connection
+                .query_row("SELECT COUNT(*) FROM pragma_foreign_key_check", [], |row| {
+                    row.get(0)
+                })
+                .expect("check upgraded foreign keys");
+            assert_eq!(
+                violations, 0,
+                "foreign-key violations from v{starting_version}"
+            );
+        }
     }
 
     #[test]
@@ -2929,6 +3035,28 @@ mod tests {
             .expect("query backup");
         assert!(marker_exists);
         drop(backup);
+        fs::remove_dir_all(directory).expect("remove fixture");
+    }
+
+    #[test]
+    fn corrupt_databases_are_preserved_and_replaced_with_a_clean_catalog() {
+        let directory = temporary_directory("corruption-recovery");
+        let database_path = directory.join("bebop.sqlite3");
+        fs::write(&database_path, b"not a sqlite database").expect("write corrupt database");
+
+        let recovery = recover_corrupt_database(&database_path)
+            .expect("corruption recovery succeeds")
+            .expect("recovery directory reported");
+        assert!(!database_path.exists());
+        assert_eq!(
+            fs::read(recovery.join("bebop.sqlite3")).expect("read preserved database"),
+            b"not a sqlite database"
+        );
+
+        let worker = DatabaseWorker::start(database_path.clone()).expect("clean database starts");
+        assert!(worker.list_roots().expect("query clean catalog").is_empty());
+        assert!(database_path.is_file());
+        drop(worker);
         fs::remove_dir_all(directory).expect("remove fixture");
     }
 }

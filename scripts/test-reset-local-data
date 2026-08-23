@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repository_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+fixture_parent="$(mktemp -d)"
+trap 'rm -rf -- "${fixture_parent}"' EXIT
+fixture="${fixture_parent}/com.dbgoodm.bebop"
+mkdir "${fixture}"
+touch "${fixture}/bebop.sqlite3"
+
+"${repository_root}/scripts/reset-local-data" \
+  --data-dir "${fixture}" \
+  --confirm RESET >/dev/null
+
+if [[ -e "${fixture}" ]]; then
+  echo "Reset fixture still exists." >&2
+  exit 1
+fi
+if ! find "${fixture_parent}/bebop-reset-backups" -type f -name bebop.sqlite3 -print -quit | grep -q .; then
+  echo "Recoverable reset backup was not created." >&2
+  exit 1
+fi
