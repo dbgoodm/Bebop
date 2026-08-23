@@ -63,9 +63,11 @@ export const commands = {
 	setMusicbrainzEnabled: (enabled: boolean) => __TAURI_INVOKE<boolean>("set_musicbrainz_enabled", { enabled }),
 	setFavorite: (entityType: string, entityId: string, favorite: boolean) => typedError<boolean, AppError_Serialize>(__TAURI_INVOKE("set_favorite", { entityType, entityId, favorite })),
 	setPlaylistTracks: (playlistId: string, trackIds: string[]) => typedError<null, AppError_Serialize>(__TAURI_INVOKE("set_playlist_tracks", { playlistId, trackIds })),
+	setSpectrumActive: (active: boolean) => typedError<boolean, AppError_Serialize>(__TAURI_INVOKE("set_spectrum_active", { active })),
 	setThemePreference: (themeId: string) => typedError<PlayerPreferences, AppError_Serialize>(__TAURI_INVOKE("set_theme_preference", { themeId })),
 	setUiPreference: (key: string, value: string) => typedError<null, AppError_Serialize>(__TAURI_INVOKE("set_ui_preference", { key, value })),
 	setVolume: (volume: number | null) => typedError<PlaybackState, AppError_Serialize>(__TAURI_INVOKE("set_volume", { volume })),
+	setVisualizationEnabled: (enabled: boolean) => typedError<PlayerPreferences, AppError_Serialize>(__TAURI_INVOKE("set_visualization_enabled", { enabled })),
 	stopPlayback: () => typedError<PlaybackState, AppError_Serialize>(__TAURI_INVOKE("stop_playback")),
 	writeMetadataToFile: (trackId: string) => typedError<MetadataWriteResult, AppError_Serialize>(__TAURI_INVOKE("write_metadata_to_file", { trackId })),
 };
@@ -321,6 +323,13 @@ export type ScanProgress = {
 };
 
 export type SortDirection = "ascending" | "descending";
+
+export type SpectrumFrame = {
+	sequence: number,
+	positionMs: number,
+	bins: number[],
+	peak: number,
+};
 
 export type TrackPage = {
 	items: TrackSummary[],

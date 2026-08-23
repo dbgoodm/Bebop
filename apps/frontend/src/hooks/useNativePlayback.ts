@@ -1,16 +1,25 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { listen } from '@tauri-apps/api/event';
 import type { TrackItem } from '@/types';
-import type { AppError, PlaybackState } from '@/services/tauri-bindings';
+import type {
+  AppError,
+  AudioOutputDevice,
+  PlaybackState,
+  SpectrumFrame,
+} from '@/services/tauri-bindings';
 import {
   getPlaybackState,
   initialPlaybackState,
+  listAudioOutputDevices,
   pausePlayback,
   playTrack as requestTrackPlayback,
   resumePlayback,
   seekPlayback,
+  selectAudioOutputDevice,
   setHifiMode as requestHifiMode,
   setPlaybackVolume,
+  setSpectrumActive,
+  setVisualizationEnabled,
   stopPlayback,
 } from '@/services/playbackService';
 
@@ -32,10 +41,13 @@ export function useNativePlayback() {
   const [playback, setPlayback] = useState<PlaybackState>(initialPlaybackState);
   const [error, setError] = useState<AppError | null>(null);
   const [endedCount, setEndedCount] = useState(0);
+  const [spectrum, setSpectrum] = useState<SpectrumFrame | null>(null);
+  const [outputDevices, setOutputDevices] = useState<AudioOutputDevice[]>([]);
   const lastAudibleVolume = useRef(1);
 
   const applyPlayback = useCallback((next: PlaybackState) => {
     setPlayback(next);
+    if (next.status !== 'playing') setSpectrum(null);
     if (!next.muted && (next.volume ?? 0) > 0) lastAudibleVolume.current = next.volume ?? 1;
   }, []);
 
@@ -72,6 +84,15 @@ export function useNativePlayback() {
         setEndedCount((count) => count + 1);
       }),
       subscribe<AppError>('playback://error', setError),
+      listen<SpectrumFrame>('playback://spectrum', ({ payload }) => setSpectrum(payload)).then(
+        (unlisten) => {
+          if (disposed) unlisten();
+          else unlisteners.push(unlisten);
+        },
+      ),
+      listAudioOutputDevices()
+        .then(setOutputDevices)
+        .catch(() => undefined),
       getPlaybackState()
         .then(applyPlayback)
         .catch((cause) => setError(asAppError(cause))),
@@ -82,6 +103,16 @@ export function useNativePlayback() {
       unlisteners.forEach((unlisten) => unlisten());
     };
   }, [applyPlayback]);
+
+  useEffect(() => {
+    const updateActivity = () => void setSpectrumActive(!document.hidden).catch(() => undefined);
+    updateActivity();
+    document.addEventListener('visibilitychange', updateActivity);
+    return () => {
+      document.removeEventListener('visibilitychange', updateActivity);
+      void setSpectrumActive(false).catch(() => undefined);
+    };
+  }, []);
 
   const playTrack = useCallback(
     (track: TrackItem) => request(() => requestTrackPlayback(track.audioUrl ?? '')),
@@ -108,17 +139,40 @@ export function useNativePlayback() {
     [request],
   );
   const stop = useCallback(() => request(stopPlayback), [request]);
+  const selectOutput = useCallback(async (deviceId: string | null) => {
+    try {
+      const devices = await selectAudioOutputDevice(deviceId);
+      setOutputDevices(devices);
+      setError(null);
+      return devices;
+    } catch (cause) {
+      setError(asAppError(cause));
+      return null;
+    }
+  }, []);
+  const setVisualization = useCallback(async (enabled: boolean) => {
+    try {
+      return await setVisualizationEnabled(enabled);
+    } catch (cause) {
+      setError(asAppError(cause));
+      return null;
+    }
+  }, []);
 
   return {
     playback,
     error,
     endedCount,
+    spectrum,
+    outputDevices,
     playTrack,
     togglePlayback,
     seek,
     setVolume,
     toggleMute,
     setHifi,
+    selectOutput,
+    setVisualization,
     stop,
   };
 }

@@ -1,4 +1,10 @@
-import { commands, type AppError, type PlaybackState } from './tauri-bindings';
+import {
+  commands,
+  type AppError,
+  type AudioOutputDevice,
+  type PlaybackState,
+  type PlayerPreferences,
+} from './tauri-bindings';
 
 export const initialPlaybackState: PlaybackState = {
   trackId: null,
@@ -51,4 +57,25 @@ export function setPlaybackVolume(volume: number) {
 
 export function setHifiMode(enabled: boolean) {
   return unwrapPlayback(commands.setHifiMode(enabled));
+}
+
+function unwrap<T>(result: { status: 'ok'; data: T } | { status: 'error'; error: AppError }): T {
+  if (result.status === 'error') throw result.error;
+  return result.data;
+}
+
+export async function listAudioOutputDevices(): Promise<AudioOutputDevice[]> {
+  return unwrap(await commands.listAudioOutputDevices());
+}
+
+export async function selectAudioOutputDevice(deviceId: string | null) {
+  return unwrap(await commands.selectAudioOutputDevice(deviceId));
+}
+
+export async function setVisualizationEnabled(enabled: boolean): Promise<PlayerPreferences> {
+  return unwrap(await commands.setVisualizationEnabled(enabled));
+}
+
+export async function setSpectrumActive(active: boolean) {
+  return unwrap(await commands.setSpectrumActive(active));
 }

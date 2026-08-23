@@ -41,6 +41,7 @@ interface FullscreenNowPlayingProps {
   onUnlockVolume?: () => void | Promise<unknown>;
   spectrumAvailable?: boolean;
   frequencyDataProvider?: (outputArray: Uint8Array) => Uint8Array;
+  spectrumBins?: readonly number[];
 }
 
 export const FullscreenNowPlaying: React.FC<FullscreenNowPlayingProps> = ({
@@ -65,6 +66,7 @@ export const FullscreenNowPlaying: React.FC<FullscreenNowPlayingProps> = ({
   onUnlockVolume,
   spectrumAvailable = true,
   frequencyDataProvider,
+  spectrumBins,
 }) => {
   const { currentTheme } = useTheme();
   const [localVolume, setLocalVolume] = useState(85);
@@ -442,6 +444,7 @@ export const FullscreenNowPlaying: React.FC<FullscreenNowPlayingProps> = ({
             glowEffect={currentTheme.waveformGlow}
             autoFillWidth={true}
             frequencyDataProvider={frequencyDataProvider}
+            spectrumBins={spectrumBins}
           />
         </div>
 

@@ -13,6 +13,7 @@ interface MonstercatVisualizerProps {
   intensity?: number;
   autoFillWidth?: boolean;
   frequencyDataProvider?: (outputArray: Uint8Array) => Uint8Array;
+  spectrumBins?: readonly number[];
 }
 
 /**
@@ -39,10 +40,14 @@ export const MonstercatVisualizer: React.FC<MonstercatVisualizerProps> = ({
   intensity = 1.0,
   autoFillWidth = true,
   frequencyDataProvider,
+  spectrumBins,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const animationFrameRef = useRef<number | null>(null);
+  const spectrumBinsRef = useRef(spectrumBins);
+  spectrumBinsRef.current = spectrumBins;
+  const usesNativeSpectrum = spectrumBins !== undefined;
   const [computedBarCount, setComputedBarCount] = useState<number>(barCount);
 
   // Dynamic bar count calculation to fill container width
@@ -121,7 +126,6 @@ export const MonstercatVisualizer: React.FC<MonstercatVisualizerProps> = ({
 
       const state = physicsRef.current;
 
-      // Native playback has no spectrum transport yet, so callers omit this in production.
       if (frequencyDataProvider) frequencyDataProvider(state.rawFftBuffer);
       else state.rawFftBuffer.fill(0);
 
@@ -135,26 +139,31 @@ export const MonstercatVisualizer: React.FC<MonstercatVisualizerProps> = ({
       let totalLiveEnergy = 0;
 
       for (let i = 0; i < numBars; i++) {
-        // Logarithmic frequency calculation: f(i) = minFreq * (maxFreq / minFreq)^(i / numBars)
-        const fLow = minFreq * Math.pow(maxFreq / minFreq, i / numBars);
-        const fHigh = minFreq * Math.pow(maxFreq / minFreq, (i + 1) / numBars);
-
-        const binLow = Math.max(
-          0,
-          Math.min(fftBinCount - 1, Math.floor((fLow * 2048) / sampleRate)),
-        );
-        const binHigh = Math.max(
-          binLow + 1,
-          Math.min(fftBinCount, Math.ceil((fHigh * 2048) / sampleRate)),
-        );
-
-        let sum = 0;
-        let count = 0;
-        for (let b = binLow; b < binHigh; b++) {
-          sum += state.rawFftBuffer[b];
-          count++;
+        let avgMagnitude = 0;
+        const nativeBins = spectrumBinsRef.current;
+        if (nativeBins) {
+          const sourcePosition = (i / Math.max(1, numBars - 1)) * (nativeBins.length - 1);
+          const lowIndex = Math.max(0, Math.floor(sourcePosition));
+          const highIndex = Math.min(nativeBins.length - 1, Math.ceil(sourcePosition));
+          const mix = sourcePosition - lowIndex;
+          avgMagnitude =
+            (nativeBins[lowIndex] ?? 0) * (1 - mix) + (nativeBins[highIndex] ?? 0) * mix;
+        } else {
+          // Browser demo data is a linear FFT, so group it logarithmically for display.
+          const fLow = minFreq * Math.pow(maxFreq / minFreq, i / numBars);
+          const fHigh = minFreq * Math.pow(maxFreq / minFreq, (i + 1) / numBars);
+          const binLow = Math.max(
+            0,
+            Math.min(fftBinCount - 1, Math.floor((fLow * 2048) / sampleRate)),
+          );
+          const binHigh = Math.max(
+            binLow + 1,
+            Math.min(fftBinCount, Math.ceil((fHigh * 2048) / sampleRate)),
+          );
+          let sum = 0;
+          for (let b = binLow; b < binHigh; b++) sum += state.rawFftBuffer[b];
+          avgMagnitude = sum / Math.max(1, binHigh - binLow);
         }
-        const avgMagnitude = count > 0 ? sum / count : 0; // 0..255
         totalLiveEnergy += avgMagnitude;
 
         // Monstercat acoustic weighting: boost bass impact and mids
@@ -173,7 +182,7 @@ export const MonstercatVisualizer: React.FC<MonstercatVisualizerProps> = ({
       }
 
       // If audio is paused or no live sound, subtle idle breath
-      if (!isPlaying || totalLiveEnergy < 5) {
+      if ((!isPlaying || totalLiveEnergy < 5) && !usesNativeSpectrum) {
         for (let i = 0; i < numBars; i++) {
           rawTargets[i] = Math.max(2, Math.sin(restingPhase + i * 0.18) * 1.5 + 2.5);
         }
@@ -270,6 +279,7 @@ export const MonstercatVisualizer: React.FC<MonstercatVisualizerProps> = ({
     autoFillWidth,
     height,
     frequencyDataProvider,
+    usesNativeSpectrum,
   ]);
 
   return (

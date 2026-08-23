@@ -1,26 +1,26 @@
 # Graph Report - Bebop  (2026-08-23)
 
 ## Corpus Check
-- 95 files · ~82,186 words
+- 96 files · ~83,916 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1089 nodes · 3056 edges · 61 communities (44 shown, 17 thin omitted)
-- Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 26 edges (avg confidence: 0.85)
+- 1147 nodes · 3195 edges · 64 communities (47 shown, 17 thin omitted)
+- Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 41 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `3cb93083`
+- Built from commit: `44a7e7ff`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
 - PlaybackEngine
-- FullscreenNowPlaying.tsx
+- useTheme
 - devDependencies
 - What You Must Do When Invoked
 - TrackItem
-- autoprefixer
+- SpectrumAnalyzer
 - compilerOptions
 - RealAudioEngine
 - Bebop clean rebuild and vertical-slice plan
@@ -61,7 +61,8 @@
 - useNativePlayback.ts
 - @testing-library/user-event
 - vitest
-- MusicPlayerPage.tsx
+- App.tsx
+- catalog.ts
 - enrichment.rs
 - tauri-bindings.ts
 - DesktopLibraryPage.tsx
@@ -69,22 +70,22 @@
 - @testing-library/react
 - user_state.rs
 - catalogService.ts
+- ListeningStats.tsx
+- esbuild
 
 ## God Nodes (most connected - your core abstractions)
-1. `AppState` - 65 edges
-2. `AppError` - 61 edges
+1. `AppState` - 69 edges
+2. `AppError` - 64 edges
 3. `DatabaseWorker` - 52 edges
 4. `database_error()` - 49 edges
 5. `database_loop()` - 43 edges
 6. `TrackItem` - 41 edges
 7. `useTheme()` - 31 edges
 8. `Request` - 31 edges
-9. `PlaybackEngine` - 27 edges
+9. `PlaybackEngine` - 29 edges
 10. `DesktopLibraryPage()` - 22 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `DiscoverView()` --calls--> `useTheme()`  [EXTRACTED]
-  apps/frontend/src/components/organisms/DiscoverView.tsx → apps/frontend/src/services/themeService.tsx
 - `FullscreenNowPlayingProps` --references--> `TrackItem`  [EXTRACTED]
   apps/frontend/src/components/organisms/FullscreenNowPlaying.tsx → apps/frontend/src/types.ts
 - `MetadataEditorProps` --references--> `TrackItem`  [EXTRACTED]
@@ -93,31 +94,37 @@
   apps/frontend/src/components/organisms/NowPlayingBar.tsx → apps/frontend/src/types.ts
 - `SettingsView()` --calls--> `useTheme()`  [EXTRACTED]
   apps/frontend/src/components/organisms/SettingsView.tsx → apps/frontend/src/services/themeService.tsx
+- `WaveformScrubberProps` --references--> `TrackItem`  [EXTRACTED]
+  apps/frontend/src/components/organisms/WaveformScrubber.tsx → apps/frontend/src/types.ts
 
 ## Import Cycles
 - None detected.
 
-## Communities (61 total, 17 thin omitted)
+## Communities (64 total, 17 thin omitted)
 
 ### Community 0 - "PlaybackEngine"
 Cohesion: 0.07
 Nodes (41): AudioOutputDevice, AudioOutputState, Device, OutputStream, PlaybackState, SampleFormat, Send, Sink (+33 more)
 
-### Community 1 - "FullscreenNowPlaying.tsx"
-Cohesion: 0.15
-Nodes (14): FullscreenNowPlaying(), FullscreenNowPlayingProps, MonstercatVisualizer(), MonstercatVisualizerProps, generateCompactWaveform(), NowPlayingBar(), NowPlayingBarProps, generateSoundcloudWaveform() (+6 more)
+### Community 1 - "useTheme"
+Cohesion: 0.13
+Nodes (19): RecentlyAddedRail(), AlbumDetailPage(), DiscoverView(), FullscreenNowPlaying(), FullscreenNowPlayingProps, MonstercatVisualizer(), MonstercatVisualizerProps, generateCompactWaveform() (+11 more)
 
 ### Community 2 - "devDependencies"
 Cohesion: 0.10
-Nodes (21): devDependencies, esbuild, eslint-plugin-react-refresh, prettier, tailwindcss, @tauri-apps/cli, @testing-library/jest-dom, tsx (+13 more)
+Nodes (21): devDependencies, autoprefixer, eslint-plugin-react-refresh, prettier, tailwindcss, @tauri-apps/cli, @testing-library/jest-dom, tsx (+13 more)
 
 ### Community 3 - "What You Must Do When Invoked"
 Cohesion: 0.08
 Nodes (24): For /graphify add and --watch, For /graphify query, For the commit hook and native CLAUDE.md integration, For --update and --cluster-only, /graphify, Honesty Rules, Interpreter guard for subcommands, Part A - Structural extraction for code files (+16 more)
 
 ### Community 4 - "TrackItem"
-Cohesion: 0.10
-Nodes (30): ALL_AVAILABLE_COLUMNS, ColumnDefinition, ColumnKey, UniversalTracklist(), UniversalTracklistProps, AlbumDetailPage(), AlbumDetailPageProps, AlbumsGridView() (+22 more)
+Cohesion: 0.11
+Nodes (29): ALL_AVAILABLE_COLUMNS, ColumnDefinition, ColumnKey, UniversalTracklist(), UniversalTracklistProps, AlbumDetailPageProps, AlbumsGridView(), AlbumsGridViewProps (+21 more)
+
+### Community 5 - "SpectrumAnalyzer"
+Cohesion: 0.08
+Nodes (29): ArrayQueue, AtomicU32, ChannelCount, Complex32, Drop, Duration, Fft, Item (+21 more)
 
 ### Community 6 - "compilerOptions"
 Cohesion: 0.10
@@ -141,7 +148,7 @@ Nodes (8): graphify reference: extra exports and benchmark, Step 6b - Wiki (only
 
 ### Community 17 - "lib.rs"
 Cohesion: 0.07
-Nodes (117): BTreeMap, Builder, EnrichmentCandidate, EnrichmentJob, LibraryScan, MetadataWriteResult, ActiveListeningSession, add_and_scan_root() (+109 more)
+Nodes (122): BTreeMap, Builder, EnrichmentCandidate, EnrichmentJob, LibraryScan, MetadataWriteResult, ActiveListeningSession, add_and_scan_root() (+114 more)
 
 ### Community 18 - "tauri.conf.json"
 Cohesion: 0.09
@@ -188,16 +195,16 @@ Cohesion: 0.19
 Nodes (22): useLibraryScan(), chooseLibraryFolder(), defaultCatalogQuery, errorSnapshot(), formatBitrate(), formatDuration(), formatSampleRate(), initialLibraryScan (+14 more)
 
 ### Community 37 - "types.ts"
-Cohesion: 0.12
-Nodes (25): ContinueListeningRail(), SAMPLE_CONTINUE_ITEMS, DEFAULT_STATS, ListeningStats(), ListeningStatsProps, MAIN_NAV_ITEMS, TopNavRail(), AntraQueueDrawer() (+17 more)
+Cohesion: 0.11
+Nodes (29): ContinueListeningRail(), SAMPLE_CONTINUE_ITEMS, RediscoverRail(), MAIN_NAV_ITEMS, TopNavRail(), AntraQueueDrawer(), AntraQueueDrawerProps, ArtistDetailPage() (+21 more)
 
 ### Community 38 - "scripts"
 Cohesion: 0.18
 Nodes (11): scripts, build, clean, dev, format, format:check, lint, preview (+3 more)
 
 ### Community 39 - "themeService.tsx"
-Cohesion: 0.24
-Nodes (8): SettingsView(), ThemeSelectorModal(), AmbientOrbConfig, StatCardColorConfig, THEME_PRESETS, ThemeConfig, ThemeContext, ThemeContextType
+Cohesion: 0.19
+Nodes (12): SettingsView(), ThemeSelectorModal(), loadUiPreference(), saveThemePreference(), saveUiPreference(), AmbientOrbConfig, StatCardColorConfig, THEME_PRESETS (+4 more)
 
 ### Community 41 - "Bebop persistent-catalog architecture"
 Cohesion: 0.12
@@ -216,36 +223,44 @@ Cohesion: 0.21
 Nodes (35): ItemKey, apply_patch_to_path(), cache_artwork(), cache_bytes(), cache_external_artwork(), CachedArtwork, clean(), clean_values() (+27 more)
 
 ### Community 50 - "useNativePlayback.ts"
-Cohesion: 0.22
-Nodes (18): asAppError(), PlaybackEventName, mocks, playingState, track, useNativePlayback(), getPlaybackState(), initialPlaybackState (+10 more)
+Cohesion: 0.19
+Nodes (24): asAppError(), PlaybackEventName, mocks, playingState, track, useNativePlayback(), getPlaybackState(), initialPlaybackState (+16 more)
 
-### Community 54 - "MusicPlayerPage.tsx"
-Cohesion: 0.10
-Nodes (26): App(), RecentlyAddedRail(), RediscoverRail(), DiscoverView(), DEMO_ALBUMS, DEMO_ARTISTS, DEMO_TRACKS, LOCAL_ALBUMS (+18 more)
+### Community 53 - "App.tsx"
+Cohesion: 0.50
+Nodes (3): App(), useDemoMode(), MusicPlayerPage()
+
+### Community 54 - "catalog.ts"
+Cohesion: 0.21
+Nodes (11): DEMO_ALBUMS, DEMO_ARTISTS, DEMO_TRACKS, LOCAL_ALBUMS, LOCAL_ARTISTS, LOCAL_TRACKS, DEMO_RECENTLY_ADDED, DEMO_REDISCOVER_ITEMS (+3 more)
 
 ### Community 55 - "enrichment.rs"
 Cohesion: 0.15
 Nodes (29): Client, candidate_is_confident(), candidates_from_recording(), enrich_track(), EnrichmentCandidate, EnrichmentJob, MusicBrainzClient, normalized() (+21 more)
 
 ### Community 56 - "tauri-bindings.ts"
-Cohesion: 0.06
-Nodes (30): AlbumDetail, AppError_Deserialize, AppError_Serialize, ArtistDetail, ArtistReference, AudioExtension, AudioOutputDevice, AudioOutputState (+22 more)
+Cohesion: 0.07
+Nodes (28): AlbumDetail, AppError_Deserialize, AppError_Serialize, ArtistDetail, ArtistReference, AudioExtension, AudioOutputState, CatalogQuery (+20 more)
 
 ### Community 57 - "DesktopLibraryPage.tsx"
-Cohesion: 0.16
-Nodes (25): EmptyState(), EmptyStateProps, AppShell(), AppShellProps, useCatalogDiscovery(), DesktopLibraryPage(), formatBytes(), formatDuration() (+17 more)
+Cohesion: 0.17
+Nodes (22): EmptyState(), EmptyStateProps, AppShell(), AppShellProps, DesktopLibraryPage(), EMPTY_SPECTRUM_BINS, formatBytes(), formatDuration() (+14 more)
 
 ### Community 58 - "MetadataEditor.tsx"
-Cohesion: 0.30
-Nodes (14): MetadataEditor(), MetadataEditorProps, splitValues(), applyMusicBrainzCandidate(), getMusicBrainzEnabled(), loadTrackMetadata(), patchFromTrack(), patchFromTrackSummary() (+6 more)
+Cohesion: 0.27
+Nodes (15): MetadataEditor(), MetadataEditorProps, splitValues(), applyMusicBrainzCandidate(), getMusicBrainzEnabled(), loadTrackMetadata(), patchFromTrack(), patchFromTrackSummary() (+7 more)
 
 ### Community 60 - "user_state.rs"
 Cohesion: 0.28
 Nodes (11): FavoriteReference, HomeSnapshot, PersistentPlayerState, PlayerPreferences, PlaylistSummary, Default, Option, Self (+3 more)
 
 ### Community 61 - "catalogService.ts"
-Cohesion: 0.27
-Nodes (11): emptyDiscovery, albumItem(), artistItem(), CatalogDiscovery, durationLabel(), loadAlbumDetail(), loadArtistDetail(), loadDiscovery() (+3 more)
+Cohesion: 0.24
+Nodes (12): emptyDiscovery, useCatalogDiscovery(), albumItem(), artistItem(), CatalogDiscovery, durationLabel(), loadAlbumDetail(), loadArtistDetail() (+4 more)
+
+### Community 62 - "ListeningStats.tsx"
+Cohesion: 0.50
+Nodes (4): DEFAULT_STATS, ListeningStats(), ListeningStatsProps, ListeningStatsData
 
 ## Knowledge Gaps
 - **244 isolated node(s):** `singleQuote`, `trailingComma`, `printWidth`, `name`, `private` (+239 more)
@@ -256,16 +271,16 @@ Nodes (11): emptyDiscovery, albumItem(), artistItem(), CatalogDiscovery, duratio
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `DatabaseWorker` connect `Result` to `lib.rs`, `LibraryWatcher`, `enrichment.rs`?**
-  _High betweenness centrality (0.100) - this node is a cross-community bridge._
-- **Why does `devDependencies` connect `devDependencies` to `autoprefixer`, `frontend/package.json`, `vite`, `eslint`, `@eslint/js`, `eslint-plugin-react-hooks`, `globals`, `jsdom`, `@testing-library/user-event`, `vitest`, `@testing-library/react`?**
-  _High betweenness centrality (0.066) - this node is a cross-community bridge._
+  _High betweenness centrality (0.072) - this node is a cross-community bridge._
+- **Why does `devDependencies` connect `devDependencies` to `frontend/package.json`, `vite`, `eslint`, `@eslint/js`, `eslint-plugin-react-hooks`, `globals`, `jsdom`, `@testing-library/user-event`, `vitest`, `@testing-library/react`, `esbuild`?**
+  _High betweenness centrality (0.059) - this node is a cross-community bridge._
 - **Why does `typescript` connect `devDependencies` to `lib.rs`?**
-  _High betweenness centrality (0.064) - this node is a cross-community bridge._
+  _High betweenness centrality (0.057) - this node is a cross-community bridge._
 - **What connects `singleQuote`, `trailingComma`, `printWidth` to the rest of the system?**
   _244 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `PlaybackEngine` be split into smaller, more focused modules?**
-  _Cohesion score 0.07468354430379746 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.07023214810461358 - nodes in this community are weakly interconnected._
+- **Should `useTheme` be split into smaller, more focused modules?**
+  _Cohesion score 0.13043478260869565 - nodes in this community are weakly interconnected._
 - **Should `devDependencies` be split into smaller, more focused modules?**
   _Cohesion score 0.09523809523809523 - nodes in this community are weakly interconnected._
-- **Should `What You Must Do When Invoked` be split into smaller, more focused modules?**
-  _Cohesion score 0.08 - nodes in this community are weakly interconnected._

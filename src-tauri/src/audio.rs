@@ -6,7 +6,10 @@ use rodio::{
 };
 use sha2::{Digest, Sha256};
 
-use crate::{AudioOutputDevice, AudioOutputState, PlaybackState, PlaybackStatus};
+use crate::{
+    AudioOutputDevice, AudioOutputState, PlaybackState, PlaybackStatus,
+    spectrum::{AnalyzedSpectrum, SpectrumAnalyzer},
+};
 
 const MAX_VOLUME: f32 = 1.0;
 
@@ -48,6 +51,10 @@ pub(crate) trait AudioBackend: Send {
     fn set_volume(&mut self, volume: f32);
     fn position_ms(&self) -> u64;
     fn is_finished(&self) -> bool;
+    fn set_spectrum_enabled(&mut self, _enabled: bool) {}
+    fn take_spectrum(&mut self) -> Option<AnalyzedSpectrum> {
+        None
+    }
     fn shutdown(&mut self) {
         self.stop();
     }
@@ -57,6 +64,7 @@ pub(crate) trait AudioBackend: Send {
 pub(crate) struct RodioBackend {
     stream: Option<OutputStream>,
     sink: Option<Sink>,
+    spectrum: SpectrumAnalyzer,
 }
 
 fn output_device_id(name: &str, index: usize) -> String {
@@ -106,27 +114,26 @@ fn available_device_handles() -> Result<Vec<(Device, AudioOutputDevice)>, AudioB
 
 fn resolve_output_device(
     selected_device_id: Option<&str>,
-) -> Result<(Device, AudioOutputDevice), AudioBackendError> {
+) -> Result<(Device, AudioOutputDevice, bool), AudioBackendError> {
     let devices = available_device_handles()?;
     if let Some(selected) = selected_device_id {
-        return devices
-            .into_iter()
+        if let Some((device, descriptor)) = devices
+            .iter()
             .find(|(_, descriptor)| descriptor.id == selected)
-            .ok_or_else(|| {
-                AudioBackendError::new(
-                    "audio-device-not-found",
-                    "The selected audio output device is no longer available.",
-                )
-            });
+            .cloned()
+        {
+            return Ok((device, descriptor, false));
+        }
     }
     let selected_index = devices
         .iter()
         .position(|(_, descriptor)| descriptor.is_default)
         .unwrap_or(0);
-    Ok(devices
+    let (device, descriptor) = devices
         .into_iter()
         .nth(selected_index)
-        .expect("available device index exists"))
+        .expect("available device index exists");
+    Ok((device, descriptor, selected_device_id.is_some()))
 }
 
 fn sample_format_priority(format: SampleFormat, default: SampleFormat) -> u8 {
@@ -228,7 +235,8 @@ impl AudioBackend for RodioBackend {
             .unwrap_or(0);
         let source_sample_rate = decoder.sample_rate();
         let source_channels = decoder.channels();
-        let (device, descriptor) = resolve_output_device(request.selected_device_id)?;
+        let (device, descriptor, selected_device_missing) =
+            resolve_output_device(request.selected_device_id)?;
         let stream = open_output_stream(
             &device,
             source_sample_rate,
@@ -238,6 +246,13 @@ impl AudioBackend for RodioBackend {
         let config = stream.config();
         let native_sample_rate = config.sample_rate() == source_sample_rate;
         let software_gain = request.volume != 1.0;
+        let mut disclosure =
+            signal_path_disclosure(request.hifi_mode, native_sample_rate, software_gain);
+        if selected_device_missing {
+            disclosure.push_str(
+                " The saved output device is unavailable, so Bebop fell back to the system default.",
+            );
+        }
         let output = AudioOutputState {
             device_id: descriptor.id,
             device_name: descriptor.name,
@@ -252,15 +267,11 @@ impl AudioBackend for RodioBackend {
             software_gain,
             exclusive_mode: false,
             bit_perfect: false,
-            disclosure: signal_path_disclosure(
-                request.hifi_mode,
-                native_sample_rate,
-                software_gain,
-            ),
+            disclosure,
         };
         let sink = Sink::connect_new(stream.mixer());
         sink.set_volume(request.volume);
-        sink.append(decoder);
+        sink.append(self.spectrum.tap(decoder));
         self.stream = Some(stream);
         self.sink = Some(sink);
         Ok(LoadedAudio {
@@ -327,6 +338,14 @@ impl AudioBackend for RodioBackend {
         self.sink.as_ref().is_some_and(Sink::empty)
     }
 
+    fn set_spectrum_enabled(&mut self, enabled: bool) {
+        self.spectrum.set_enabled(enabled);
+    }
+
+    fn take_spectrum(&mut self) -> Option<AnalyzedSpectrum> {
+        self.spectrum.take_latest()
+    }
+
     fn shutdown(&mut self) {
         self.stop();
         self.stream = None;
@@ -378,6 +397,18 @@ impl PlaybackEngine {
             self.state.hifi_mode,
             self.selected_device_id.clone(),
         )
+    }
+
+    pub(crate) fn set_spectrum_enabled(&mut self, enabled: bool) {
+        self.backend.set_spectrum_enabled(enabled);
+    }
+
+    pub(crate) fn take_spectrum(&mut self) -> Option<AnalyzedSpectrum> {
+        if matches!(self.state.status, PlaybackStatus::Playing) {
+            self.backend.take_spectrum()
+        } else {
+            None
+        }
     }
 
     pub(crate) fn prepare_track(&mut self, path: &Path, id: String) {

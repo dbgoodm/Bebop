@@ -82,6 +82,10 @@ vi.mock('@/hooks/useNativePlayback', () => ({
     setVolume: mocks.setVolume,
     toggleMute: mocks.toggleMute,
     setHifi: mocks.setHifi,
+    spectrum: null,
+    outputDevices: [],
+    selectOutput: vi.fn(),
+    setVisualization: vi.fn(),
     stop: mocks.stop,
   }),
 }));
@@ -227,6 +231,6 @@ describe('DesktopLibraryPage', () => {
     expect(mocks.seek).toHaveBeenCalledWith(45);
     expect(mocks.setVolume).toHaveBeenCalledWith(0.5);
     expect(mocks.toggleMute).toHaveBeenCalledOnce();
-    expect(screen.getByText(/spectrum unavailable/i)).toBeInTheDocument();
+    expect(screen.getByText(/spectrum active/i)).toBeInTheDocument();
   });
 });

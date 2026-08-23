@@ -39,6 +39,7 @@ interface NowPlayingBarProps {
   onUnlockVolume?: () => void | Promise<unknown>;
   spectrumAvailable?: boolean;
   frequencyDataProvider?: (outputArray: Uint8Array) => Uint8Array;
+  spectrumBins?: readonly number[];
 }
 
 // Deterministic SoundCloud waveform bars generator
@@ -95,6 +96,7 @@ export const NowPlayingBar: React.FC<NowPlayingBarProps> = ({
   onUnlockVolume,
   spectrumAvailable = true,
   frequencyDataProvider,
+  spectrumBins,
 }) => {
   const { currentTheme } = useTheme();
   const handleToggle = onTogglePlay || onPlayPause || (() => {});
@@ -221,6 +223,7 @@ export const NowPlayingBar: React.FC<NowPlayingBarProps> = ({
           glowEffect={currentTheme.waveformGlow}
           autoFillWidth={true}
           frequencyDataProvider={frequencyDataProvider}
+          spectrumBins={spectrumBins}
         />
       </div>
 
@@ -527,7 +530,11 @@ export const NowPlayingBar: React.FC<NowPlayingBarProps> = ({
         <div className="hidden xl:flex items-center gap-2 px-2.5 py-1 bg-[#101622] border border-neutral-800 rounded text-neutral-300 font-mono text-[11px]">
           <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
           <span className="text-amber-300 font-semibold">
-            {spectrumAvailable ? 'Web Audio FFT' : 'Native output · spectrum unavailable'}
+            {!spectrumAvailable
+              ? 'Spectrum disabled'
+              : spectrumBins
+                ? 'Native PCM FFT · 64 bands'
+                : 'Web Audio FFT'}
           </span>
         </div>
 

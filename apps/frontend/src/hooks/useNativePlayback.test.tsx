@@ -13,6 +13,10 @@ const mocks = vi.hoisted(() => ({
   seekPlayback: vi.fn(),
   setPlaybackVolume: vi.fn(),
   setHifiMode: vi.fn(),
+  listAudioOutputDevices: vi.fn(),
+  selectAudioOutputDevice: vi.fn(),
+  setVisualizationEnabled: vi.fn(),
+  setSpectrumActive: vi.fn(),
 }));
 
 vi.mock('@tauri-apps/api/event', () => ({
@@ -42,6 +46,10 @@ vi.mock('@/services/playbackService', () => ({
   seekPlayback: mocks.seekPlayback,
   setPlaybackVolume: mocks.setPlaybackVolume,
   setHifiMode: mocks.setHifiMode,
+  listAudioOutputDevices: mocks.listAudioOutputDevices,
+  selectAudioOutputDevice: mocks.selectAudioOutputDevice,
+  setVisualizationEnabled: mocks.setVisualizationEnabled,
+  setSpectrumActive: mocks.setSpectrumActive,
 }));
 
 import { useNativePlayback } from './useNativePlayback';
@@ -88,6 +96,10 @@ describe('useNativePlayback', () => {
       mocks.seekPlayback,
       mocks.setPlaybackVolume,
       mocks.setHifiMode,
+      mocks.listAudioOutputDevices,
+      mocks.selectAudioOutputDevice,
+      mocks.setVisualizationEnabled,
+      mocks.setSpectrumActive,
     ].forEach((mock) => mock.mockReset());
     mocks.getPlaybackState.mockResolvedValue({ ...playingState, status: 'paused' });
     mocks.playTrack.mockResolvedValue(playingState);
@@ -97,6 +109,10 @@ describe('useNativePlayback', () => {
     mocks.seekPlayback.mockResolvedValue(playingState);
     mocks.setPlaybackVolume.mockResolvedValue(playingState);
     mocks.setHifiMode.mockResolvedValue(playingState);
+    mocks.listAudioOutputDevices.mockResolvedValue([]);
+    mocks.selectAudioOutputDevice.mockResolvedValue([]);
+    mocks.setVisualizationEnabled.mockResolvedValue({ visualizationEnabled: true });
+    mocks.setSpectrumActive.mockResolvedValue(true);
   });
 
   it('uses Rust command results and playback events instead of a frontend elapsed-time timer', async () => {
@@ -105,8 +121,12 @@ describe('useNativePlayback', () => {
 
     await act(async () => {
       mocks.listeners.get('playback://position')?.({ payload: playingState });
+      mocks.listeners.get('playback://spectrum')?.({
+        payload: { sequence: 1, positionMs: 1_250, bins: new Array(64).fill(42), peak: 80 },
+      });
     });
     expect(result.current.playback.positionMs).toBe(1_250);
+    expect(result.current.spectrum?.bins).toHaveLength(64);
 
     await act(async () => {
       await result.current.playTrack(track);

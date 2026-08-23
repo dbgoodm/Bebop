@@ -16,7 +16,7 @@ React pages/hooks
   ├─ queue/collections/Home ← settings + listening sessions ← Rust playback monitor
   └─ generated IPC → playback commands → Rust PlaybackEngine → Rodio / CPAL → output device
                          ↑                                      │
-                         └──── Tauri events: state, position, ended, error ────┘
+                         └──── Tauri events: state, position, spectrum, ended, error ────┘
 ```
 
 React never runs an elapsed-time clock for native playback. Command results and the
@@ -135,8 +135,19 @@ volume** in the output-path notice; this switches the running stream to adjustab
 without interrupting the active track. The UI reports whether Rodio is resampling and never
 labels a shared PipeWire/PulseAudio or Windows shared-mode path as bit-perfect.
 
-The visualizer is intentionally passive for native playback. Spectrum transport is deferred;
-Web Audio FFT and synthesized fallback audio are isolated to explicit browser demo mode.
+Decoded interleaved PCM passes through a transparent source adapter before Rodio consumes it. The
+adapter downmixes each frame and performs only a non-blocking write into a fixed-capacity lock-free
+queue; a full queue replaces stale samples instead of delaying audio. A separate Rust worker applies
+a 2,048-sample Hann window and FFT, groups the result into 64 logarithmic `u8` bands, and replaces a
+single latest-frame slot at about 30 Hz. The Tauri emitter takes that slot rather than accumulating
+events. Analysis and emission stop while paused, stopped, visualization-disabled, or window-hidden.
+Production visualizers consume only `playback://spectrum`; Web Audio and idle animation remain
+confined to explicit browser demo mode.
+
+Output selection, unity-gain hi-fi mode, adjustable software gain, and visualization preference are
+persisted in SQLite. Settings list real devices and show per-track source bit depth/rate/channels
+beside the active output sample format/rate/channels. If a previously selected device disappears,
+playback falls back to the system default and discloses that fallback rather than failing the track.
 
 ## Hardware-audio smoke tests
 
@@ -169,5 +180,5 @@ and Windows NSIS bundle. Hardware audio is intentionally outside CI coverage.
 
 ## Deferred work
 
-Native spectrum samples, Last.fm, Discord presence, acquisition, installers beyond CI bundles,
-code signing, and auto-updates remain deferred to later stages in the V2 plan.
+Last.fm, Discord presence, acquisition, installers beyond CI bundles, code signing, and auto-updates
+remain deferred to later stages in the V2 plan.

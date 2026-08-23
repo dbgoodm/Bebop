@@ -14,6 +14,7 @@ mod catalog;
 mod enrichment;
 mod metadata;
 mod persistence;
+mod spectrum;
 mod user_state;
 mod watcher;
 
@@ -49,7 +50,9 @@ const PLAYBACK_STATE_EVENT: &str = "playback://state";
 const PLAYBACK_POSITION_EVENT: &str = "playback://position";
 const PLAYBACK_ENDED_EVENT: &str = "playback://ended";
 const PLAYBACK_ERROR_EVENT: &str = "playback://error";
+const PLAYBACK_SPECTRUM_EVENT: &str = "playback://spectrum";
 const POSITION_INTERVAL: Duration = Duration::from_millis(250);
+const SPECTRUM_INTERVAL: Duration = Duration::from_millis(33);
 
 #[derive(Clone, Debug, Deserialize, Serialize, Type)]
 #[serde(rename_all = "camelCase")]
@@ -199,6 +202,15 @@ pub struct LibraryChanged {
     pub track_ids: Vec<String>,
 }
 
+#[derive(Clone, Debug, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct SpectrumFrame {
+    pub sequence: u64,
+    pub position_ms: u64,
+    pub bins: Vec<u8>,
+    pub peak: u8,
+}
+
 /// Shared state owns the database worker and the sole native playback engine.
 pub struct AppState {
     database: DatabaseWorker,
@@ -207,6 +219,8 @@ pub struct AppState {
     watcher: LibraryWatcher,
     listening: Arc<Mutex<Option<ActiveListeningSession>>>,
     playback: Arc<Mutex<PlaybackEngine>>,
+    visualization_enabled: Arc<AtomicBool>,
+    spectrum_active: Arc<AtomicBool>,
     running: Arc<AtomicBool>,
 }
 
@@ -230,6 +244,7 @@ impl AppState {
             preferences.hifi_mode,
             preferences.selected_output_device_id.clone(),
         );
+        playback.set_spectrum_enabled(preferences.visualization_enabled);
         Self {
             database,
             artwork_cache,
@@ -237,6 +252,8 @@ impl AppState {
             watcher,
             listening: Arc::new(Mutex::new(None)),
             playback: Arc::new(Mutex::new(playback)),
+            visualization_enabled: Arc::new(AtomicBool::new(preferences.visualization_enabled)),
+            spectrum_active: Arc::new(AtomicBool::new(true)),
             running: Arc::new(AtomicBool::new(true)),
         }
     }
@@ -426,6 +443,40 @@ fn set_library_view_preference(
     let mut preferences = state.database.load_player_state()?.preferences;
     preferences.library_view = library_view;
     state.database.save_preferences(preferences)
+}
+
+#[tauri::command]
+#[specta::specta]
+fn set_visualization_enabled(
+    state: State<'_, AppState>,
+    enabled: bool,
+) -> Result<PlayerPreferences, AppError> {
+    state
+        .visualization_enabled
+        .store(enabled, Ordering::Release);
+    update_spectrum_enabled(&state)?;
+    let mut preferences = state.database.load_player_state()?.preferences;
+    preferences.visualization_enabled = enabled;
+    state.database.save_preferences(preferences)
+}
+
+#[tauri::command]
+#[specta::specta]
+fn set_spectrum_active(state: State<'_, AppState>, active: bool) -> Result<bool, AppError> {
+    state.spectrum_active.store(active, Ordering::Release);
+    update_spectrum_enabled(&state)?;
+    Ok(active)
+}
+
+fn update_spectrum_enabled(state: &AppState) -> Result<(), AppError> {
+    let enabled = state.visualization_enabled.load(Ordering::Acquire)
+        && state.spectrum_active.load(Ordering::Acquire);
+    state
+        .playback
+        .lock()
+        .map_err(|_| AppError::state_unavailable("playback-engine"))?
+        .set_spectrum_enabled(enabled);
+    Ok(())
 }
 
 #[tauri::command]
@@ -1173,6 +1224,9 @@ fn select_audio_output_device(
         .playback
         .lock()
         .map_err(|_| AppError::state_unavailable("playback-engine"))?;
+    let was_playing = matches!(engine.state.status, PlaybackStatus::Playing);
+    let checkpoint_track = engine.state.track_id.clone();
+    let checkpoint_position = engine.state.position_ms;
     if let Err(error) = engine.select_output_device(device_id) {
         let error = AppError::from_audio(error, None);
         emit_playback_error(&app, &error);
@@ -1180,9 +1234,22 @@ fn select_audio_output_device(
     }
     emit_playback_state(&app, &engine.state);
     persist_audio_preferences(&state, &engine);
-    engine
+    let devices = engine
         .output_devices()
-        .map_err(|error| AppError::from_audio(error, None))
+        .map_err(|error| AppError::from_audio(error, None))?;
+    drop(engine);
+    if checkpoint_track.is_some() {
+        update_active_session(
+            &state.listening,
+            &state.database,
+            was_playing,
+            Some((false, true)),
+        );
+        let _ = state
+            .database
+            .save_playback_checkpoint(checkpoint_track, checkpoint_position);
+    }
+    Ok(devices)
 }
 
 #[tauri::command]
@@ -1280,6 +1347,38 @@ fn spawn_playback_monitor(app: AppHandle, state: &AppState) {
     });
 }
 
+fn spawn_spectrum_emitter(app: AppHandle, state: &AppState) {
+    let playback = Arc::clone(&state.playback);
+    let running = Arc::clone(&state.running);
+    let visualization_enabled = Arc::clone(&state.visualization_enabled);
+    let spectrum_active = Arc::clone(&state.spectrum_active);
+    thread::spawn(move || {
+        while running.load(Ordering::Acquire) {
+            thread::sleep(SPECTRUM_INTERVAL);
+            if !visualization_enabled.load(Ordering::Acquire)
+                || !spectrum_active.load(Ordering::Acquire)
+            {
+                continue;
+            }
+            let Some((analyzed, position_ms)) = playback.lock().ok().and_then(|mut engine| {
+                let position_ms = engine.state.position_ms;
+                engine.take_spectrum().map(|frame| (frame, position_ms))
+            }) else {
+                continue;
+            };
+            let _ = app.emit(
+                PLAYBACK_SPECTRUM_EVENT,
+                SpectrumFrame {
+                    sequence: analyzed.sequence,
+                    position_ms,
+                    bins: analyzed.bins,
+                    peak: analyzed.peak,
+                },
+            );
+        }
+    });
+}
+
 fn shutdown_playback(state: &AppState) {
     state.running.store(false, Ordering::Release);
     if let Ok(mut engine) = state.playback.lock() {
@@ -1342,9 +1441,11 @@ fn ipc_bindings() -> Builder<tauri::Wry> {
             set_musicbrainz_enabled,
             set_favorite,
             set_playlist_tracks,
+            set_spectrum_active,
             set_theme_preference,
             set_ui_preference,
             set_volume,
+            set_visualization_enabled,
             stop_playback,
             write_metadata_to_file
         ])
@@ -1372,6 +1473,7 @@ fn ipc_bindings() -> Builder<tauri::Wry> {
         .typ::<PlaybackState>()
         .typ::<PlayerPreferences>()
         .typ::<PlaylistSummary>()
+        .typ::<SpectrumFrame>()
         .typ::<ScanProgress>()
         .typ::<SortDirection>()
         .typ::<TrackPage>()
@@ -1429,6 +1531,7 @@ pub fn run() {
             ));
             let state = app.state::<AppState>();
             spawn_playback_monitor(app.handle().clone(), &state);
+            spawn_spectrum_emitter(app.handle().clone(), &state);
             let startup_app = app.handle().clone();
             thread::Builder::new()
                 .name("bebop-startup-reconciliation".into())

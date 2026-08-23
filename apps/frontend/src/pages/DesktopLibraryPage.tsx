@@ -62,6 +62,8 @@ function formatBytes(bytes: number) {
   return `${(bytes / 1_024 ** index).toFixed(index < 2 ? 0 : 1)} ${units[index]}`;
 }
 
+const EMPTY_SPECTRUM_BINS: readonly number[] = [];
+
 export function DesktopLibraryPage() {
   const { currentTheme } = useTheme();
   const [activeTab, setActiveTab] = useState<NavTab>('HOME');
@@ -76,6 +78,7 @@ export function DesktopLibraryPage() {
   const [favoriteTrackIds, setFavoriteTrackIds] = useState<ReadonlySet<string>>(new Set());
   const [playlists, setPlaylists] = useState<PlaylistSummary[]>([]);
   const [playlistName, setPlaylistName] = useState('');
+  const [visualizationEnabled, setVisualizationEnabled] = useState(true);
   const [librarySubTab, setLibrarySubTab] = useState<LibrarySubTab>('tracks');
   const resumeRef = useRef<{ trackId: string | null; positionMs: number }>({
     trackId: null,
@@ -208,6 +211,7 @@ export function DesktopLibraryPage() {
         if (['artists', 'albums', 'genres', 'tracks'].includes(player.preferences.libraryView)) {
           setLibrarySubTab(player.preferences.libraryView as LibrarySubTab);
         }
+        setVisualizationEnabled(player.preferences.visualizationEnabled ?? true);
       })
       .catch(() => undefined)
       .finally(() => {
@@ -592,12 +596,46 @@ export function DesktopLibraryPage() {
               Bebop's local SQLite database. Playback never starts automatically after launch.
             </EmptyState>
             <div className="rounded border border-neutral-800 bg-neutral-950/50 p-5 text-sm text-neutral-300">
+              <label className="mb-4 block text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                Output device
+                <select
+                  value={nativePlayback.outputDevices.find((device) => device.isSelected)?.id ?? ''}
+                  onChange={(event) => void nativePlayback.selectOutput(event.target.value || null)}
+                  className="mt-2 block w-full rounded border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm normal-case tracking-normal text-white"
+                >
+                  <option value="">System default</option>
+                  {nativePlayback.outputDevices.map((device) => (
+                    <option key={device.id} value={device.id}>
+                      {device.name}
+                      {device.isDefault ? ' (default)' : ''}
+                    </option>
+                  ))}
+                </select>
+              </label>
               {nativePlayback.playback.output ? (
                 <>
                   <p className="font-semibold text-white">
                     {nativePlayback.playback.output.deviceName}
                   </p>
                   <p className="mt-2">{nativePlayback.playback.output.disclosure}</p>
+                  <dl className="mt-3 grid grid-cols-2 gap-2 font-mono text-xs text-neutral-400">
+                    <div>
+                      <dt>Source</dt>
+                      <dd className="text-neutral-200">
+                        {nativePlayback.playback.output.sourceBitDepth ?? '—'}-bit ·{' '}
+                        {nativePlayback.playback.output.sourceSampleRate} Hz ·{' '}
+                        {nativePlayback.playback.output.sourceChannels} ch
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Output</dt>
+                      <dd className="text-neutral-200">
+                        {nativePlayback.playback.output.outputSampleFormat} ·{' '}
+                        {nativePlayback.playback.output.outputSampleRate} Hz ·{' '}
+                        {nativePlayback.playback.output.outputChannels} ch
+                      </dd>
+                    </div>
+                  </dl>
                 </>
               ) : (
                 <p>Play a scanned track to inspect the active output stream.</p>
@@ -611,6 +649,18 @@ export function DesktopLibraryPage() {
                   ? 'Allow software volume'
                   : 'Enable hi-fi unity gain'}
               </button>
+              <label className="mt-4 flex items-center gap-2 text-sm text-neutral-300">
+                <input
+                  type="checkbox"
+                  checked={visualizationEnabled}
+                  onChange={(event) => {
+                    const enabled = event.target.checked;
+                    setVisualizationEnabled(enabled);
+                    void nativePlayback.setVisualization(enabled);
+                  }}
+                />
+                Native 64-band spectrum visualization
+              </label>
             </div>
             <div className="rounded border border-neutral-800 bg-neutral-950/50 p-5">
               <h2 className="text-sm font-semibold text-white">Manual playlists</h2>
@@ -880,7 +930,8 @@ export function DesktopLibraryPage() {
         onToggleMute={() => void nativePlayback.toggleMute()}
         volumeLocked={nativePlayback.playback.hifiMode}
         onUnlockVolume={() => nativePlayback.setHifi(false)}
-        spectrumAvailable={false}
+        spectrumAvailable={visualizationEnabled}
+        spectrumBins={nativePlayback.spectrum?.bins ?? EMPTY_SPECTRUM_BINS}
         onSelectArtist={(artist) => void selectArtist(artist)}
         onSelectAlbum={(album) => void selectAlbum(album)}
       />
@@ -918,7 +969,8 @@ export function DesktopLibraryPage() {
         onToggleMute={() => void nativePlayback.toggleMute()}
         volumeLocked={nativePlayback.playback.hifiMode}
         onUnlockVolume={() => nativePlayback.setHifi(false)}
-        spectrumAvailable={false}
+        spectrumAvailable={visualizationEnabled}
+        spectrumBins={nativePlayback.spectrum?.bins ?? EMPTY_SPECTRUM_BINS}
         onSelectArtist={(artist) => void selectArtist(artist)}
         onSelectAlbum={(album) => void selectAlbum(album)}
       />
