@@ -42,11 +42,13 @@ const DEFAULT_STATS: ListeningStatsData = {
 export interface ListeningStatsProps {
   stats?: Partial<ListeningStatsData>;
   onCardClick?: (statKey: string) => void;
+  showAffinityMetrics?: boolean;
 }
 
 export const ListeningStats: React.FC<ListeningStatsProps> = ({
   stats: userStats,
   onCardClick,
+  showAffinityMetrics = true,
 }) => {
   const { currentTheme } = useTheme();
   const stats = { ...DEFAULT_STATS, ...userStats };
@@ -291,78 +293,80 @@ export const ListeningStats: React.FC<ListeningStatsProps> = ({
       </div>
 
       {/* Bottom Row: 4 Affinity & System Metrics with Custom Badges */}
-      <div id="stats-bottom-row" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        {bottomRowMetrics.map((item) => {
-          const IconComponent = item.icon;
-          return (
-            <div
-              key={item.id}
-              id={`metric-card-${item.id}`}
-              onClick={() => onCardClick?.(item.id)}
-              style={{
-                backgroundColor: currentTheme.bgCard,
-                borderColor: currentTheme.borderColor,
-                background: currentTheme.cardGradient || currentTheme.bgCard,
-              }}
-              className={`group border ${currentTheme.cardRadius} p-4 flex flex-col justify-between transition-all duration-200 hover:-translate-y-1 hover:shadow-xl cursor-pointer select-none`}
-            >
-              <div className="flex items-center justify-between gap-2">
-                <span
-                  className="text-[10px] sm:text-[11px] font-bold tracking-wider uppercase truncate"
-                  style={{ color: currentTheme.textMuted }}
-                >
-                  {item.label}
-                </span>
-                <span
-                  className="px-2 py-0.5 rounded text-[10px] font-mono font-semibold border truncate"
-                  style={{
-                    backgroundColor: `${item.badgeColor}18`,
-                    color: item.badgeColor,
-                    borderColor: `${item.badgeColor}50`,
-                  }}
-                >
-                  {item.badgeText}
-                </span>
-              </div>
-
-              <div className="my-2.5 flex items-center gap-3">
-                <div
-                  className="w-9 h-9 rounded-xl flex items-center justify-center border shrink-0 transition-transform group-hover:scale-110"
-                  style={{
-                    backgroundColor: `${item.badgeColor}18`,
-                    borderColor: `${item.badgeColor}60`,
-                    color: item.badgeColor,
-                  }}
-                >
-                  <IconComponent className="w-4 h-4" />
-                </div>
-                <span
-                  className="text-lg lg:text-xl font-extrabold tracking-tight line-clamp-1"
-                  style={{ color: currentTheme.textPrimary }}
-                >
-                  {item.value}
-                </span>
-              </div>
-
+      {showAffinityMetrics && (
+        <div id="stats-bottom-row" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {bottomRowMetrics.map((item) => {
+            const IconComponent = item.icon;
+            return (
               <div
-                className="pt-2 border-t flex items-center justify-between text-xs"
-                style={{ borderColor: currentTheme.borderColor }}
+                key={item.id}
+                id={`metric-card-${item.id}`}
+                onClick={() => onCardClick?.(item.id)}
+                style={{
+                  backgroundColor: currentTheme.bgCard,
+                  borderColor: currentTheme.borderColor,
+                  background: currentTheme.cardGradient || currentTheme.bgCard,
+                }}
+                className={`group border ${currentTheme.cardRadius} p-4 flex flex-col justify-between transition-all duration-200 hover:-translate-y-1 hover:shadow-xl cursor-pointer select-none`}
               >
-                <span
-                  className="font-medium truncate tracking-tight"
-                  style={{ color: item.badgeColor }}
+                <div className="flex items-center justify-between gap-2">
+                  <span
+                    className="text-[10px] sm:text-[11px] font-bold tracking-wider uppercase truncate"
+                    style={{ color: currentTheme.textMuted }}
+                  >
+                    {item.label}
+                  </span>
+                  <span
+                    className="px-2 py-0.5 rounded text-[10px] font-mono font-semibold border truncate"
+                    style={{
+                      backgroundColor: `${item.badgeColor}18`,
+                      color: item.badgeColor,
+                      borderColor: `${item.badgeColor}50`,
+                    }}
+                  >
+                    {item.badgeText}
+                  </span>
+                </div>
+
+                <div className="my-2.5 flex items-center gap-3">
+                  <div
+                    className="w-9 h-9 rounded-xl flex items-center justify-center border shrink-0 transition-transform group-hover:scale-110"
+                    style={{
+                      backgroundColor: `${item.badgeColor}18`,
+                      borderColor: `${item.badgeColor}60`,
+                      color: item.badgeColor,
+                    }}
+                  >
+                    <IconComponent className="w-4 h-4" />
+                  </div>
+                  <span
+                    className="text-lg lg:text-xl font-extrabold tracking-tight line-clamp-1"
+                    style={{ color: currentTheme.textPrimary }}
+                  >
+                    {item.value}
+                  </span>
+                </div>
+
+                <div
+                  className="pt-2 border-t flex items-center justify-between text-xs"
+                  style={{ borderColor: currentTheme.borderColor }}
                 >
-                  {item.subtext}
-                </span>
-                <span
-                  className="w-1.5 h-1.5 rounded-full shrink-0"
-                  style={{ backgroundColor: item.badgeColor }}
-                />
+                  <span
+                    className="font-medium truncate tracking-tight"
+                    style={{ color: item.badgeColor }}
+                  >
+                    {item.subtext}
+                  </span>
+                  <span
+                    className="w-1.5 h-1.5 rounded-full shrink-0"
+                    style={{ backgroundColor: item.badgeColor }}
+                  />
+                </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
     </section>
   );
 };

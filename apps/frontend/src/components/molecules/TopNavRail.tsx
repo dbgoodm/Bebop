@@ -12,6 +12,8 @@ export const TopNavRail: React.FC<TopNavRailProps> = ({
   searchQuery = '',
   onSearchChange,
   onImportAudioFile,
+  audioStatusLabel = 'Web Audio FFT',
+  showPrototypeActions = true,
 }) => {
   const { queue, activeDownloadsCount, setIsDrawerOpen, isDrawerOpen } = useAntraEngine();
   const { setIsThemeModalOpen, currentTheme } = useTheme();
@@ -152,72 +154,79 @@ export const TopNavRail: React.FC<TopNavRailProps> = ({
           className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded border text-xs font-mono select-none"
         >
           <Volume2 className="w-3.5 h-3.5" style={{ color: currentTheme.primary }} />
-          <span>Web Audio FFT</span>
+          <span>{audioStatusLabel}</span>
         </div>
 
-        {/* Hidden File Input for Custom Audio Files */}
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="audio/*,.mp3,.flac,.wav,.ogg,.m4a"
-          className="hidden"
-          onChange={handleFileChange}
-        />
-
-        {/* Import Audio File Button */}
-        <button
-          id="nav-import-audio-btn"
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          className="relative p-2 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 text-neutral-400 hover:bg-neutral-800/60"
-          title="Import Local Audio (.mp3, .flac, .wav) to play & visualize"
-          aria-label="Import Audio File"
-        >
-          <Upload className="w-4 h-4" style={{ color: currentTheme.primary }} />
-          <span className="hidden lg:inline text-xs font-mono text-neutral-300">Import Audio</span>
-        </button>
-
-        {/* Download Queue Icon Button (No Border, Click to Open Queue Pop-up) */}
-        <button
-          id="nav-download-queue-btn"
-          type="button"
-          onClick={() => setIsDrawerOpen(!isDrawerOpen)}
-          style={{
-            color: isDrawerOpen || downloadingItems.length > 0 ? currentTheme.primary : undefined,
-            backgroundColor: isDrawerOpen ? `${currentTheme.primary}18` : undefined,
-          }}
-          className="relative p-2 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/60"
-          title={
-            downloadingItems.length > 0
-              ? `Downloading: ${currentProgress}% (${downloadingItems.length} active)`
-              : queuedItems.length > 0
-                ? `Download Queue: ${queuedItems.length} queued`
-                : 'Download Queue'
-          }
-          aria-label="Download Queue"
-        >
-          <Download
-            className={`w-4 h-4 transition-transform ${
-              downloadingItems.length > 0 ? 'animate-bounce' : ''
-            }`}
-            style={{ color: downloadingItems.length > 0 ? currentTheme.primary : undefined }}
-          />
-          {downloadingItems.length > 0 ? (
-            <span
-              id="nav-download-progress-pill"
-              className="text-[10px] font-mono font-bold"
-              style={{ color: currentTheme.primary }}
-            >
-              {currentProgress}%
-            </span>
-          ) : queuedItems.length > 0 ? (
-            <span
-              id="nav-queued-count-pill"
-              className="w-1.5 h-1.5 rounded-full"
-              style={{ backgroundColor: currentTheme.primary }}
+        {showPrototypeActions && (
+          <>
+            {/* Hidden File Input for Custom Audio Files */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="audio/*,.mp3,.flac,.wav,.ogg,.m4a"
+              className="hidden"
+              onChange={handleFileChange}
             />
-          ) : null}
-        </button>
+
+            {/* Import Audio File Button */}
+            <button
+              id="nav-import-audio-btn"
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="relative p-2 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 text-neutral-400 hover:bg-neutral-800/60"
+              title="Import Local Audio (.mp3, .flac, .wav) to play & visualize"
+              aria-label="Import Audio File"
+            >
+              <Upload className="w-4 h-4" style={{ color: currentTheme.primary }} />
+              <span className="hidden lg:inline text-xs font-mono text-neutral-300">
+                Import Audio
+              </span>
+            </button>
+
+            {/* Download Queue Icon Button (No Border, Click to Open Queue Pop-up) */}
+            <button
+              id="nav-download-queue-btn"
+              type="button"
+              onClick={() => setIsDrawerOpen(!isDrawerOpen)}
+              style={{
+                color:
+                  isDrawerOpen || downloadingItems.length > 0 ? currentTheme.primary : undefined,
+                backgroundColor: isDrawerOpen ? `${currentTheme.primary}18` : undefined,
+              }}
+              className="relative p-2 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/60"
+              title={
+                downloadingItems.length > 0
+                  ? `Downloading: ${currentProgress}% (${downloadingItems.length} active)`
+                  : queuedItems.length > 0
+                    ? `Download Queue: ${queuedItems.length} queued`
+                    : 'Download Queue'
+              }
+              aria-label="Download Queue"
+            >
+              <Download
+                className={`w-4 h-4 transition-transform ${
+                  downloadingItems.length > 0 ? 'animate-bounce' : ''
+                }`}
+                style={{ color: downloadingItems.length > 0 ? currentTheme.primary : undefined }}
+              />
+              {downloadingItems.length > 0 ? (
+                <span
+                  id="nav-download-progress-pill"
+                  className="text-[10px] font-mono font-bold"
+                  style={{ color: currentTheme.primary }}
+                >
+                  {currentProgress}%
+                </span>
+              ) : queuedItems.length > 0 ? (
+                <span
+                  id="nav-queued-count-pill"
+                  className="w-1.5 h-1.5 rounded-full"
+                  style={{ backgroundColor: currentTheme.primary }}
+                />
+              ) : null}
+            </button>
+          </>
+        )}
 
         {/* Theme Studio Palette Button */}
         <button

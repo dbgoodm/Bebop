@@ -93,6 +93,9 @@ export const ContinueListeningRail: React.FC<ContinueListeningRailProps> = ({
   onItemClick,
   onSelectArtist,
   onSelectAlbum,
+  emptyMessage = 'Start a track from your local library and its current session will appear here.',
+  emptyActionLabel,
+  onEmptyAction,
 }) => {
   const { currentTheme } = useTheme();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -200,136 +203,165 @@ export const ContinueListeningRail: React.FC<ContinueListeningRailProps> = ({
         id="continue-listening-carousel"
         className="flex items-stretch gap-4 overflow-x-auto pb-1 pt-1 no-scrollbar snap-x"
       >
-        {items.map((item) => (
+        {items.length === 0 ? (
           <div
-            key={item.id}
-            id={`continue-card-${item.id}`}
-            onClick={() => onItemClick?.(item)}
+            className="flex min-h-48 w-full flex-col items-center justify-center rounded-xl border border-dashed px-6 py-8 text-center"
             style={{
               backgroundColor: currentTheme.bgCard,
               borderColor: currentTheme.borderColor,
             }}
-            className="group relative flex-none w-72 sm:w-80 border rounded-xl overflow-hidden flex flex-col justify-between transition-all duration-200 hover:-translate-y-1 hover:shadow-xl cursor-pointer snap-start"
           >
-            {/* Top Media Banner / Cover Art & Resume Play Trigger */}
-            <div className="relative h-36 w-full overflow-hidden bg-neutral-900">
-              {item.coverUrl ? (
-                <img
-                  src={item.coverUrl}
-                  alt={item.title}
-                  referrerPolicy="no-referrer"
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                />
-              ) : (
-                <div
-                  className={`w-full h-full bg-gradient-to-br ${item.accentGradient || 'from-neutral-800 to-neutral-950'} flex items-center justify-center`}
-                >
-                  <Disc3 className="w-12 h-12 text-neutral-600" />
-                </div>
-              )}
-
-              {/* Gradient Overlay for Text Legibility */}
-              <div className="absolute inset-0 bg-gradient-to-t from-[#0c1017] via-transparent to-black/40" />
-
-              {/* Top Bar Badges on Image */}
-              <div className="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between">
-                {getTypeBadge(item.type)}
-                <span className="inline-flex items-center gap-1 text-[11px] font-medium text-neutral-300 bg-black/60 backdrop-blur-sm px-2 py-0.5 rounded border border-white/10">
-                  <Clock className="w-3 h-3 text-neutral-400" />
-                  {item.lastPlayedText}
-                </span>
-              </div>
-
-              {/* Netflix-style Floating Resume Play Button */}
+            <Music2 className="h-6 w-6" style={{ color: currentTheme.primary }} />
+            <h3 className="mt-3 text-sm font-semibold text-white">No listening session yet</h3>
+            <p className="mt-1 max-w-md text-xs text-neutral-400">{emptyMessage}</p>
+            {emptyActionLabel && onEmptyAction && (
               <button
-                id={`resume-play-${item.id}`}
                 type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onResumeItem?.(item);
-                }}
-                style={{
-                  backgroundColor: currentTheme.primary,
-                  boxShadow: `0 4px 16px ${currentTheme.accentGlow}`,
-                }}
-                className="absolute right-3 bottom-3 w-11 h-11 rounded-full text-black flex items-center justify-center shadow-lg transform translate-y-2 opacity-90 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-200 cursor-pointer hover:scale-105 hover:brightness-110"
-                aria-label={`Resume ${item.title}`}
+                onClick={onEmptyAction}
+                className="mt-4 text-xs font-semibold underline"
+                style={{ color: currentTheme.primary }}
               >
-                <Play className="w-5 h-5 fill-black ml-0.5" />
+                {emptyActionLabel}
               </button>
-            </div>
+            )}
+          </div>
+        ) : (
+          items.map((item) => (
+            <div
+              key={item.id}
+              id={`continue-card-${item.id}`}
+              onClick={() => onItemClick?.(item)}
+              style={{
+                backgroundColor: currentTheme.bgCard,
+                borderColor: currentTheme.borderColor,
+              }}
+              className="group relative flex-none w-72 sm:w-80 border rounded-xl overflow-hidden flex flex-col justify-between transition-all duration-200 hover:-translate-y-1 hover:shadow-xl cursor-pointer snap-start"
+            >
+              {/* Top Media Banner / Cover Art & Resume Play Trigger */}
+              <div className="relative h-36 w-full overflow-hidden bg-neutral-900">
+                {item.coverUrl ? (
+                  <img
+                    src={item.coverUrl}
+                    alt={item.title}
+                    referrerPolicy="no-referrer"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                ) : (
+                  <div
+                    className={`w-full h-full bg-gradient-to-br ${item.accentGradient || 'from-neutral-800 to-neutral-950'} flex items-center justify-center`}
+                  >
+                    <Disc3 className="w-12 h-12 text-neutral-600" />
+                  </div>
+                )}
 
-            {/* Bottom Info Section */}
-            <div className="p-3.5 flex flex-col justify-between flex-1">
-              <div>
-                <h3
-                  className="text-sm font-bold text-white tracking-tight line-clamp-1 group-hover:opacity-90 transition-colors"
-                  title={item.title}
-                >
-                  {item.title}
-                </h3>
-                <div className="text-xs text-neutral-400 mt-0.5 line-clamp-1">
-                  {item.type === 'album' && item.subtitle.includes('•') ? (
-                    (() => {
-                      const artistPart = item.subtitle.split('•')[0].trim();
-                      const rest = item.subtitle.substring(item.subtitle.indexOf('•'));
-                      return (
-                        <span>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onSelectArtist?.(artistPart);
-                            }}
-                            className="hover:underline cursor-pointer transition-colors"
-                            style={{ color: currentTheme.textSecondary }}
-                            title={`View artist: ${artistPart}`}
-                          >
-                            {artistPart}
-                          </button>
-                          <span className="text-neutral-500"> {rest}</span>
-                        </span>
-                      );
-                    })()
-                  ) : item.type === 'artist' ? (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onSelectArtist?.(item.title);
-                      }}
-                      className="hover:underline cursor-pointer transition-colors"
-                      style={{ color: currentTheme.textSecondary }}
-                      title={`View artist: ${item.title}`}
-                    >
-                      {item.subtitle}
-                    </button>
-                  ) : (
-                    <span>{item.subtitle}</span>
-                  )}
+                {/* Gradient Overlay for Text Legibility */}
+                <div className="absolute inset-0 bg-gradient-to-t from-[#0c1017] via-transparent to-black/40" />
+
+                {/* Top Bar Badges on Image */}
+                <div className="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between">
+                  {getTypeBadge(item.type)}
+                  <span className="inline-flex items-center gap-1 text-[11px] font-medium text-neutral-300 bg-black/60 backdrop-blur-sm px-2 py-0.5 rounded border border-white/10">
+                    <Clock className="w-3 h-3 text-neutral-400" />
+                    {item.lastPlayedText}
+                  </span>
                 </div>
+
+                {/* Netflix-style Floating Resume Play Button */}
+                <button
+                  id={`resume-play-${item.id}`}
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onResumeItem?.(item);
+                  }}
+                  style={{
+                    backgroundColor: currentTheme.primary,
+                    boxShadow: `0 4px 16px ${currentTheme.accentGlow}`,
+                  }}
+                  className="absolute right-3 bottom-3 w-11 h-11 rounded-full text-black flex items-center justify-center shadow-lg transform translate-y-2 opacity-90 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-200 cursor-pointer hover:scale-105 hover:brightness-110"
+                  aria-label={`Resume ${item.title}`}
+                >
+                  <Play className="w-5 h-5 fill-black ml-0.5" />
+                </button>
               </div>
 
-              {/* Last active track note (no progress bar or time remaining) */}
-              {item.lastPlayedTrackName && (
-                <div
-                  className="mt-3 pt-2 border-t flex items-center justify-between text-[11px] text-neutral-400"
-                  style={{ borderColor: currentTheme.borderColor }}
-                >
-                  <span className="flex items-center gap-1.5 truncate text-neutral-300">
-                    <Music2 className="w-3 h-3 shrink-0" style={{ color: currentTheme.primary }} />
-                    <span className="truncate">Last: &ldquo;{item.lastPlayedTrackName}&rdquo;</span>
-                  </span>
-                  {item.totalTracksCount && (
-                    <span className="text-[10px] text-neutral-500 shrink-0 ml-2">
-                      {item.totalTracksCount} tracks
-                    </span>
-                  )}
+              {/* Bottom Info Section */}
+              <div className="p-3.5 flex flex-col justify-between flex-1">
+                <div>
+                  <h3
+                    className="text-sm font-bold text-white tracking-tight line-clamp-1 group-hover:opacity-90 transition-colors"
+                    title={item.title}
+                  >
+                    {item.title}
+                  </h3>
+                  <div className="text-xs text-neutral-400 mt-0.5 line-clamp-1">
+                    {item.type === 'album' && item.subtitle.includes('•') ? (
+                      (() => {
+                        const artistPart = item.subtitle.split('•')[0].trim();
+                        const rest = item.subtitle.substring(item.subtitle.indexOf('•'));
+                        return (
+                          <span>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onSelectArtist?.(artistPart);
+                              }}
+                              className="hover:underline cursor-pointer transition-colors"
+                              style={{ color: currentTheme.textSecondary }}
+                              title={`View artist: ${artistPart}`}
+                            >
+                              {artistPart}
+                            </button>
+                            <span className="text-neutral-500"> {rest}</span>
+                          </span>
+                        );
+                      })()
+                    ) : item.type === 'artist' ? (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onSelectArtist?.(item.title);
+                        }}
+                        className="hover:underline cursor-pointer transition-colors"
+                        style={{ color: currentTheme.textSecondary }}
+                        title={`View artist: ${item.title}`}
+                      >
+                        {item.subtitle}
+                      </button>
+                    ) : (
+                      <span>{item.subtitle}</span>
+                    )}
+                  </div>
                 </div>
-              )}
+
+                {/* Last active track note (no progress bar or time remaining) */}
+                {item.lastPlayedTrackName && (
+                  <div
+                    className="mt-3 pt-2 border-t flex items-center justify-between text-[11px] text-neutral-400"
+                    style={{ borderColor: currentTheme.borderColor }}
+                  >
+                    <span className="flex items-center gap-1.5 truncate text-neutral-300">
+                      <Music2
+                        className="w-3 h-3 shrink-0"
+                        style={{ color: currentTheme.primary }}
+                      />
+                      <span className="truncate">
+                        Last: &ldquo;{item.lastPlayedTrackName}&rdquo;
+                      </span>
+                    </span>
+                    {item.totalTracksCount && (
+                      <span className="text-[10px] text-neutral-500 shrink-0 ml-2">
+                        {item.totalTracksCount} tracks
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        ))}
+          ))
+        )}
       </div>
     </section>
   );

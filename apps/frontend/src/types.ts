@@ -8,6 +8,8 @@ export interface TopNavRailProps {
   onMailClick?: () => void;
   unreadCount?: number;
   onImportAudioFile?: (file: File) => void;
+  audioStatusLabel?: string;
+  showPrototypeActions?: boolean;
 }
 
 export interface MetricCardData {
@@ -60,6 +62,9 @@ export interface ContinueListeningRailProps {
   onItemClick?: (item: ContinueListeningItem) => void;
   onSelectArtist?: (artistName: string) => void;
   onSelectAlbum?: (albumName: string) => void;
+  emptyMessage?: string;
+  emptyActionLabel?: string;
+  onEmptyAction?: () => void;
 }
 
 export type AudioFormat =

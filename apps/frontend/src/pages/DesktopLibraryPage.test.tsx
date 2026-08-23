@@ -88,6 +88,30 @@ vi.mock('@/services/themeService', () => ({
   useTheme: () => ({ currentTheme: { bgCanvas: '#000' } }),
 }));
 
+vi.mock('@/components/molecules/TopNavRail', () => ({
+  TopNavRail: ({
+    onTabChange,
+    audioStatusLabel,
+    showPrototypeActions,
+  }: {
+    onTabChange: (tab: 'LIBRARY') => void;
+    audioStatusLabel: string;
+    showPrototypeActions: boolean;
+  }) => (
+    <div>
+      <button type="button" onClick={() => onTabChange('LIBRARY')}>
+        Open library
+      </button>
+      <span>{audioStatusLabel}</span>
+      <span>{showPrototypeActions ? 'Prototype actions' : 'Native-only actions'}</span>
+    </div>
+  ),
+}));
+
+vi.mock('@/components/organisms/ThemeSelectorModal', () => ({
+  ThemeSelectorModal: () => null,
+}));
+
 vi.mock('@/components/organisms/LibraryView', () => ({
   LibraryView: ({ onPlayTrack }: { onPlayTrack: (track: TrackItem) => void }) => (
     <button type="button" onClick={() => onPlayTrack(mocks.track)}>
@@ -148,6 +172,13 @@ describe('DesktopLibraryPage', () => {
   it('connects scanned tracks and transport controls to native playback', () => {
     render(<DesktopLibraryPage />);
 
+    expect(screen.getByText(/Bebop local-first/i)).toBeInTheDocument();
+    expect(screen.getByText('Native Rust output')).toBeInTheDocument();
+    expect(screen.getByText('Native-only actions')).toBeInTheDocument();
+    expect(screen.getByText(/Continue Listening/i)).toBeInTheDocument();
+    expect(screen.getAllByText('Scanned track')).toHaveLength(2);
+    expect(screen.getByText(/Library preview/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Open library' }));
     fireEvent.click(screen.getByRole('button', { name: 'Play scanned track' }));
     fireEvent.click(screen.getByRole('button', { name: 'Toggle playback' }));
     fireEvent.click(screen.getByRole('button', { name: 'Seek playback' }));

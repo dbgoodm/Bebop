@@ -15,8 +15,9 @@ npm ci
 npm run tauri:dev
 ```
 
-For a Wayland rendering issue, try `npm run tauri:dev:wayland`; `npm run tauri:dev:x11` is an
-XWayland fallback. Select a music folder in Bebop, then choose a scanned track to play it.
+On Linux, `tauri:dev` automatically applies WebKitGTK's DMABUF workaround for the Omarchy
+Wayland protocol issue. `npm run tauri:dev:x11` remains an XWayland fallback. Select a music
+folder in Bebop, then choose a scanned track to play it.
 
 Useful commands:
 

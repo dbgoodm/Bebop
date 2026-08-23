@@ -67,7 +67,7 @@ switching, or bit-perfect delivery. Run these manual checks before a release.
 ### Omarchy Linux / PipeWire
 
 1. Connect the intended DAC and select it as the system default output device.
-2. Run `npm run tauri:dev`, select a folder containing a known FLAC (for example, 44.1 kHz/24-bit), and play it.
+2. Run `npm run tauri:dev`, which applies the WebKitGTK DMABUF workaround on Linux, select a folder containing a known FLAC (for example, 44.1 kHz/24-bit), and play it.
 3. Confirm audible output, pause/resume, seek, volume/mute after switching out of hi-fi mode, stop, and next-track behavior.
 4. Check Bebop's output-path notice. It must accurately show native-rate delivery or resampling;
    do not treat native rate alone as bit-perfect proof.
