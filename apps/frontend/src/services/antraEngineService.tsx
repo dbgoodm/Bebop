@@ -20,6 +20,23 @@ interface AntraEngineContextType {
 
 const AntraEngineContext = createContext<AntraEngineContextType | undefined>(undefined);
 
+const INACTIVE_ANTRA_ENGINE: AntraEngineContextType = {
+  queue: [],
+  ingestedAlbumIds: [],
+  activeDownloadsCount: 0,
+  totalSpeed: '0.0 MB/s',
+  isDrawerOpen: false,
+  setIsDrawerOpen: () => undefined,
+  queueAlbum: () => undefined,
+  queueAllMissingAlbums: () => undefined,
+  pauseQueueItem: () => undefined,
+  resumeQueueItem: () => undefined,
+  cancelQueueItem: () => undefined,
+  clearCompleted: () => undefined,
+  getAlbumQueueStatus: () => undefined,
+  isAlbumIngested: () => false,
+};
+
 const STORAGE_KEY_INGESTED = 'antra_ingested_albums_v1';
 
 export const AntraEngineProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -249,3 +266,5 @@ export const useAntraEngine = () => {
   }
   return context;
 };
+
+export const useOptionalAntraEngine = () => useContext(AntraEngineContext) ?? INACTIVE_ANTRA_ENGINE;

@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { ArtistItem, ArtistTopTrack, ArtistDiscographyAlbum, TrackItem } from '@/types';
 import { UniversalTracklist } from '@/components/molecules/UniversalTracklist';
-import { useAntraEngine } from '@/services/antraEngineService';
+import { useOptionalAntraEngine } from '@/services/antraEngineService';
 import { useTheme } from '@/services/themeService';
 
 interface ArtistDetailPageProps {
@@ -33,7 +33,7 @@ export const ArtistDetailPage: React.FC<ArtistDetailPageProps> = ({
   onSelectAlbum,
 }) => {
   const { currentTheme } = useTheme();
-  const { queueAlbum, getAlbumQueueStatus, isAlbumIngested } = useAntraEngine();
+  const { queueAlbum, getAlbumQueueStatus, isAlbumIngested } = useOptionalAntraEngine();
 
   const [favoriteMap, setFavoriteMap] = useState<Record<string, boolean>>(() => {
     const init: Record<string, boolean> = {};

@@ -1,7 +1,7 @@
 import React, { useRef } from 'react';
 import { Search, X, Volume2, Disc, Settings, Download, Upload, Palette } from 'lucide-react';
 import { NavTab, TopNavRailProps } from '@/types';
-import { useAntraEngine } from '@/services/antraEngineService';
+import { useOptionalAntraEngine } from '@/services/antraEngineService';
 import { useTheme } from '@/services/themeService';
 
 const MAIN_NAV_ITEMS: NavTab[] = ['HOME', 'LIBRARY', 'DISCOVER'];
@@ -15,7 +15,7 @@ export const TopNavRail: React.FC<TopNavRailProps> = ({
   audioStatusLabel = 'Web Audio FFT',
   showPrototypeActions = true,
 }) => {
-  const { queue, activeDownloadsCount, setIsDrawerOpen, isDrawerOpen } = useAntraEngine();
+  const { queue, activeDownloadsCount, setIsDrawerOpen, isDrawerOpen } = useOptionalAntraEngine();
   const { setIsThemeModalOpen, currentTheme } = useTheme();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
