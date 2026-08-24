@@ -2010,6 +2010,7 @@ mod tests {
         let root = temporary_directory("tagged-catalog");
         let fixture = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/tone.flac");
         fs::copy(fixture, root.join("tagged.flac")).expect("copy tagged fixture");
+        fs::write(root.join("cover.jpg"), b"fixture-artwork").expect("write cover fixture");
         let database = DatabaseWorker::in_memory().expect("database starts");
         let library_root = database
             .add_root(
@@ -2031,6 +2032,11 @@ mod tests {
         assert_eq!(tracks[0].artists[0].name, "Fixture Artist");
         assert_eq!(tracks[0].album, "Fixture Album");
         assert_eq!(tracks[0].genres, ["Jazz"]);
+        let artwork_path = tracks[0]
+            .artwork_path
+            .as_deref()
+            .expect("track artwork path is hydrated");
+        assert!(Path::new(artwork_path).is_file());
         let discovery = database
             .query_discovery(DiscoveryQuery {
                 search: Some("Fixture".into()),
@@ -2041,6 +2047,14 @@ mod tests {
         assert_eq!(discovery.artists[0].name, "Fixture Artist");
         assert_eq!(discovery.albums[0].title, "Fixture Album");
         assert_eq!(discovery.genres[0].name, "Jazz");
+        assert_eq!(
+            discovery.artists[0].artwork_path.as_deref(),
+            Some(artwork_path)
+        );
+        assert_eq!(
+            discovery.albums[0].artwork_path.as_deref(),
+            Some(artwork_path)
+        );
         let detail = database
             .get_artist_detail(discovery.artists[0].id.clone())
             .expect("artist detail");

@@ -1,4 +1,5 @@
 import { open } from '@tauri-apps/plugin-dialog';
+import { convertFileSrc } from '@tauri-apps/api/core';
 import type { TrackItem } from '@/types';
 import {
   commands,
@@ -137,6 +138,10 @@ function formatBitrate(track: TrackSummary): string {
   return `${Math.round((track.fileSize * 8) / (track.durationMs / 1_000) / 1_000)} kbps`;
 }
 
+export function toArtworkUrl(path: string | null): string | undefined {
+  return path ? convertFileSrc(path) : undefined;
+}
+
 /** Adapts the existing presentation model without manufacturing music metadata. */
 export function toTrackItem(track: TrackSummary, index: number): TrackItem {
   return {
@@ -154,6 +159,7 @@ export function toTrackItem(track: TrackSummary, index: number): TrackItem {
     catalogNumber: track.catalogNumber ?? '—',
     duration: formatDuration(track.durationMs),
     durationSeconds: Math.floor((track.durationMs ?? 0) / 1_000),
+    coverUrl: toArtworkUrl(track.artworkPath),
     audioUrl: track.path,
     artistIds: track.artists.map((artist) => artist.id),
     albumId: track.albumId ?? undefined,

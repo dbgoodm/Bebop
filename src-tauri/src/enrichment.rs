@@ -444,6 +444,7 @@ mod tests {
             isrc: None,
             musicbrainz_recording_id: None,
             artwork_id: None,
+            artwork_path: None,
             extension: crate::AudioExtension::Flac,
             file_size: 1,
             duration_ms: Some(100_000),

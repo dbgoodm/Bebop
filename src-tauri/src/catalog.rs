@@ -152,6 +152,7 @@ pub struct TrackSummary {
     pub isrc: Option<String>,
     pub musicbrainz_recording_id: Option<String>,
     pub artwork_id: Option<String>,
+    pub artwork_path: Option<String>,
     pub extension: AudioExtension,
     pub file_size: u64,
     pub duration_ms: Option<u64>,
@@ -186,7 +187,9 @@ pub struct ArtistSummary {
     pub album_count: u64,
     pub track_count: u64,
     pub total_duration_ms: u64,
+    pub total_file_size: u64,
     pub artwork_id: Option<String>,
+    pub artwork_path: Option<String>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, Type)]
@@ -201,6 +204,8 @@ pub struct AlbumSummary {
     pub artwork_id: Option<String>,
     pub track_count: u64,
     pub total_duration_ms: u64,
+    pub total_file_size: u64,
+    pub artwork_path: Option<String>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, Type)]

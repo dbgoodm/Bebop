@@ -14,7 +14,7 @@
     "format": "npm run format --workspace=@bebop/frontend",
     "format:check": "npm run format:check --workspace=@bebop/frontend",
     "tauri:dev": "node scripts/tauri-dev.mjs",
-    "tauri:dev:wayland": "WEBKIT_DISABLE_DMABUF_RENDERER=1 node scripts/tauri-dev.mjs",
+    "tauri:dev:wayland": "WEBKIT_DMABUF_RENDERER_FORCE_SHM=1 WEBKIT_SKIA_ENABLE_CPU_RENDERING=1 node scripts/tauri-dev.mjs",
     "tauri:dev:x11": "GDK_BACKEND=x11 tauri dev --config src-tauri/tauri.conf.json",
     "tauri:build": "tauri build --config src-tauri/tauri.conf.json"
   }

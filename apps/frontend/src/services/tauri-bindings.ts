@@ -181,6 +181,8 @@ export type AlbumSummary = {
 	artworkId: string | null,
 	trackCount: number,
 	totalDurationMs: number,
+	totalFileSize: number,
+	artworkPath: string | null,
 };
 
 export type AppError = AppError_Serialize | AppError_Deserialize;
@@ -215,7 +217,9 @@ export type ArtistSummary = {
 	albumCount: number,
 	trackCount: number,
 	totalDurationMs: number,
+	totalFileSize: number,
 	artworkId: string | null,
+	artworkPath: string | null,
 };
 
 export type AudioExtension = "flac" | "wav" | "mp3" | "ogg" | "aac" | "aiff" | "m4a";
@@ -483,6 +487,7 @@ export type TrackSummary = {
 	isrc: string | null,
 	musicbrainzRecordingId: string | null,
 	artworkId: string | null,
+	artworkPath: string | null,
 	extension: AudioExtension,
 	fileSize: number,
 	durationMs: number | null,

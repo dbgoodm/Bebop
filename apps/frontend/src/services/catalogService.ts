@@ -1,6 +1,6 @@
 import type { AlbumItem, ArtistItem, AudioFormat, GenreItem } from '@/types';
 import { commands, type AlbumSummary, type ArtistSummary } from './tauri-bindings';
-import { toTrackItem } from './libraryService';
+import { toArtworkUrl, toTrackItem } from './libraryService';
 
 export interface CatalogDiscovery {
   artists: ArtistItem[];
@@ -14,7 +14,15 @@ function durationLabel(milliseconds: number) {
   return hours ? `${hours}h ${minutes % 60}m` : `${minutes}m`;
 }
 
+function fileSizeLabel(bytes: number) {
+  if (bytes <= 0) return '0 B';
+  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const index = Math.min(Math.floor(Math.log(bytes) / Math.log(1_024)), units.length - 1);
+  return `${(bytes / 1_024 ** index).toFixed(index < 2 ? 0 : 1)} ${units[index]}`;
+}
+
 function artistItem(artist: ArtistSummary): ArtistItem {
+  const artworkUrl = toArtworkUrl(artist.artworkPath);
   return {
     id: artist.id,
     name: artist.name,
@@ -22,8 +30,13 @@ function artistItem(artist: ArtistSummary): ArtistItem {
     albumCount: artist.albumCount,
     trackCount: artist.trackCount,
     totalDuration: durationLabel(artist.totalDurationMs),
+    avatarUrl: artworkUrl,
+    bannerUrl: artworkUrl,
+    featuredCoverUrl: artworkUrl,
+    bioSummary: `${artist.trackCount.toLocaleString()} local tracks across ${artist.albumCount.toLocaleString()} albums, totaling ${durationLabel(artist.totalDurationMs)}.`,
     losslessPlaytime: durationLabel(artist.totalDurationMs),
     losslessPercentage: 'Local files',
+    localStorageSize: fileSizeLabel(artist.totalFileSize),
   };
 }
 
@@ -38,8 +51,10 @@ function albumItem(album: AlbumSummary): AlbumItem {
     format: 'ALAC' as AudioFormat,
     codec: 'Local audio',
     catalogNumber: album.catalogNumber ?? '—',
+    coverUrl: toArtworkUrl(album.artworkPath),
     dynamicRange: '—',
     label: album.label ?? undefined,
+    fileSize: fileSizeLabel(album.totalFileSize),
     tracks: [],
   };
 }
@@ -48,7 +63,7 @@ export async function loadDiscovery(search: string): Promise<CatalogDiscovery> {
   const result = await commands.queryDiscovery({
     search: search.trim() || null,
     offset: 0,
-    limit: 100,
+    limit: 5_000,
   });
   if (result.status === 'error') throw result.error;
   return {
@@ -89,6 +104,7 @@ export async function loadArtistDetail(artistId: string): Promise<ArtistItem> {
       year: album.year ?? 0,
       formatBadge: 'Local audio',
       trackCount: album.trackCount,
+      coverUrl: toArtworkUrl(album.artworkPath),
       isLocal: true,
       catalogNumber: album.catalogNumber ?? undefined,
     })),

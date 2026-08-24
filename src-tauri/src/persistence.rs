@@ -1611,6 +1611,7 @@ fn track_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<TrackSummary> {
         isrc: row.get(22)?,
         musicbrainz_recording_id: row.get(23)?,
         artwork_id: row.get(24)?,
+        artwork_path: None,
         available: row.get(25)?,
     })
 }
@@ -1699,6 +1700,7 @@ fn hydrate_track(connection: &Connection, track: &mut TrackSummary) -> Result<()
         .map_err(database_error("read-track-play-count"))?;
     track.artists = artist_references(connection, &track.id, "artist")?;
     track.album_artists = artist_references(connection, &track.id, "album-artist")?;
+    track.artwork_path = artwork_path(connection, track.artwork_id.as_deref())?;
     if let Some(album_id) = &track.album_id {
         track.album = connection
             .query_row(
@@ -1726,6 +1728,23 @@ fn hydrate_track(connection: &Connection, track: &mut TrackSummary) -> Result<()
         apply_metadata_override(track, patch);
     }
     Ok(())
+}
+
+fn artwork_path(
+    connection: &Connection,
+    artwork_id: Option<&str>,
+) -> Result<Option<String>, AppError> {
+    let Some(artwork_id) = artwork_id else {
+        return Ok(None);
+    };
+    connection
+        .query_row(
+            "SELECT cache_path FROM artwork WHERE id = ?1",
+            [artwork_id],
+            |row| row.get(0),
+        )
+        .optional()
+        .map_err(database_error("read-artwork-path"))
 }
 
 fn apply_metadata_override(track: &mut TrackSummary, patch: MetadataPatch) {
@@ -1800,7 +1819,7 @@ fn query_discovery(
     connection: &Connection,
     query: DiscoveryQuery,
 ) -> Result<DiscoveryCatalog, AppError> {
-    let limit = query.limit.clamp(1, 100);
+    let limit = query.limit.clamp(1, 5_000);
     let pattern = query
         .search
         .as_deref()
@@ -1808,14 +1827,15 @@ fn query_discovery(
         .filter(|value| !value.is_empty())
         .map(|value| format!("%{}%", value.replace('%', "\\%").replace('_', "\\_")));
     Ok(DiscoveryCatalog {
-        artists: query_artists(connection, pattern.as_deref(), query.offset, limit)?,
-        albums: query_albums(connection, pattern.as_deref(), query.offset, limit)?,
+        artists: query_artists(connection, None, pattern.as_deref(), query.offset, limit)?,
+        albums: query_albums(connection, None, pattern.as_deref(), query.offset, limit)?,
         genres: query_genres(connection, pattern.as_deref(), query.offset, limit)?,
     })
 }
 
 fn query_artists(
     connection: &Connection,
+    exact_id: Option<&str>,
     pattern: Option<&str>,
     offset: u32,
     limit: u32,
@@ -1829,26 +1849,28 @@ fn query_artists(
                  WHERE ta.artist_id = a.id AND ta.role = 'artist'),
                 (SELECT COALESCE(SUM(t.duration_ms), 0) FROM track_artists ta JOIN tracks t ON t.id = ta.track_id
                  WHERE ta.artist_id = a.id AND ta.role = 'artist'),
+                (SELECT COALESCE(SUM(t.file_size), 0) FROM track_artists ta JOIN tracks t ON t.id = ta.track_id
+                 WHERE ta.artist_id = a.id AND ta.role = 'artist'),
                 (SELECT al.artwork_id FROM track_artists ta JOIN tracks t ON t.id = ta.track_id
                  JOIN albums al ON al.id = t.album_id WHERE ta.artist_id = a.id AND al.artwork_id IS NOT NULL LIMIT 1)
              FROM artists a
-             WHERE ?1 IS NULL OR a.name LIKE ?1 ESCAPE '\\' COLLATE NOCASE OR EXISTS (
+             WHERE (?1 IS NULL OR a.id = ?1) AND (?2 IS NULL OR a.name LIKE ?2 ESCAPE '\\' COLLATE NOCASE OR EXISTS (
                 SELECT 1 FROM track_artists ta JOIN tracks t ON t.id = ta.track_id
                 LEFT JOIN albums al ON al.id = t.album_id
                 WHERE ta.artist_id = a.id AND (
-                  t.title LIKE ?1 ESCAPE '\\' COLLATE NOCASE OR t.composer LIKE ?1 ESCAPE '\\' COLLATE NOCASE OR
-                  t.label LIKE ?1 ESCAPE '\\' COLLATE NOCASE OR t.catalog_number LIKE ?1 ESCAPE '\\' COLLATE NOCASE OR
-                  al.title LIKE ?1 ESCAPE '\\' COLLATE NOCASE OR EXISTS (
+                  t.title LIKE ?2 ESCAPE '\\' COLLATE NOCASE OR t.composer LIKE ?2 ESCAPE '\\' COLLATE NOCASE OR
+                  t.label LIKE ?2 ESCAPE '\\' COLLATE NOCASE OR t.catalog_number LIKE ?2 ESCAPE '\\' COLLATE NOCASE OR
+                  al.title LIKE ?2 ESCAPE '\\' COLLATE NOCASE OR EXISTS (
                     SELECT 1 FROM track_genres tg JOIN genres g ON g.id = tg.genre_id
-                    WHERE tg.track_id = t.id AND g.name LIKE ?1 ESCAPE '\\' COLLATE NOCASE
+                    WHERE tg.track_id = t.id AND g.name LIKE ?2 ESCAPE '\\' COLLATE NOCASE
                   )
                 )
-             )
-             ORDER BY a.name COLLATE NOCASE, a.id LIMIT ?2 OFFSET ?3",
+             ))
+             ORDER BY a.name COLLATE NOCASE, a.id LIMIT ?3 OFFSET ?4",
         )
         .map_err(database_error("prepare-artists-query"))?;
     let mut artists = statement
-        .query_map(params![pattern, limit, offset], |row| {
+        .query_map(params![exact_id, pattern, limit, offset], |row| {
             Ok(ArtistSummary {
                 id: row.get(0)?,
                 name: row.get(1)?,
@@ -1856,7 +1878,9 @@ fn query_artists(
                 album_count: row.get(2)?,
                 track_count: row.get(3)?,
                 total_duration_ms: row.get(4)?,
-                artwork_id: row.get(5)?,
+                total_file_size: row.get(5)?,
+                artwork_id: row.get(6)?,
+                artwork_path: None,
             })
         })
         .map_err(database_error("query-artists"))?
@@ -1864,6 +1888,7 @@ fn query_artists(
         .map_err(database_error("read-artists"))?;
     drop(statement);
     for artist in &mut artists {
+        artist.artwork_path = artwork_path(connection, artist.artwork_id.as_deref())?;
         let mut genres = connection
             .prepare(
                 "SELECT DISTINCT g.name FROM track_artists ta
@@ -1882,6 +1907,7 @@ fn query_artists(
 
 fn query_albums(
     connection: &Connection,
+    exact_id: Option<&str>,
     pattern: Option<&str>,
     offset: u32,
     limit: u32,
@@ -1889,19 +1915,19 @@ fn query_albums(
     let mut statement = connection
         .prepare(
             "SELECT al.id, al.title, al.year, al.label, al.catalog_number, al.artwork_id,
-                COUNT(t.id), COALESCE(SUM(t.duration_ms), 0)
+                COUNT(t.id), COALESCE(SUM(t.duration_ms), 0), COALESCE(SUM(t.file_size), 0)
              FROM albums al LEFT JOIN tracks t ON t.album_id = al.id
-             WHERE ?1 IS NULL OR al.title LIKE ?1 ESCAPE '\\' COLLATE NOCASE OR
-                al.label LIKE ?1 ESCAPE '\\' COLLATE NOCASE OR al.catalog_number LIKE ?1 ESCAPE '\\' COLLATE NOCASE OR
+             WHERE (?1 IS NULL OR al.id = ?1) AND (?2 IS NULL OR al.title LIKE ?2 ESCAPE '\\' COLLATE NOCASE OR
+                al.label LIKE ?2 ESCAPE '\\' COLLATE NOCASE OR al.catalog_number LIKE ?2 ESCAPE '\\' COLLATE NOCASE OR
                 EXISTS (SELECT 1 FROM album_artists aa JOIN artists a ON a.id = aa.artist_id
-                        WHERE aa.album_id = al.id AND a.name LIKE ?1 ESCAPE '\\' COLLATE NOCASE) OR
+                        WHERE aa.album_id = al.id AND a.name LIKE ?2 ESCAPE '\\' COLLATE NOCASE) OR
                 EXISTS (SELECT 1 FROM tracks st WHERE st.album_id = al.id AND
-                        (st.title LIKE ?1 ESCAPE '\\' COLLATE NOCASE OR st.composer LIKE ?1 ESCAPE '\\' COLLATE NOCASE))
-             GROUP BY al.id ORDER BY al.title COLLATE NOCASE, al.id LIMIT ?2 OFFSET ?3",
+                        (st.title LIKE ?2 ESCAPE '\\' COLLATE NOCASE OR st.composer LIKE ?2 ESCAPE '\\' COLLATE NOCASE)))
+             GROUP BY al.id ORDER BY al.title COLLATE NOCASE, al.id LIMIT ?3 OFFSET ?4",
         )
         .map_err(database_error("prepare-albums-query"))?;
     let mut albums = statement
-        .query_map(params![pattern, limit, offset], |row| {
+        .query_map(params![exact_id, pattern, limit, offset], |row| {
             Ok(AlbumSummary {
                 id: row.get(0)?,
                 title: row.get(1)?,
@@ -1912,6 +1938,8 @@ fn query_albums(
                 artwork_id: row.get(5)?,
                 track_count: row.get(6)?,
                 total_duration_ms: row.get(7)?,
+                total_file_size: row.get(8)?,
+                artwork_path: None,
             })
         })
         .map_err(database_error("query-albums"))?
@@ -1919,6 +1947,7 @@ fn query_albums(
         .map_err(database_error("read-albums"))?;
     drop(statement);
     for album in &mut albums {
+        album.artwork_path = artwork_path(connection, album.artwork_id.as_deref())?;
         album.artists = album_artists(connection, &album.id)?;
     }
     Ok(albums)
@@ -2001,9 +2030,9 @@ fn query_genres(
 }
 
 fn get_artist_detail(connection: &Connection, id: &str) -> Result<ArtistDetail, AppError> {
-    let artist = query_artists(connection, None, 0, u32::MAX)?
+    let artist = query_artists(connection, Some(id), None, 0, 1)?
         .into_iter()
-        .find(|artist| artist.id == id)
+        .next()
         .ok_or_else(|| {
             AppError::new("artist-not-found", "The requested artist no longer exists.")
         })?;
@@ -2019,11 +2048,15 @@ fn get_artist_detail(connection: &Connection, id: &str) -> Result<ArtistDetail, 
         .collect::<rusqlite::Result<Vec<_>>>()
         .map_err(database_error("read-artist-albums"))?;
     drop(album_statement);
-    let all_albums = query_albums(connection, None, 0, u32::MAX)?;
-    let albums = all_albums
-        .into_iter()
-        .filter(|album| album_ids.contains(&album.id))
-        .collect();
+    let mut albums = Vec::with_capacity(album_ids.len());
+    for album_id in album_ids {
+        if let Some(album) = query_albums(connection, Some(&album_id), None, 0, 1)?
+            .into_iter()
+            .next()
+        {
+            albums.push(album);
+        }
+    }
     let tracks = tracks_for_entity(
         connection,
         "SELECT DISTINCT track_id FROM track_artists WHERE artist_id = ?1",
@@ -2037,9 +2070,9 @@ fn get_artist_detail(connection: &Connection, id: &str) -> Result<ArtistDetail, 
 }
 
 fn get_album_detail(connection: &Connection, id: &str) -> Result<AlbumDetail, AppError> {
-    let album = query_albums(connection, None, 0, u32::MAX)?
+    let album = query_albums(connection, Some(id), None, 0, 1)?
         .into_iter()
-        .find(|album| album.id == id)
+        .next()
         .ok_or_else(|| AppError::new("album-not-found", "The requested album no longer exists."))?;
     let tracks = tracks_for_entity(connection, "SELECT id FROM tracks WHERE album_id = ?1", id)?;
     Ok(AlbumDetail { album, tracks })

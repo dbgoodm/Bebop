@@ -1,14 +1,16 @@
 import { spawn } from "node:child_process";
+import { existsSync } from "node:fs";
 
 const environment = { ...process.env };
 
-// WebKitGTK's DMABUF renderer can trigger a GDK Wayland protocol error on Omarchy.
-// Keep Windows untouched and allow an explicit shell environment to override this default.
+// Match the native NVIDIA fallback during development. Keep other platforms untouched and allow
+// explicit shell values to override these defaults.
 if (
   process.platform === "linux" &&
-  environment.WEBKIT_DISABLE_DMABUF_RENDERER === undefined
+  (existsSync("/proc/driver/nvidia/version") || existsSync("/sys/module/nvidia"))
 ) {
-  environment.WEBKIT_DISABLE_DMABUF_RENDERER = "1";
+  environment.WEBKIT_DMABUF_RENDERER_FORCE_SHM ??= "1";
+  environment.WEBKIT_SKIA_ENABLE_CPU_RENDERING ??= "1";
 }
 
 const npmCommand = process.platform === "win32" ? "npm.cmd" : "npm";
