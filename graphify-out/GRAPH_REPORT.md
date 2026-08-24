@@ -1,16 +1,16 @@
-# Graph Report - Bebop  (2026-08-23)
+# Graph Report - Bebop  (2026-08-24)
 
 ## Corpus Check
-- 118 files · ~98,316 words
+- 118 files · ~98,343 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1476 nodes · 4232 edges · 81 communities (60 shown, 21 thin omitted)
+- 1477 nodes · 4236 edges · 81 communities (60 shown, 21 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 46 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `5fec61e1`
+- Built from commit: `41765249`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -164,7 +164,7 @@ Nodes (8): graphify reference: extra exports and benchmark, Step 6b - Wiki (only
 
 ### Community 17 - "lib.rs"
 Cohesion: 0.06
-Nodes (151): AcquisitionJob, AcquisitionSearch, AcquisitionSearchFile, AcquisitionSettings, AcquisitionStatus, Builder, EnrichmentCandidate, EnrichmentJob (+143 more)
+Nodes (147): AcquisitionJob, AcquisitionSearch, AcquisitionSearchFile, AcquisitionSettings, AcquisitionStatus, Builder, EnrichmentCandidate, EnrichmentJob (+139 more)
 
 ### Community 18 - "bundle"
 Cohesion: 0.05
@@ -200,11 +200,11 @@ Nodes (3): For --cluster-only, For --update (incremental re-extraction), graphif
 
 ### Community 34 - "Result"
 Cohesion: 0.06
-Nodes (119): AlbumSummary, ArtistSummary, CatalogSignatures, Connection, GenreSummary, RootAvailability, Row, acquisition_jobs_round_trip_without_exposing_credentials() (+111 more)
+Nodes (121): AlbumSummary, ArtistSummary, CatalogSignatures, Connection, GenreSummary, RootAvailability, Row, IntegrationJob (+113 more)
 
 ### Community 35 - "catalog.rs"
-Cohesion: 0.10
-Nodes (42): DirEntry, F, SortDirection, AlbumDetail, AlbumSummary, ArtistDetail, ArtistReference, ArtistSummary (+34 more)
+Cohesion: 0.09
+Nodes (46): DirEntry, F, SortDirection, AlbumDetail, AlbumSummary, ArtistDetail, ArtistReference, ArtistSummary (+38 more)
 
 ### Community 36 - "libraryService.ts"
 Cohesion: 0.18
@@ -219,8 +219,8 @@ Cohesion: 0.18
 Nodes (11): scripts, build, clean, dev, format, format:check, lint, preview (+3 more)
 
 ### Community 39 - "integrations.rs"
-Cohesion: 0.11
-Nodes (41): DiscordClient, clear_discord(), clear_lastfm_session(), discord_application_id(), eligible_for_online_metadata(), flush_lastfm_outbox(), get_lastfm_session(), initial_statuses() (+33 more)
+Cohesion: 0.12
+Nodes (40): DiscordClient, clear_discord(), clear_lastfm_session(), discord_application_id(), eligible_for_online_metadata(), flush_lastfm_outbox(), get_lastfm_session(), initial_statuses() (+32 more)
 
 ### Community 41 - "Bebop V2 architecture"
 Cohesion: 0.13
@@ -335,7 +335,7 @@ Nodes (4): Backup and recovery, Catalog backups, Metadata file backups, Recovera
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `DatabaseWorker` connect `Result` to `updates.rs`, `integrations.rs`, `lib.rs`, `LibraryWatcher`, `enrichment.rs`, `acquisition.rs`?**
-  _High betweenness centrality (0.109) - this node is a cross-community bridge._
+  _High betweenness centrality (0.108) - this node is a cross-community bridge._
 - **Why does `devDependencies` connect `devDependencies` to `@testing-library/react`, `frontend/package.json`, `vite`, `eslint`, `@eslint/js`, `eslint-plugin-react-hooks`, `globals`, `jsdom`, `@testing-library/user-event`, `vitest`, `esbuild`?**
   _High betweenness centrality (0.049) - this node is a cross-community bridge._
 - **Why does `typescript` connect `devDependencies` to `lib.rs`?**
@@ -343,7 +343,7 @@ _Questions this graph is uniquely positioned to answer:_
 - **What connects `singleQuote`, `trailingComma`, `printWidth` to the rest of the system?**
   _297 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `PlaybackEngine` be split into smaller, more focused modules?**
-  _Cohesion score 0.06913367756741251 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.07023214810461358 - nodes in this community are weakly interconnected._
 - **Should `useTheme` be split into smaller, more focused modules?**
   _Cohesion score 0.09915966386554621 - nodes in this community are weakly interconnected._
 - **Should `devDependencies` be split into smaller, more focused modules?**

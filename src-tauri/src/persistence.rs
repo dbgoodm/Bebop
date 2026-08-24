@@ -2291,7 +2291,8 @@ fn write_setting<T: serde::Serialize>(
 
 fn load_player_state(connection: &Connection) -> Result<PersistentPlayerState, AppError> {
     let preferences = read_setting(connection, "player.preferences")?.unwrap_or_default();
-    let current_track_id = read_setting(connection, "player.current-track")?;
+    let current_track_id =
+        read_setting::<Option<String>>(connection, "player.current-track")?.flatten();
     let resume_position_ms = read_setting(connection, "player.resume-position-ms")?.unwrap_or(0);
     let mut statement = connection
         .prepare("SELECT track_id FROM queue_entries ORDER BY position")
@@ -3006,6 +3007,19 @@ mod tests {
         assert!(!disabled.enabled);
         worker.remove_root(root.id).expect("root removed");
         assert!(worker.list_roots().expect("list roots").is_empty());
+    }
+
+    #[test]
+    fn player_state_restores_without_a_current_track() {
+        let worker = DatabaseWorker::in_memory().expect("database starts");
+        worker
+            .save_playback_checkpoint(None, 0)
+            .expect("empty playback checkpoint saved");
+
+        let restored = worker.load_player_state().expect("player state restored");
+
+        assert_eq!(restored.current_track_id, None);
+        assert_eq!(restored.resume_position_ms, 0);
     }
 
     #[test]

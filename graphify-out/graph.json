@@ -4096,17 +4096,6 @@
       "source_location": "L302"
     },
     {
-      "id": "src_tauri_src_audio_rodiobackend_take_spectrum",
-      "label": ".take_spectrum()",
-      "_origin": "ast",
-      "community": 0,
-      "community_name": "PlaybackEngine",
-      "file_type": "code",
-      "norm_label": ".take_spectrum()",
-      "source_file": "src-tauri/src/audio.rs",
-      "source_location": "L345"
-    },
-    {
       "id": "src_tauri_src_audio_rs_arc",
       "label": "Arc",
       "_origin": "ast",
@@ -5469,28 +5458,6 @@
       "source_location": "L912"
     },
     {
-      "id": "src_tauri_src_lib_reconciliation_preserves_database_track_ids_across_rescans",
-      "label": "reconciliation_preserves_database_track_ids_across_rescans()",
-      "_origin": "ast",
-      "community": 17,
-      "community_name": "lib.rs",
-      "file_type": "code",
-      "norm_label": "reconciliation_preserves_database_track_ids_across_rescans()",
-      "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L1935"
-    },
-    {
-      "id": "src_tauri_src_lib_reconciliation_preserves_track_identity_after_a_move",
-      "label": "reconciliation_preserves_track_identity_after_a_move()",
-      "_origin": "ast",
-      "community": 17,
-      "community_name": "lib.rs",
-      "file_type": "code",
-      "norm_label": "reconciliation_preserves_track_identity_after_a_move()",
-      "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L1967"
-    },
-    {
       "id": "src_tauri_src_lib_remove_library_root",
       "label": "remove_library_root()",
       "_origin": "ast",
@@ -5975,17 +5942,6 @@
       "source_location": "L466"
     },
     {
-      "id": "src_tauri_src_lib_scan_recognizes_supported_files_and_ignores_hidden_or_other_files",
-      "label": "scan_recognizes_supported_files_and_ignores_hidden_or_other_files()",
-      "_origin": "ast",
-      "community": 17,
-      "community_name": "lib.rs",
-      "file_type": "code",
-      "norm_label": "scan_recognizes_supported_files_and_ignores_hidden_or_other_files()",
-      "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L1904"
-    },
-    {
       "id": "src_tauri_src_lib_scan_root",
       "label": "scan_root()",
       "_origin": "ast",
@@ -6248,17 +6204,6 @@
       "norm_label": "tagged_fixture_populates_catalog_entities()",
       "source_file": "src-tauri/src/lib.rs",
       "source_location": "L2009"
-    },
-    {
-      "id": "src_tauri_src_lib_temporary_directory",
-      "label": "temporary_directory()",
-      "_origin": "ast",
-      "community": 17,
-      "community_name": "lib.rs",
-      "file_type": "code",
-      "norm_label": "temporary_directory()",
-      "source_file": "src-tauri/src/lib.rs",
-      "source_location": "L1893"
     },
     {
       "id": "src_tauri_src_lib_test_slskd_connection",
@@ -8556,6 +8501,17 @@
       "source_location": ""
     },
     {
+      "id": "src_tauri_src_integrations_integrationjob",
+      "label": "IntegrationJob",
+      "_origin": "ast",
+      "community": 34,
+      "community_name": "Result",
+      "file_type": "code",
+      "norm_label": "integrationjob",
+      "source_file": "src-tauri/src/integrations.rs",
+      "source_location": "L64"
+    },
+    {
       "id": "src_tauri_src_persistence",
       "label": "persistence.rs",
       "_origin": "ast",
@@ -8575,7 +8531,7 @@
       "file_type": "code",
       "norm_label": "acquisition_jobs_round_trip_without_exposing_credentials()",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2914"
+      "source_location": "L2915"
     },
     {
       "id": "src_tauri_src_persistence_acquisition_record_from_row",
@@ -8586,7 +8542,7 @@
       "file_type": "code",
       "norm_label": "acquisition_record_from_row()",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2782"
+      "source_location": "L2783"
     },
     {
       "id": "src_tauri_src_persistence_add_root",
@@ -8674,7 +8630,7 @@
       "file_type": "code",
       "norm_label": "complete_integration_job()",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2706"
+      "source_location": "L2707"
     },
     {
       "id": "src_tauri_src_persistence_corrupt_databases_are_preserved_and_replaced_with_a_clean_catalog",
@@ -8685,7 +8641,7 @@
       "file_type": "code",
       "norm_label": "corrupt_databases_are_preserved_and_replaced_with_a_clean_catalog()",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L3042"
+      "source_location": "L3056"
     },
     {
       "id": "src_tauri_src_persistence_create_playlist",
@@ -8696,7 +8652,7 @@
       "file_type": "code",
       "norm_label": "create_playlist()",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2409"
+      "source_location": "L2410"
     },
     {
       "id": "src_tauri_src_persistence_database_error",
@@ -9257,7 +9213,7 @@
       "file_type": "code",
       "norm_label": "enqueue_integration_job()",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2659"
+      "source_location": "L2660"
     },
     {
       "id": "src_tauri_src_persistence_every_historical_schema_version_upgrades_to_the_complete_current_schema",
@@ -9268,7 +9224,7 @@
       "file_type": "code",
       "norm_label": "every_historical_schema_version_upgrades_to_the_complete_current_schema()",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2941"
+      "source_location": "L2942"
     },
     {
       "id": "src_tauri_src_persistence_existing_databases_are_backed_up_before_a_schema_upgrade",
@@ -9279,7 +9235,7 @@
       "file_type": "code",
       "norm_label": "existing_databases_are_backed_up_before_a_schema_upgrade()",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L3012"
+      "source_location": "L3026"
     },
     {
       "id": "src_tauri_src_persistence_fail_integration_job",
@@ -9290,7 +9246,7 @@
       "file_type": "code",
       "norm_label": "fail_integration_job()",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2717"
+      "source_location": "L2718"
     },
     {
       "id": "src_tauri_src_persistence_get_acquisition_job",
@@ -9301,7 +9257,7 @@
       "file_type": "code",
       "norm_label": "get_acquisition_job()",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2798"
+      "source_location": "L2799"
     },
     {
       "id": "src_tauri_src_persistence_get_album_detail",
@@ -9345,7 +9301,7 @@
       "file_type": "code",
       "norm_label": "get_home_snapshot()",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2549"
+      "source_location": "L2550"
     },
     {
       "id": "src_tauri_src_persistence_get_metadata_draft",
@@ -9367,7 +9323,7 @@
       "file_type": "code",
       "norm_label": "get_playlist_tracks()",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2453"
+      "source_location": "L2454"
     },
     {
       "id": "src_tauri_src_persistence_get_root",
@@ -9411,7 +9367,7 @@
       "file_type": "code",
       "norm_label": "hydrate_track_ids()",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2646"
+      "source_location": "L2647"
     },
     {
       "id": "src_tauri_src_persistence_integration_outbox_is_persistent_and_idempotent",
@@ -9422,7 +9378,7 @@
       "file_type": "code",
       "norm_label": "integration_outbox_is_persistent_and_idempotent()",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2872"
+      "source_location": "L2873"
     },
     {
       "id": "src_tauri_src_persistence_is_corruption_error",
@@ -9444,7 +9400,7 @@
       "file_type": "code",
       "norm_label": "list_acquisition_jobs()",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2817"
+      "source_location": "L2818"
     },
     {
       "id": "src_tauri_src_persistence_list_favorites",
@@ -9455,7 +9411,7 @@
       "file_type": "code",
       "norm_label": "list_favorites()",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2390"
+      "source_location": "L2391"
     },
     {
       "id": "src_tauri_src_persistence_list_playlists",
@@ -9466,7 +9422,7 @@
       "file_type": "code",
       "norm_label": "list_playlists()",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2432"
+      "source_location": "L2433"
     },
     {
       "id": "src_tauri_src_persistence_list_roots",
@@ -9521,7 +9477,7 @@
       "file_type": "code",
       "norm_label": "migrations_create_the_complete_v2_schema()",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2865"
+      "source_location": "L2866"
     },
     {
       "id": "src_tauri_src_persistence_open_connection",
@@ -9554,7 +9510,18 @@
       "file_type": "code",
       "norm_label": "pending_integration_jobs()",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2678"
+      "source_location": "L2679"
+    },
+    {
+      "id": "src_tauri_src_persistence_player_state_restores_without_a_current_track",
+      "label": "player_state_restores_without_a_current_track()",
+      "_origin": "ast",
+      "community": 34,
+      "community_name": "Result",
+      "file_type": "code",
+      "norm_label": "player_state_restores_without_a_current_track()",
+      "source_file": "src-tauri/src/persistence.rs",
+      "source_location": "L3013"
     },
     {
       "id": "src_tauri_src_persistence_query_albums",
@@ -9708,7 +9675,7 @@
       "file_type": "code",
       "norm_label": "resolve_track()",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2832"
+      "source_location": "L2833"
     },
     {
       "id": "src_tauri_src_persistence_resolve_track_id",
@@ -9741,7 +9708,7 @@
       "file_type": "code",
       "norm_label": "roots_are_persistent_entities_and_removal_cascades_catalog_rows()",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2997"
+      "source_location": "L2998"
     },
     {
       "id": "src_tauri_src_persistence_rs_albumdetail",
@@ -10071,7 +10038,7 @@
       "file_type": "code",
       "norm_label": "save_acquisition_job()",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2744"
+      "source_location": "L2745"
     },
     {
       "id": "src_tauri_src_persistence_save_artwork",
@@ -10115,7 +10082,7 @@
       "file_type": "code",
       "norm_label": "save_playback_checkpoint()",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2350"
+      "source_location": "L2351"
     },
     {
       "id": "src_tauri_src_persistence_save_preferences",
@@ -10126,7 +10093,7 @@
       "file_type": "code",
       "norm_label": "save_preferences()",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2334"
+      "source_location": "L2335"
     },
     {
       "id": "src_tauri_src_persistence_save_queue",
@@ -10137,7 +10104,7 @@
       "file_type": "code",
       "norm_label": "save_queue()",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2312"
+      "source_location": "L2313"
     },
     {
       "id": "src_tauri_src_persistence_send",
@@ -10159,7 +10126,7 @@
       "file_type": "code",
       "norm_label": "set_favorite()",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2359"
+      "source_location": "L2360"
     },
     {
       "id": "src_tauri_src_persistence_set_playlist_tracks",
@@ -10170,7 +10137,7 @@
       "file_type": "code",
       "norm_label": "set_playlist_tracks()",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2473"
+      "source_location": "L2474"
     },
     {
       "id": "src_tauri_src_persistence_set_root_enabled",
@@ -10192,7 +10159,7 @@
       "file_type": "code",
       "norm_label": "start_listening_session()",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2508"
+      "source_location": "L2509"
     },
     {
       "id": "src_tauri_src_persistence_temporary_directory",
@@ -10203,7 +10170,7 @@
       "file_type": "code",
       "norm_label": "temporary_directory()",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2854"
+      "source_location": "L2855"
     },
     {
       "id": "src_tauri_src_persistence_track_from_row",
@@ -10236,7 +10203,7 @@
       "file_type": "code",
       "norm_label": "tracks_from_id_query()",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2634"
+      "source_location": "L2635"
     },
     {
       "id": "src_tauri_src_persistence_update_listening_session",
@@ -10247,7 +10214,7 @@
       "file_type": "code",
       "norm_label": "update_listening_session()",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2524"
+      "source_location": "L2525"
     },
     {
       "id": "src_tauri_src_persistence_upsert_album",
@@ -10855,6 +10822,50 @@
       "source_location": "L107"
     },
     {
+      "id": "src_tauri_src_lib_reconciliation_preserves_database_track_ids_across_rescans",
+      "label": "reconciliation_preserves_database_track_ids_across_rescans()",
+      "_origin": "ast",
+      "community": 35,
+      "community_name": "catalog.rs",
+      "file_type": "code",
+      "norm_label": "reconciliation_preserves_database_track_ids_across_rescans()",
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L1935"
+    },
+    {
+      "id": "src_tauri_src_lib_reconciliation_preserves_track_identity_after_a_move",
+      "label": "reconciliation_preserves_track_identity_after_a_move()",
+      "_origin": "ast",
+      "community": 35,
+      "community_name": "catalog.rs",
+      "file_type": "code",
+      "norm_label": "reconciliation_preserves_track_identity_after_a_move()",
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L1967"
+    },
+    {
+      "id": "src_tauri_src_lib_scan_recognizes_supported_files_and_ignores_hidden_or_other_files",
+      "label": "scan_recognizes_supported_files_and_ignores_hidden_or_other_files()",
+      "_origin": "ast",
+      "community": 35,
+      "community_name": "catalog.rs",
+      "file_type": "code",
+      "norm_label": "scan_recognizes_supported_files_and_ignores_hidden_or_other_files()",
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L1904"
+    },
+    {
+      "id": "src_tauri_src_lib_temporary_directory",
+      "label": "temporary_directory()",
+      "_origin": "ast",
+      "community": 35,
+      "community_name": "catalog.rs",
+      "file_type": "code",
+      "norm_label": "temporary_directory()",
+      "source_file": "src-tauri/src/lib.rs",
+      "source_location": "L1893"
+    },
+    {
       "id": "tracksort",
       "label": "TrackSort",
       "_origin": "ast",
@@ -11293,17 +11304,6 @@
       "norm_label": "initial_statuses()",
       "source_file": "src-tauri/src/integrations.rs",
       "source_location": "L202"
-    },
-    {
-      "id": "src_tauri_src_integrations_integrationjob",
-      "label": "IntegrationJob",
-      "_origin": "ast",
-      "community": 39,
-      "community_name": "integrations.rs",
-      "file_type": "code",
-      "norm_label": "integrationjob",
-      "source_file": "src-tauri/src/integrations.rs",
-      "source_location": "L64"
     },
     {
       "id": "src_tauri_src_integrations_integrationmanager",
@@ -12925,6 +12925,17 @@
       "norm_label": "source",
       "source_file": "",
       "source_location": ""
+    },
+    {
+      "id": "src_tauri_src_audio_rodiobackend_take_spectrum",
+      "label": ".take_spectrum()",
+      "_origin": "ast",
+      "community": 5,
+      "community_name": "SpectrumAnalyzer",
+      "file_type": "code",
+      "norm_label": ".take_spectrum()",
+      "source_file": "src-tauri/src/audio.rs",
+      "source_location": "L345"
     },
     {
       "id": "src_tauri_src_spectrum",
@@ -23186,7 +23197,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2915",
+      "source_location": "L2916",
       "weight": 1.0
     },
     {
@@ -23198,7 +23209,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2928",
+      "source_location": "L2929",
       "weight": 1.0
     },
     {
@@ -23210,7 +23221,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2931",
+      "source_location": "L2932",
       "weight": 1.0
     },
     {
@@ -23282,7 +23293,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2713",
+      "source_location": "L2714",
       "weight": 1.0
     },
     {
@@ -23294,7 +23305,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L3043",
+      "source_location": "L3057",
       "weight": 1.0
     },
     {
@@ -23306,7 +23317,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L3047",
+      "source_location": "L3061",
       "weight": 1.0
     },
     {
@@ -23318,7 +23329,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L3056",
+      "source_location": "L3070",
       "weight": 1.0
     },
     {
@@ -23330,7 +23341,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2424",
+      "source_location": "L2425",
       "weight": 1.0
     },
     {
@@ -24494,7 +24505,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2674",
+      "source_location": "L2675",
       "weight": 1.0
     },
     {
@@ -24506,7 +24517,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2959",
+      "source_location": "L2960",
       "weight": 1.0
     },
     {
@@ -24518,7 +24529,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L3013",
+      "source_location": "L3027",
       "weight": 1.0
     },
     {
@@ -24530,7 +24541,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L3021",
+      "source_location": "L3035",
       "weight": 1.0
     },
     {
@@ -24542,7 +24553,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2740",
+      "source_location": "L2741",
       "weight": 1.0
     },
     {
@@ -24554,7 +24565,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2808",
+      "source_location": "L2809",
       "weight": 1.0
     },
     {
@@ -24650,7 +24661,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2557",
+      "source_location": "L2558",
       "weight": 1.0
     },
     {
@@ -24662,7 +24673,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2603",
+      "source_location": "L2604",
       "weight": 1.0
     },
     {
@@ -24686,7 +24697,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2464",
+      "source_location": "L2465",
       "weight": 1.0
     },
     {
@@ -24698,7 +24709,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2470",
+      "source_location": "L2471",
       "weight": 1.0
     },
     {
@@ -24794,7 +24805,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2651",
+      "source_location": "L2652",
       "weight": 1.0
     },
     {
@@ -24806,7 +24817,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2873",
+      "source_location": "L2874",
       "weight": 1.0
     },
     {
@@ -24818,7 +24829,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2874",
+      "source_location": "L2875",
       "weight": 1.0
     },
     {
@@ -24830,7 +24841,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2890",
+      "source_location": "L2891",
       "weight": 1.0
     },
     {
@@ -24842,7 +24853,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2894",
+      "source_location": "L2895",
       "weight": 1.0
     },
     {
@@ -24854,7 +24865,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2824",
+      "source_location": "L2825",
       "weight": 1.0
     },
     {
@@ -24866,7 +24877,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2396",
+      "source_location": "L2397",
       "weight": 1.0
     },
     {
@@ -24878,7 +24889,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2439",
+      "source_location": "L2440",
       "weight": 1.0
     },
     {
@@ -24914,7 +24925,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2298",
+      "source_location": "L2299",
       "weight": 1.0
     },
     {
@@ -24926,7 +24937,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2305",
+      "source_location": "L2306",
       "weight": 1.0
     },
     {
@@ -24950,7 +24961,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2866",
+      "source_location": "L2867",
       "weight": 1.0
     },
     {
@@ -24962,7 +24973,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2867",
+      "source_location": "L2868",
       "weight": 1.0
     },
     {
@@ -24998,7 +25009,43 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2689",
+      "source_location": "L2690",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_persistence_player_state_restores_without_a_current_track",
+      "target": "src_tauri_src_persistence_databaseworker_in_memory",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "src-tauri/src/persistence.rs",
+      "source_location": "L3014",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_persistence_player_state_restores_without_a_current_track",
+      "target": "src_tauri_src_persistence_save_playback_checkpoint",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "src-tauri/src/persistence.rs",
+      "source_location": "L3015",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_persistence_player_state_restores_without_a_current_track",
+      "target": "src_tauri_src_persistence_load_player_state",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "src-tauri/src/persistence.rs",
+      "source_location": "L3019",
       "weight": 1.0
     },
     {
@@ -25286,7 +25333,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2845",
+      "source_location": "L2846",
       "weight": 1.0
     },
     {
@@ -25310,7 +25357,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2998",
+      "source_location": "L2999",
       "weight": 1.0
     },
     {
@@ -25322,7 +25369,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2999",
+      "source_location": "L3000",
       "weight": 1.0
     },
     {
@@ -25334,7 +25381,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L3003",
+      "source_location": "L3004",
       "weight": 1.0
     },
     {
@@ -25346,7 +25393,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L3007",
+      "source_location": "L3008",
       "weight": 1.0
     },
     {
@@ -25358,7 +25405,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2778",
+      "source_location": "L2779",
       "weight": 1.0
     },
     {
@@ -25406,7 +25453,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2355",
+      "source_location": "L2356",
       "weight": 1.0
     },
     {
@@ -25418,7 +25465,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2346",
+      "source_location": "L2347",
       "weight": 1.0
     },
     {
@@ -25430,7 +25477,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2315",
+      "source_location": "L2316",
       "weight": 1.0
     },
     {
@@ -25442,7 +25489,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2378",
+      "source_location": "L2379",
       "weight": 1.0
     },
     {
@@ -25454,7 +25501,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2480",
+      "source_location": "L2481",
       "weight": 1.0
     },
     {
@@ -25490,7 +25537,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2520",
+      "source_location": "L2521",
       "weight": 1.0
     },
     {
@@ -25526,7 +25573,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2637",
+      "source_location": "L2638",
       "weight": 1.0
     },
     {
@@ -25538,7 +25585,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2643",
+      "source_location": "L2644",
       "weight": 1.0
     },
     {
@@ -25550,7 +25597,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2545",
+      "source_location": "L2546",
       "weight": 1.0
     },
     {
@@ -33818,7 +33865,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2782",
+      "source_location": "L2783",
       "weight": 1.0
     },
     {
@@ -33974,7 +34021,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2706",
+      "source_location": "L2707",
       "weight": 1.0
     },
     {
@@ -33986,7 +34033,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2409",
+      "source_location": "L2410",
       "weight": 1.0
     },
     {
@@ -33998,7 +34045,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2409",
+      "source_location": "L2410",
       "weight": 1.0
     },
     {
@@ -35138,7 +35185,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2659",
+      "source_location": "L2660",
       "weight": 1.0
     },
     {
@@ -35150,7 +35197,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2717",
+      "source_location": "L2718",
       "weight": 1.0
     },
     {
@@ -35162,7 +35209,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2798",
+      "source_location": "L2799",
       "weight": 1.0
     },
     {
@@ -35174,7 +35221,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2798",
+      "source_location": "L2799",
       "weight": 1.0
     },
     {
@@ -35270,7 +35317,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2549",
+      "source_location": "L2550",
       "weight": 1.0
     },
     {
@@ -35282,7 +35329,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2549",
+      "source_location": "L2550",
       "weight": 1.0
     },
     {
@@ -35330,7 +35377,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2453",
+      "source_location": "L2454",
       "weight": 1.0
     },
     {
@@ -35342,7 +35389,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2453",
+      "source_location": "L2454",
       "weight": 1.0
     },
     {
@@ -35354,7 +35401,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2453",
+      "source_location": "L2454",
       "weight": 1.0
     },
     {
@@ -35426,7 +35473,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2646",
+      "source_location": "L2647",
       "weight": 1.0
     },
     {
@@ -35438,7 +35485,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2646",
+      "source_location": "L2647",
       "weight": 1.0
     },
     {
@@ -35450,7 +35497,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2646",
+      "source_location": "L2647",
       "weight": 1.0
     },
     {
@@ -35462,7 +35509,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2646",
+      "source_location": "L2647",
       "weight": 1.0
     },
     {
@@ -35474,7 +35521,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2817",
+      "source_location": "L2818",
       "weight": 1.0
     },
     {
@@ -35486,7 +35533,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2817",
+      "source_location": "L2818",
       "weight": 1.0
     },
     {
@@ -35498,7 +35545,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2817",
+      "source_location": "L2818",
       "weight": 1.0
     },
     {
@@ -35510,7 +35557,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2390",
+      "source_location": "L2391",
       "weight": 1.0
     },
     {
@@ -35522,7 +35569,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2390",
+      "source_location": "L2391",
       "weight": 1.0
     },
     {
@@ -35534,7 +35581,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2390",
+      "source_location": "L2391",
       "weight": 1.0
     },
     {
@@ -35546,7 +35593,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2432",
+      "source_location": "L2433",
       "weight": 1.0
     },
     {
@@ -35558,7 +35605,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2432",
+      "source_location": "L2433",
       "weight": 1.0
     },
     {
@@ -35570,7 +35617,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2432",
+      "source_location": "L2433",
       "weight": 1.0
     },
     {
@@ -35714,7 +35761,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2678",
+      "source_location": "L2679",
       "weight": 1.0
     },
     {
@@ -35726,7 +35773,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2678",
+      "source_location": "L2679",
       "weight": 1.0
     },
     {
@@ -35738,7 +35785,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2678",
+      "source_location": "L2679",
       "weight": 1.0
     },
     {
@@ -36350,7 +36397,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2832",
+      "source_location": "L2833",
       "weight": 1.0
     },
     {
@@ -36362,7 +36409,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2832",
+      "source_location": "L2833",
       "weight": 1.0
     },
     {
@@ -36374,7 +36421,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2832",
+      "source_location": "L2833",
       "weight": 1.0
     },
     {
@@ -36422,7 +36469,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2744",
+      "source_location": "L2745",
       "weight": 1.0
     },
     {
@@ -36482,7 +36529,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2350",
+      "source_location": "L2351",
       "weight": 1.0
     },
     {
@@ -36494,7 +36541,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2334",
+      "source_location": "L2335",
       "weight": 1.0
     },
     {
@@ -36506,7 +36553,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2334",
+      "source_location": "L2335",
       "weight": 1.0
     },
     {
@@ -36518,7 +36565,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2312",
+      "source_location": "L2313",
       "weight": 1.0
     },
     {
@@ -36554,7 +36601,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2359",
+      "source_location": "L2360",
       "weight": 1.0
     },
     {
@@ -36566,7 +36613,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2473",
+      "source_location": "L2474",
       "weight": 1.0
     },
     {
@@ -36602,7 +36649,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2508",
+      "source_location": "L2509",
       "weight": 1.0
     },
     {
@@ -36662,7 +36709,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2634",
+      "source_location": "L2635",
       "weight": 1.0
     },
     {
@@ -36674,7 +36721,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2634",
+      "source_location": "L2635",
       "weight": 1.0
     },
     {
@@ -36686,7 +36733,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2634",
+      "source_location": "L2635",
       "weight": 1.0
     },
     {
@@ -36698,7 +36745,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2524",
+      "source_location": "L2525",
       "weight": 1.0
     },
     {
@@ -47547,7 +47594,7 @@
       "confidence_score": 1.0,
       "context": "parameter_type",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2782",
+      "source_location": "L2783",
       "weight": 1.0
     },
     {
@@ -47667,7 +47714,7 @@
       "confidence_score": 1.0,
       "context": "parameter_type",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2706",
+      "source_location": "L2707",
       "weight": 1.0
     },
     {
@@ -47679,7 +47726,7 @@
       "confidence_score": 1.0,
       "context": "parameter_type",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2409",
+      "source_location": "L2410",
       "weight": 1.0
     },
     {
@@ -48183,7 +48230,7 @@
       "confidence_score": 1.0,
       "context": "parameter_type",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2659",
+      "source_location": "L2660",
       "weight": 1.0
     },
     {
@@ -48195,7 +48242,7 @@
       "confidence_score": 1.0,
       "context": "parameter_type",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2717",
+      "source_location": "L2718",
       "weight": 1.0
     },
     {
@@ -48207,7 +48254,7 @@
       "confidence_score": 1.0,
       "context": "parameter_type",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2798",
+      "source_location": "L2799",
       "weight": 1.0
     },
     {
@@ -48255,7 +48302,7 @@
       "confidence_score": 1.0,
       "context": "parameter_type",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2549",
+      "source_location": "L2550",
       "weight": 1.0
     },
     {
@@ -48279,7 +48326,7 @@
       "confidence_score": 1.0,
       "context": "parameter_type",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2453",
+      "source_location": "L2454",
       "weight": 1.0
     },
     {
@@ -48339,7 +48386,7 @@
       "confidence_score": 1.0,
       "context": "parameter_type",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2646",
+      "source_location": "L2647",
       "weight": 1.0
     },
     {
@@ -48363,7 +48410,7 @@
       "confidence_score": 1.0,
       "context": "parameter_type",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2817",
+      "source_location": "L2818",
       "weight": 1.0
     },
     {
@@ -48375,7 +48422,7 @@
       "confidence_score": 1.0,
       "context": "parameter_type",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2390",
+      "source_location": "L2391",
       "weight": 1.0
     },
     {
@@ -48387,7 +48434,7 @@
       "confidence_score": 1.0,
       "context": "parameter_type",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2432",
+      "source_location": "L2433",
       "weight": 1.0
     },
     {
@@ -48471,7 +48518,7 @@
       "confidence_score": 1.0,
       "context": "parameter_type",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2678",
+      "source_location": "L2679",
       "weight": 1.0
     },
     {
@@ -48699,7 +48746,7 @@
       "confidence_score": 1.0,
       "context": "parameter_type",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2832",
+      "source_location": "L2833",
       "weight": 1.0
     },
     {
@@ -48735,7 +48782,7 @@
       "confidence_score": 1.0,
       "context": "parameter_type",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2744",
+      "source_location": "L2745",
       "weight": 1.0
     },
     {
@@ -48747,7 +48794,7 @@
       "confidence_score": 1.0,
       "context": "parameter_type",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2744",
+      "source_location": "L2745",
       "weight": 1.0
     },
     {
@@ -48807,7 +48854,7 @@
       "confidence_score": 1.0,
       "context": "parameter_type",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2350",
+      "source_location": "L2351",
       "weight": 1.0
     },
     {
@@ -48819,7 +48866,7 @@
       "confidence_score": 1.0,
       "context": "parameter_type",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2350",
+      "source_location": "L2351",
       "weight": 1.0
     },
     {
@@ -48831,7 +48878,7 @@
       "confidence_score": 1.0,
       "context": "parameter_type",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2334",
+      "source_location": "L2335",
       "weight": 1.0
     },
     {
@@ -48843,7 +48890,7 @@
       "confidence_score": 1.0,
       "context": "parameter_type",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2312",
+      "source_location": "L2313",
       "weight": 1.0
     },
     {
@@ -48855,7 +48902,7 @@
       "confidence_score": 1.0,
       "context": "parameter_type",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2312",
+      "source_location": "L2313",
       "weight": 1.0
     },
     {
@@ -48891,7 +48938,7 @@
       "confidence_score": 1.0,
       "context": "parameter_type",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2359",
+      "source_location": "L2360",
       "weight": 1.0
     },
     {
@@ -48903,7 +48950,7 @@
       "confidence_score": 1.0,
       "context": "parameter_type",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2473",
+      "source_location": "L2474",
       "weight": 1.0
     },
     {
@@ -48915,7 +48962,7 @@
       "confidence_score": 1.0,
       "context": "parameter_type",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2473",
+      "source_location": "L2474",
       "weight": 1.0
     },
     {
@@ -48939,7 +48986,7 @@
       "confidence_score": 1.0,
       "context": "parameter_type",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2508",
+      "source_location": "L2509",
       "weight": 1.0
     },
     {
@@ -48975,7 +49022,7 @@
       "confidence_score": 1.0,
       "context": "parameter_type",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2634",
+      "source_location": "L2635",
       "weight": 1.0
     },
     {
@@ -48987,7 +49034,7 @@
       "confidence_score": 1.0,
       "context": "parameter_type",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2524",
+      "source_location": "L2525",
       "weight": 1.0
     },
     {
@@ -51891,7 +51938,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2782",
+      "source_location": "L2783",
       "weight": 1.0
     },
     {
@@ -51975,7 +52022,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2706",
+      "source_location": "L2707",
       "weight": 1.0
     },
     {
@@ -51987,7 +52034,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2409",
+      "source_location": "L2410",
       "weight": 1.0
     },
     {
@@ -52599,7 +52646,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2659",
+      "source_location": "L2660",
       "weight": 1.0
     },
     {
@@ -52611,7 +52658,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2717",
+      "source_location": "L2718",
       "weight": 1.0
     },
     {
@@ -52623,7 +52670,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2798",
+      "source_location": "L2799",
       "weight": 1.0
     },
     {
@@ -52671,7 +52718,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2549",
+      "source_location": "L2550",
       "weight": 1.0
     },
     {
@@ -52695,7 +52742,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2453",
+      "source_location": "L2454",
       "weight": 1.0
     },
     {
@@ -52743,7 +52790,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2646",
+      "source_location": "L2647",
       "weight": 1.0
     },
     {
@@ -52755,7 +52802,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2817",
+      "source_location": "L2818",
       "weight": 1.0
     },
     {
@@ -52767,7 +52814,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2390",
+      "source_location": "L2391",
       "weight": 1.0
     },
     {
@@ -52779,7 +52826,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2432",
+      "source_location": "L2433",
       "weight": 1.0
     },
     {
@@ -52863,7 +52910,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2678",
+      "source_location": "L2679",
       "weight": 1.0
     },
     {
@@ -53007,7 +53054,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2832",
+      "source_location": "L2833",
       "weight": 1.0
     },
     {
@@ -53043,7 +53090,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2744",
+      "source_location": "L2745",
       "weight": 1.0
     },
     {
@@ -53091,7 +53138,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2350",
+      "source_location": "L2351",
       "weight": 1.0
     },
     {
@@ -53103,7 +53150,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2334",
+      "source_location": "L2335",
       "weight": 1.0
     },
     {
@@ -53115,7 +53162,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2312",
+      "source_location": "L2313",
       "weight": 1.0
     },
     {
@@ -53127,7 +53174,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2359",
+      "source_location": "L2360",
       "weight": 1.0
     },
     {
@@ -53139,7 +53186,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2473",
+      "source_location": "L2474",
       "weight": 1.0
     },
     {
@@ -53163,7 +53210,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2508",
+      "source_location": "L2509",
       "weight": 1.0
     },
     {
@@ -53175,7 +53222,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2854",
+      "source_location": "L2855",
       "weight": 1.0
     },
     {
@@ -53211,7 +53258,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2634",
+      "source_location": "L2635",
       "weight": 1.0
     },
     {
@@ -53223,7 +53270,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2524",
+      "source_location": "L2525",
       "weight": 1.0
     },
     {
@@ -62567,7 +62614,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2312",
+      "source_location": "L2313",
       "weight": 1.0
     },
     {
@@ -62578,7 +62625,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2334",
+      "source_location": "L2335",
       "weight": 1.0
     },
     {
@@ -62589,7 +62636,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2350",
+      "source_location": "L2351",
       "weight": 1.0
     },
     {
@@ -62600,7 +62647,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2359",
+      "source_location": "L2360",
       "weight": 1.0
     },
     {
@@ -62611,7 +62658,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2390",
+      "source_location": "L2391",
       "weight": 1.0
     },
     {
@@ -62622,7 +62669,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2409",
+      "source_location": "L2410",
       "weight": 1.0
     },
     {
@@ -62633,7 +62680,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2432",
+      "source_location": "L2433",
       "weight": 1.0
     },
     {
@@ -62644,7 +62691,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2453",
+      "source_location": "L2454",
       "weight": 1.0
     },
     {
@@ -62655,7 +62702,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2473",
+      "source_location": "L2474",
       "weight": 1.0
     },
     {
@@ -62666,7 +62713,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2508",
+      "source_location": "L2509",
       "weight": 1.0
     },
     {
@@ -62677,7 +62724,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2524",
+      "source_location": "L2525",
       "weight": 1.0
     },
     {
@@ -62688,7 +62735,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2549",
+      "source_location": "L2550",
       "weight": 1.0
     },
     {
@@ -62699,7 +62746,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2634",
+      "source_location": "L2635",
       "weight": 1.0
     },
     {
@@ -62710,7 +62757,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2646",
+      "source_location": "L2647",
       "weight": 1.0
     },
     {
@@ -62721,7 +62768,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2659",
+      "source_location": "L2660",
       "weight": 1.0
     },
     {
@@ -62732,7 +62779,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2678",
+      "source_location": "L2679",
       "weight": 1.0
     },
     {
@@ -62743,7 +62790,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2706",
+      "source_location": "L2707",
       "weight": 1.0
     },
     {
@@ -62754,7 +62801,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2717",
+      "source_location": "L2718",
       "weight": 1.0
     },
     {
@@ -62765,7 +62812,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2744",
+      "source_location": "L2745",
       "weight": 1.0
     },
     {
@@ -62776,7 +62823,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2782",
+      "source_location": "L2783",
       "weight": 1.0
     },
     {
@@ -62787,7 +62834,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2798",
+      "source_location": "L2799",
       "weight": 1.0
     },
     {
@@ -62798,7 +62845,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2817",
+      "source_location": "L2818",
       "weight": 1.0
     },
     {
@@ -62809,7 +62856,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2832",
+      "source_location": "L2833",
       "weight": 1.0
     },
     {
@@ -62820,7 +62867,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2854",
+      "source_location": "L2855",
       "weight": 1.0
     },
     {
@@ -62831,7 +62878,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2865",
+      "source_location": "L2866",
       "weight": 1.0
     },
     {
@@ -62842,7 +62889,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2872",
+      "source_location": "L2873",
       "weight": 1.0
     },
     {
@@ -62853,7 +62900,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2914",
+      "source_location": "L2915",
       "weight": 1.0
     },
     {
@@ -62864,7 +62911,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2941",
+      "source_location": "L2942",
       "weight": 1.0
     },
     {
@@ -62875,7 +62922,18 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L2997",
+      "source_location": "L2998",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tauri_src_persistence",
+      "target": "src_tauri_src_persistence_player_state_restores_without_a_current_track",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src-tauri/src/persistence.rs",
+      "source_location": "L3013",
       "weight": 1.0
     },
     {
@@ -62886,7 +62944,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L3012",
+      "source_location": "L3026",
       "weight": 1.0
     },
     {
@@ -62897,7 +62955,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L3042",
+      "source_location": "L3056",
       "weight": 1.0
     },
     {
@@ -66340,7 +66398,7 @@
       "confidence_score": 0.85,
       "context": "call",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L3059",
+      "source_location": "L3073",
       "weight": 1.0
     },
     {
@@ -66352,7 +66410,7 @@
       "confidence_score": 0.85,
       "context": "call",
       "source_file": "src-tauri/src/persistence.rs",
-      "source_location": "L3019",
+      "source_location": "L3033",
       "weight": 1.0
     },
     {
@@ -66477,5 +66535,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "5fec61e1a5f2c4cb77c8d15447d4a27b4f613bd8"
+  "built_at_commit": "41765249406364ffc337cbf5e2af9618675df269"
 }

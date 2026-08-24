@@ -1825,24 +1825,24 @@ pub fn run() {
         .setup(|app| {
             let app_data = app.path().app_data_dir()?;
             let database = DatabaseWorker::start(app_data.join("bebop.sqlite3"))
-                .map_err(|error| std::io::Error::other(error.message))?;
+                .map_err(|error| std::io::Error::other(format!("{error:?}")))?;
             let artwork_cache = app_data.join("artwork");
             let watcher = LibraryWatcher::start(
                 app.handle().clone(),
                 database.clone(),
                 artwork_cache.clone(),
             )
-            .map_err(|error| std::io::Error::other(error.message))?;
+            .map_err(|error| std::io::Error::other(format!("{error:?}")))?;
             let roots = database
                 .list_roots()
-                .map_err(|error| std::io::Error::other(error.message))?;
+                .map_err(|error| std::io::Error::other(format!("{error:?}")))?;
             let restored_player = database
                 .load_player_state()
-                .map_err(|error| std::io::Error::other(error.message))?;
+                .map_err(|error| std::io::Error::other(format!("{error:?}")))?;
             for root in &roots {
                 watcher
                     .watch_root(root)
-                    .map_err(|error| std::io::Error::other(error.message))?;
+                    .map_err(|error| std::io::Error::other(format!("{error:?}")))?;
             }
             app.manage(AppState::new(
                 app.handle().clone(),
