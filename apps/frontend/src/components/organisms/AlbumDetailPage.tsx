@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   ArrowLeft,
   Play,
@@ -11,17 +11,33 @@ import {
   Music,
   Info,
   FileAudio,
+  DownloadCloud,
+  ArrowDownToLine,
+  Shuffle,
+  Loader2,
+  CheckCircle2,
 } from 'lucide-react';
 import { AlbumItem, TrackItem, ArtistItem } from '@/types';
 import { UniversalTracklist } from '@/components/molecules/UniversalTracklist';
 import { useTheme } from '@/services/themeService';
+import {
+  acquireTrack,
+  acquireAlbum,
+  onAcquisitionProgress,
+  onAcquisitionCompleted,
+  onAcquisitionFailed,
+} from '@/services/acquisitionService';
+import { loadAlbumDetail } from '@/services/catalogService';
 
 interface AlbumDetailPageProps {
   album: AlbumItem;
   currentTrackId?: string;
   isPlaying?: boolean;
   onBack: () => void;
+  /** Where back returns to, so the label matches how the page was reached. */
+  backLabel?: string;
   onPlayTrack?: (track: TrackItem) => void;
+  onEditTrack?: (track: TrackItem) => void;
   onPlayAlbum?: (album: AlbumItem) => void;
   onSelectArtist?: (artist: any) => void;
   onSelectAlbum?: (album: any) => void;
@@ -32,13 +48,210 @@ export const AlbumDetailPage: React.FC<AlbumDetailPageProps> = ({
   currentTrackId,
   isPlaying,
   onBack,
+  backLabel = 'Back to Library',
   onPlayTrack,
+  onEditTrack,
   onPlayAlbum,
   onSelectArtist,
   onSelectAlbum,
 }) => {
   const { currentTheme } = useTheme();
   const [favoriteMap, setFavoriteMap] = useState<Record<string, boolean>>({});
+  const [tracks, setTracks] = useState<TrackItem[]>(album.tracks || []);
+  const [isAcquiringAll, setIsAcquiringAll] = useState(false);
+
+  useEffect(() => {
+    setTracks(album.tracks || []);
+    if (!album.tracks || album.tracks.length === 0 || album.tracks.every((t) => t.isLocal)) {
+      void (async () => {
+        try {
+          const detailed = await loadAlbumDetail(album.id);
+          if (detailed.tracks && detailed.tracks.length > 0) {
+            setTracks(detailed.tracks);
+          }
+        } catch (e) {
+          console.warn('Failed to load unified album tracks:', e);
+        }
+      })();
+    }
+  }, [album.id]);
+
+  // Subscribe to real-time acquisition progress and completion events
+  useEffect(() => {
+    let unlistenProgress: (() => void) | undefined;
+    let unlistenCompleted: (() => void) | undefined;
+    let unlistenFailed: (() => void) | undefined;
+
+    void onAcquisitionProgress((payload) => {
+      setTracks((prevTracks) =>
+        prevTracks.map((t) => {
+          if (
+            (payload.remoteTrackId && t.remoteId === payload.remoteTrackId) ||
+            (payload.trackId && (t.id === payload.trackId || t.remoteId === payload.trackId))
+          ) {
+            const speedMb = payload.speedBytesPerSec
+              ? `${(payload.speedBytesPerSec / (1024 * 1024)).toFixed(1)} MB/s`
+              : undefined;
+            return {
+              ...t,
+              acquisitionStatus: (payload.stage as any) || 'downloading',
+              acquisitionProgress: payload.percent,
+              acquisitionSpeed: speedMb,
+            };
+          }
+          return t;
+        }),
+      );
+    }).then((un) => {
+      unlistenProgress = un;
+    });
+
+    void onAcquisitionCompleted((payload) => {
+      setTracks((prevTracks) =>
+        prevTracks.map((t) => {
+          if (
+            (payload.remoteTrackId && t.remoteId === payload.remoteTrackId) ||
+            (payload.trackId && (t.id === payload.trackId || t.remoteId === payload.trackId))
+          ) {
+            return {
+              ...t,
+              id: payload.localTrackId || t.id,
+              isLocal: true,
+              acquisitionStatus: 'completed',
+              acquisitionProgress: 100,
+              audioUrl: payload.filePath || t.audioUrl,
+            };
+          }
+          return t;
+        }),
+      );
+    }).then((un) => {
+      unlistenCompleted = un;
+    });
+
+    void onAcquisitionFailed((payload) => {
+      setTracks((prevTracks) =>
+        prevTracks.map((t) => {
+          if (
+            (payload.remoteTrackId && t.remoteId === payload.remoteTrackId) ||
+            (payload.trackId && (t.id === payload.trackId || t.remoteId === payload.trackId))
+          ) {
+            return {
+              ...t,
+              acquisitionStatus: 'failed',
+            };
+          }
+          return t;
+        }),
+      );
+    }).then((un) => {
+      unlistenFailed = un;
+    });
+
+    return () => {
+      unlistenProgress?.();
+      unlistenCompleted?.();
+      unlistenFailed?.();
+    };
+  }, []);
+
+  const localTracks = useMemo(() => tracks.filter((t) => t.isLocal !== false), [tracks]);
+  const missingTracks = useMemo(() => tracks.filter((t) => t.isLocal === false), [tracks]);
+
+  const allMissing = tracks.length > 0 && localTracks.length === 0;
+  const isPartial = localTracks.length > 0 && missingTracks.length > 0;
+  const allLocal = tracks.length > 0 && missingTracks.length === 0;
+
+  const handleAcquireTrack = useCallback(
+    async (track: TrackItem) => {
+      setTracks((prev) =>
+        prev.map((t) =>
+          t.id === track.id || t.remoteId === track.remoteId
+            ? { ...t, acquisitionStatus: 'queued', acquisitionProgress: 0 }
+            : t,
+        ),
+      );
+
+      try {
+        await acquireTrack({
+          trackTitle: track.title,
+          artistName: track.artist || album.artist,
+          albumTitle: album.title,
+          remoteTrackId: track.remoteId || track.id,
+          remoteReleaseId: album.id,
+          isrc: track.isrc,
+          trackNumber: track.trackNumber,
+          durationMs: track.durationSeconds ? track.durationSeconds * 1000 : undefined,
+          musicbrainzRecordingId: track.musicbrainzRecordingId,
+          spotifyTrackId: track.spotifyTrackId,
+        });
+      } catch (err) {
+        console.error('Failed to acquire track:', err);
+        setTracks((prev) =>
+          prev.map((t) =>
+            t.id === track.id || t.remoteId === track.remoteId
+              ? { ...t, acquisitionStatus: 'failed' }
+              : t,
+          ),
+        );
+      }
+    },
+    [album],
+  );
+
+  const handleAcquireMissing = useCallback(async () => {
+    if (missingTracks.length === 0 || isAcquiringAll) return;
+    setIsAcquiringAll(true);
+
+    setTracks((prev) =>
+      prev.map((t) =>
+        t.isLocal === false ? { ...t, acquisitionStatus: 'queued', acquisitionProgress: 0 } : t,
+      ),
+    );
+
+    try {
+      await acquireAlbum({
+        albumTitle: album.title,
+        artistName: album.artist,
+        remoteReleaseId: album.id,
+        tracks: missingTracks.map((t) => ({
+          trackTitle: t.title,
+          artistName: t.artist || album.artist,
+          albumTitle: album.title,
+          remoteTrackId: t.remoteId || t.id,
+          remoteReleaseId: album.id,
+          isrc: t.isrc,
+          trackNumber: t.trackNumber,
+          durationMs: t.durationSeconds ? t.durationSeconds * 1000 : undefined,
+          musicbrainzRecordingId: t.musicbrainzRecordingId,
+          spotifyTrackId: t.spotifyTrackId,
+        })),
+      });
+    } catch (err) {
+      console.error('Failed to acquire missing tracks:', err);
+    } finally {
+      setIsAcquiringAll(false);
+    }
+  }, [album, missingTracks, isAcquiringAll]);
+
+  const handlePlayAvailable = useCallback(() => {
+    if (localTracks.length > 0) {
+      onPlayAlbum?.({
+        ...album,
+        tracks: localTracks,
+      });
+    }
+  }, [album, localTracks, onPlayAlbum]);
+
+  const handleShuffleAlbum = useCallback(() => {
+    if (localTracks.length > 0) {
+      const shuffled = [...localTracks].sort(() => Math.random() - 0.5);
+      onPlayAlbum?.({
+        ...album,
+        tracks: shuffled,
+      });
+    }
+  }, [album, localTracks, onPlayAlbum]);
 
   const toggleFavorite = (trackId: string) => {
     setFavoriteMap((prev) => ({
@@ -66,7 +279,7 @@ export const AlbumDetailPage: React.FC<AlbumDetailPageProps> = ({
           className="inline-flex items-center gap-2 px-3 py-1.5 rounded text-xs font-mono text-neutral-300 hover:text-white border transition-colors cursor-pointer hover:brightness-125"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
-          <span>Back to Library</span>
+          <span>{backLabel}</span>
         </button>
 
         <div className="flex items-center gap-2">
@@ -143,19 +356,29 @@ export const AlbumDetailPage: React.FC<AlbumDetailPageProps> = ({
               )}
 
               {/* Format tag badge on cover */}
-              <div className="absolute bottom-2 right-2 px-1.5 py-0.5 rounded bg-black/85 backdrop-blur-xs text-[10px] font-mono text-amber-400 border border-amber-500/40">
+              <div className="absolute bottom-2 right-2 px-1.5 py-0.5 rounded bg-black/85 text-[10px] font-mono text-amber-400 border border-amber-500/40">
                 {album.format}
               </div>
 
-              {/* Play All Album Button Overlay */}
+              {/* Play All / Acquire Album Button Overlay */}
               <button
                 type="button"
-                onClick={() => onPlayAlbum?.(album)}
-                className="absolute inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-pointer"
-                aria-label={`Play album ${album.title}`}
+                onClick={() => {
+                  if (allMissing) {
+                    void handleAcquireMissing();
+                  } else {
+                    handlePlayAvailable();
+                  }
+                }}
+                className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-pointer"
+                aria-label={allMissing ? `Acquire album ${album.title}` : `Play album ${album.title}`}
               >
                 <div className="w-12 h-12 rounded-full bg-amber-500 text-black flex items-center justify-center shadow-lg hover:scale-105 transition-transform">
-                  <Play className="w-6 h-6 fill-black ml-0.5" />
+                  {allMissing ? (
+                    <DownloadCloud className="w-6 h-6 stroke-black stroke-2" />
+                  ) : (
+                    <Play className="w-6 h-6 fill-black ml-0.5" />
+                  )}
                 </div>
               </button>
             </div>
@@ -186,12 +409,12 @@ export const AlbumDetailPage: React.FC<AlbumDetailPageProps> = ({
               {/* Genre / Label Badges */}
               <div className="flex flex-wrap gap-2 pt-1">
                 {album.genre && (
-                  <span className="px-3 py-1 rounded-full text-xs font-medium bg-neutral-900/90 text-neutral-200 border border-neutral-700/60 backdrop-blur-xs shadow-xs">
+                  <span className="px-3 py-1 rounded-full text-xs font-medium bg-neutral-900/90 text-neutral-200 border border-neutral-700/60 shadow-xs">
                     {album.genre}
                   </span>
                 )}
                 {album.label && (
-                  <span className="px-3 py-1 rounded-full text-xs font-mono text-neutral-400 bg-[#121620]/90 border border-neutral-800 backdrop-blur-xs">
+                  <span className="px-3 py-1 rounded-full text-xs font-mono text-neutral-400 bg-[#121620]/90 border border-neutral-800">
                     {album.label}
                   </span>
                 )}
@@ -204,7 +427,7 @@ export const AlbumDetailPage: React.FC<AlbumDetailPageProps> = ({
             <div className="grid grid-cols-4 gap-2 sm:gap-2.5">
               <div className="bg-[#121620]/80 backdrop-blur-md border border-neutral-700/60 rounded-lg py-2.5 px-3 sm:px-4 flex flex-col items-center justify-center text-center shadow-lg min-w-[68px] sm:min-w-[80px]">
                 <span className="text-base sm:text-lg font-bold text-white font-mono leading-none">
-                  {album.trackCount}
+                  {tracks.length || album.trackCount}
                 </span>
                 <span className="text-[10px] sm:text-[11px] text-neutral-400 font-sans mt-1">
                   Tracks
@@ -250,41 +473,127 @@ export const AlbumDetailPage: React.FC<AlbumDetailPageProps> = ({
             <h2 className="text-base font-bold text-white tracking-tight flex items-center gap-2">
               <span>Track Listing</span>
               <span className="text-xs font-mono text-neutral-500 font-normal">
-                ({album.tracks.length} tracks)
+                ({tracks.length} tracks{localTracks.length < tracks.length ? ` · ${localTracks.length} local` : ''})
               </span>
             </h2>
 
-            <button
-              type="button"
-              onClick={() => onPlayAlbum?.(album)}
-              className="inline-flex items-center gap-1.5 px-3 py-1 rounded bg-amber-500 hover:bg-amber-400 text-black font-semibold text-xs transition-colors cursor-pointer"
-            >
-              <Play className="w-3.5 h-3.5 fill-black" />
-              <span>Play All</span>
-            </button>
+            <div className="flex items-center gap-2">
+              {allMissing ? (
+                <button
+                  type="button"
+                  onClick={handleAcquireMissing}
+                  disabled={isAcquiringAll}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded bg-amber-500 hover:bg-amber-400 text-black font-semibold text-xs transition-colors cursor-pointer disabled:opacity-50 shadow-md"
+                >
+                  {isAcquiringAll ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <DownloadCloud className="w-3.5 h-3.5" />
+                  )}
+                  <span>{isAcquiringAll ? 'Acquiring Album…' : 'Get Full Album'}</span>
+                </button>
+              ) : isPartial ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={handlePlayAvailable}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-amber-500 hover:bg-amber-400 text-black font-semibold text-xs transition-colors cursor-pointer"
+                  >
+                    <Play className="w-3.5 h-3.5 fill-black" />
+                    <span>Play Available ({localTracks.length})</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleAcquireMissing}
+                    disabled={isAcquiringAll}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 border border-amber-500/40 font-semibold text-xs transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    {isAcquiringAll ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <ArrowDownToLine className="w-3.5 h-3.5" />
+                    )}
+                    <span>Acquire Missing Tracks ({missingTracks.length})</span>
+                  </button>
+                </>
+              ) : allLocal ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={handlePlayAvailable}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-amber-500 hover:bg-amber-400 text-black font-semibold text-xs transition-colors cursor-pointer"
+                  >
+                    <Play className="w-3.5 h-3.5 fill-black" />
+                    <span>Play Album</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleShuffleAlbum}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-300 border border-neutral-700 font-semibold text-xs transition-colors cursor-pointer"
+                  >
+                    <Shuffle className="w-3.5 h-3.5" />
+                    <span>Shuffle</span>
+                  </button>
+                </>
+              ) : tracks.length > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => onPlayAlbum?.(album)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded bg-amber-500 hover:bg-amber-400 text-black font-semibold text-xs transition-colors cursor-pointer"
+                >
+                  <Play className="w-3.5 h-3.5 fill-black" />
+                  <span>Play All</span>
+                </button>
+              ) : (
+                <span className="text-xs font-mono text-neutral-500">
+                  Not in local library
+                </span>
+              )}
+            </div>
           </div>
 
-          {/* Tracks Table using UniversalTracklist with draggable columns */}
-          <UniversalTracklist
-            idPrefix={`album-${album.id}`}
-            tracks={album.tracks}
-            currentTrackId={currentTrackId}
-            isPlaying={isPlaying}
-            onPlayTrack={onPlayTrack}
-            onSelectArtist={onSelectArtist}
-            onSelectAlbum={onSelectAlbum}
-            storageKey={`album_${album.id}_columns`}
-            defaultVisibleColumns={[
-              'trackNumber',
-              'title',
-              'dynamicRange',
-              'sampleRate',
-              'bitrate',
-              'duration',
-              'actions',
-            ]}
-            showCustomizerButton={true}
-          />
+          {tracks.length > 0 ? (
+            <UniversalTracklist
+              idPrefix={`album-${album.id}`}
+              tracks={tracks}
+              currentTrackId={currentTrackId}
+              isPlaying={isPlaying}
+              onPlayTrack={onPlayTrack}
+              onEditTrack={onEditTrack}
+              onAcquireTrack={handleAcquireTrack}
+              onSelectArtist={onSelectArtist}
+              onSelectAlbum={onSelectAlbum}
+              storageKey={`album_${album.id}_columns`}
+              defaultVisibleColumns={[
+                'trackNumber',
+                'title',
+                'dynamicRange',
+                'sampleRate',
+                'bitrate',
+                'duration',
+                'actions',
+              ]}
+              showCustomizerButton={true}
+            />
+          ) : (
+            <div
+              style={{
+                backgroundColor: currentTheme.bgCard,
+                borderColor: currentTheme.borderColor,
+              }}
+              className="rounded-lg border p-8 flex flex-col items-center justify-center text-center gap-3 text-neutral-400"
+            >
+              <Disc className="w-12 h-12 text-neutral-600" />
+              <div className="flex flex-col gap-1">
+                <span className="text-sm font-semibold text-neutral-200">
+                  Remote Discography Release
+                </span>
+                <span className="text-xs text-neutral-400 max-w-sm">
+                  This release was cataloged from MusicBrainz. Audio tracks will be available when local audio files for this album are added to your library.
+                </span>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Right Column: Audiophile Studio Specs & Technical Inspection */}

@@ -17,7 +17,7 @@ use crate::{
     metadata::{EmbeddedMetadata, read_embedded_metadata},
 };
 
-#[derive(Clone, Debug, Deserialize, Serialize, Type)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize, Type)]
 #[serde(rename_all = "lowercase")]
 pub enum AudioExtension {
     Flac,
@@ -103,6 +103,21 @@ pub enum WatchMode {
     Manual,
 }
 
+#[derive(Clone, Debug, Deserialize, Serialize, Type, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum EntityProvenance {
+    Local,
+    Remote,
+    Both,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, Type, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+pub enum EntityAvailability {
+    InLibrary,
+    NotLocal,
+}
+
 impl WatchMode {
     pub(crate) fn from_database(value: &str) -> Self {
         match value {
@@ -178,11 +193,36 @@ pub struct DiscoveryQuery {
     pub limit: u32,
 }
 
+/// A bounded, keyset-paginated catalog response. `next_cursor` is opaque to
+/// callers; passing it back avoids the increasingly expensive OFFSET scans
+/// used by the prototype discovery endpoint.
+#[derive(Clone, Debug, Deserialize, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct CatalogPage<T: Type> {
+    pub items: Vec<T>,
+    pub next_cursor: Option<String>,
+    pub page_size: u32,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct ArtistCatalogQuery {
+    pub search: Option<String>,
+    pub cursor: Option<String>,
+    pub page_size: u32,
+    pub available: Option<bool>,
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct ArtistSummary {
     pub id: String,
     pub name: String,
+    pub musicbrainz_artist_id: Option<String>,
+    pub provenance: EntityProvenance,
+    pub availability: EntityAvailability,
+    pub provider_ids: Vec<String>,
+    pub last_refreshed_at: Option<String>,
     pub genres: Vec<String>,
     pub album_count: u64,
     pub track_count: u64,
@@ -191,6 +231,8 @@ pub struct ArtistSummary {
     pub artwork_id: Option<String>,
     pub artwork_path: Option<String>,
 }
+
+pub type ArtistCatalogPage = CatalogPage<ArtistSummary>;
 
 #[derive(Clone, Debug, Deserialize, Serialize, Type)]
 #[serde(rename_all = "camelCase")]
@@ -206,6 +248,10 @@ pub struct AlbumSummary {
     pub total_duration_ms: u64,
     pub total_file_size: u64,
     pub artwork_path: Option<String>,
+    pub provenance: EntityProvenance,
+    pub availability: EntityAvailability,
+    pub provider_ids: Vec<String>,
+    pub last_refreshed_at: Option<String>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, Type)]
@@ -239,6 +285,54 @@ pub struct ArtistDetail {
 pub struct AlbumDetail {
     pub album: AlbumSummary,
     pub tracks: Vec<TrackSummary>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct AudioSpecs {
+    pub extension: AudioExtension,
+    pub sample_rate: Option<u32>,
+    pub bit_depth: Option<u16>,
+    pub channels: Option<u16>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct UnifiedTrackSummary {
+    pub id: Option<String>,
+    pub remote_id: String,
+    pub track_number: u32,
+    pub disc_number: u32,
+    pub title: String,
+    pub artists: Vec<ArtistReference>,
+    pub duration_ms: Option<u64>,
+    pub is_local: bool,
+    pub audio_specs: Option<AudioSpecs>,
+    pub isrc: Option<String>,
+    pub musicbrainz_recording_id: Option<String>,
+    pub spotify_track_id: Option<String>,
+    pub acquisition_status: Option<String>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct UnifiedAlbumDetail {
+    pub album: AlbumSummary,
+    pub tracks: Vec<UnifiedTrackSummary>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct RemoteTrackPayload {
+    pub id: String,
+    pub release_id: String,
+    pub track_number: u32,
+    pub disc_number: u32,
+    pub title: String,
+    pub duration_ms: Option<u64>,
+    pub isrc: Option<String>,
+    pub musicbrainz_recording_id: Option<String>,
+    pub spotify_track_id: Option<String>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, Type)]

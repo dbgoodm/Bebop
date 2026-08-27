@@ -1,5 +1,5 @@
 use std::{
-    collections::BTreeMap,
+    collections::{BTreeMap, HashSet},
     path::{Path, PathBuf},
     sync::{
         Arc, Mutex,
@@ -9,13 +9,19 @@ use std::{
     time::{Duration, Instant},
 };
 
-mod acquisition;
+pub mod acquisition;
+mod artist_info;
 mod audio;
 mod catalog;
 mod enrichment;
+mod fingerprint;
 mod integrations;
+mod lyrics;
 mod metadata;
+mod metadata_jobs;
+mod metrics;
 mod persistence;
+mod song_dna;
 mod spectrum;
 mod updates;
 mod user_state;
@@ -30,27 +36,44 @@ use tauri::{AppHandle, Emitter, Manager, State, WindowEvent};
 use tauri_specta::{Builder, collect_commands};
 use uuid::Uuid;
 
-use acquisition::AcquisitionManager;
 pub use acquisition::{
-    AcquisitionJob, AcquisitionSearch, AcquisitionSearchFile, AcquisitionSearchGroup,
-    AcquisitionSettings, AcquisitionStatus,
+    AcquisitionAlbumRequest, AcquisitionJobDto, AcquisitionJobStatus, AcquisitionProgressPayload,
+    AcquisitionQueue, AcquisitionSettings, AcquisitionTrackRequest,
 };
+pub use artist_info::ArtistInformation;
+use artist_info::load_artist_information;
 use audio::{AudioBackendError, PlaybackEngine};
 pub use catalog::{
-    AlbumDetail, AlbumSummary, ArtistDetail, ArtistReference, ArtistSummary, AudioExtension,
-    CatalogQuery, DiscoveryCatalog, DiscoveryQuery, GenreSummary, LibraryRoot, LibraryScan,
-    RootAvailability, ScanProgress, SortDirection, TrackPage, TrackSort, TrackSummary, WatchMode,
+    AlbumDetail, AlbumSummary, ArtistCatalogPage, ArtistCatalogQuery, ArtistDetail,
+    ArtistReference, ArtistSummary, AudioExtension, AudioSpecs, CatalogQuery, DiscoveryCatalog,
+    DiscoveryQuery, EntityAvailability, EntityProvenance, GenreSummary, LibraryRoot, LibraryScan,
+    RemoteTrackPayload, RootAvailability, ScanProgress, SortDirection, TrackPage, TrackSort,
+    TrackSummary, UnifiedAlbumDetail, UnifiedTrackSummary, WatchMode,
 };
 use catalog::{probe_audio_metadata, scan_library_at};
 pub use enrichment::{EnrichmentCandidate, EnrichmentJob};
-use enrichment::{MusicBrainzClient, enrich_track, patch_from_candidate};
+use enrichment::{
+    MusicBrainzClient, enrich_track, patch_from_candidate, preserve_local_only_fields,
+};
 use integrations::{
     IntegrationManager, clear_lastfm_session, qualifies_for_scrobble, set_lastfm_session,
 };
 pub use integrations::{IntegrationSettings, IntegrationStatus};
+use lyrics::resolve_lyrics;
+pub use lyrics::{LyricLine, LyricsDocument, LyricsSource};
 pub use metadata::{MetadataPatch, MetadataWriteResult};
-use metadata::{cache_external_artwork, restore_backup, write_patch_atomically};
+use metadata::{
+    cache_external_artwork, read_metadata_patch, restore_backup, write_patch_atomically,
+};
+use metadata_jobs::diff_metadata_patches;
+pub use metadata_jobs::{
+    MetadataDiff, MetadataJob, MetadataJobScope, MetadataJobStatus, MetadataReview,
+};
 use persistence::DatabaseWorker;
+pub use song_dna::{
+    AudioAnalysisProgress, AudioFeatures, GeneratedPlaylist, Playlist, PlaylistGenerationRequest,
+    PlaylistMood, PlaylistSelection,
+};
 pub use updates::{UpdateProgress, UpdateStatus};
 pub use user_state::{
     FavoriteReference, HomeSnapshot, PersistentPlayerState, PlayerPreferences, PlaylistSummary,
@@ -60,6 +83,7 @@ use watcher::LibraryWatcher;
 const SCAN_PROGRESS_EVENT: &str = "library://scan-progress";
 const LIBRARY_CHANGED_EVENT: &str = "library://changed";
 const METADATA_JOB_PROGRESS_EVENT: &str = "metadata://job-progress";
+const DISCOGRAPHY_SYNC_EVENT: &str = "catalog://discography-sync";
 const PLAYBACK_STATE_EVENT: &str = "playback://state";
 const PLAYBACK_POSITION_EVENT: &str = "playback://position";
 const PLAYBACK_ENDED_EVENT: &str = "playback://ended";
@@ -230,13 +254,16 @@ pub struct AppState {
     database: DatabaseWorker,
     artwork_cache: PathBuf,
     musicbrainz: Arc<MusicBrainzClient>,
+    metadata_writes: Arc<Mutex<HashSet<String>>>,
     integrations: IntegrationManager,
-    acquisition: AcquisitionManager,
+    acquisition: Arc<AcquisitionQueue>,
     watcher: LibraryWatcher,
     listening: Arc<Mutex<Option<ActiveListeningSession>>>,
     playback: Arc<Mutex<PlaybackEngine>>,
     visualization_enabled: Arc<AtomicBool>,
     spectrum_active: Arc<AtomicBool>,
+    audio_analysis_running: Arc<AtomicBool>,
+    discography_sync_running: Arc<AtomicBool>,
     running: Arc<AtomicBool>,
 }
 
@@ -265,183 +292,31 @@ impl AppState {
             preferences.selected_output_device_id.clone(),
         );
         playback.set_spectrum_enabled(preferences.visualization_enabled);
+        let musicbrainz = Arc::new(MusicBrainzClient::default());
+        musicbrainz.attach_database(database.clone());
+        let acquisition = Arc::new(AcquisitionQueue::new(
+            Some(app.clone()),
+            database.clone(),
+            artwork_cache.clone(),
+            None,
+        ));
         Self {
-            acquisition: AcquisitionManager::start(app.clone(), database.clone()),
             integrations: IntegrationManager::start(app, database.clone()),
             database,
             artwork_cache,
-            musicbrainz: Arc::new(MusicBrainzClient::default()),
+            musicbrainz,
+            metadata_writes: Arc::new(Mutex::new(HashSet::new())),
+            acquisition,
             watcher,
             listening: Arc::new(Mutex::new(None)),
             playback: Arc::new(Mutex::new(playback)),
             visualization_enabled: Arc::new(AtomicBool::new(preferences.visualization_enabled)),
             spectrum_active: Arc::new(AtomicBool::new(true)),
+            audio_analysis_running: Arc::new(AtomicBool::new(false)),
+            discography_sync_running: Arc::new(AtomicBool::new(false)),
             running: Arc::new(AtomicBool::new(true)),
         }
     }
-}
-
-#[tauri::command]
-#[specta::specta]
-fn get_acquisition_settings(state: State<'_, AppState>) -> Result<AcquisitionSettings, AppError> {
-    acquisition::load_settings(&state.database)
-}
-
-#[tauri::command]
-#[specta::specta]
-fn set_acquisition_settings(
-    state: State<'_, AppState>,
-    settings: AcquisitionSettings,
-) -> Result<AcquisitionSettings, AppError> {
-    acquisition::save_settings(&state.database, settings)
-}
-
-#[tauri::command]
-#[specta::specta]
-async fn configure_slskd_api_key(
-    state: State<'_, AppState>,
-    api_key: String,
-) -> Result<AcquisitionStatus, AppError> {
-    let database = state.database.clone();
-    tauri::async_runtime::spawn_blocking(move || {
-        acquisition::set_api_key(&api_key)?;
-        Ok(acquisition::test_connection(&database))
-    })
-    .await
-    .map_err(|error| AppError::new("background-task-failed", error.to_string()))?
-}
-
-#[tauri::command]
-#[specta::specta]
-async fn disconnect_slskd(state: State<'_, AppState>) -> Result<AcquisitionStatus, AppError> {
-    let database = state.database.clone();
-    tauri::async_runtime::spawn_blocking(move || {
-        acquisition::clear_api_key()?;
-        Ok(acquisition::test_connection(&database))
-    })
-    .await
-    .map_err(|error| AppError::new("background-task-failed", error.to_string()))?
-}
-
-#[tauri::command]
-#[specta::specta]
-async fn test_slskd_connection(state: State<'_, AppState>) -> Result<AcquisitionStatus, AppError> {
-    let database = state.database.clone();
-    tauri::async_runtime::spawn_blocking(move || acquisition::test_connection(&database))
-        .await
-        .map_err(|error| AppError::new("background-task-failed", error.to_string()))
-}
-
-#[tauri::command]
-#[specta::specta]
-async fn search_acquisition(
-    state: State<'_, AppState>,
-    query: String,
-) -> Result<AcquisitionSearch, AppError> {
-    let database = state.database.clone();
-    tauri::async_runtime::spawn_blocking(move || acquisition::start_search(&database, query))
-        .await
-        .map_err(|error| AppError::new("background-task-failed", error.to_string()))?
-}
-
-#[tauri::command]
-#[specta::specta]
-async fn get_acquisition_search(
-    state: State<'_, AppState>,
-    search_id: String,
-) -> Result<AcquisitionSearch, AppError> {
-    let database = state.database.clone();
-    tauri::async_runtime::spawn_blocking(move || acquisition::get_search(&database, search_id))
-        .await
-        .map_err(|error| AppError::new("background-task-failed", error.to_string()))?
-}
-
-#[tauri::command]
-#[specta::specta]
-async fn enqueue_acquisition(
-    app: AppHandle,
-    state: State<'_, AppState>,
-    search_id: String,
-    source_user: String,
-    file: AcquisitionSearchFile,
-) -> Result<AcquisitionJob, AppError> {
-    let database = state.database.clone();
-    tauri::async_runtime::spawn_blocking(move || {
-        acquisition::enqueue(&app, &database, search_id, source_user, file)
-    })
-    .await
-    .map_err(|error| AppError::new("background-task-failed", error.to_string()))?
-}
-
-#[tauri::command]
-#[specta::specta]
-async fn list_acquisition_jobs(
-    app: AppHandle,
-    state: State<'_, AppState>,
-) -> Result<Vec<AcquisitionJob>, AppError> {
-    let database = state.database.clone();
-    tauri::async_runtime::spawn_blocking(move || acquisition::list_jobs(&app, &database))
-        .await
-        .map_err(|error| AppError::new("background-task-failed", error.to_string()))?
-}
-
-#[tauri::command]
-#[specta::specta]
-async fn pause_acquisition(
-    app: AppHandle,
-    state: State<'_, AppState>,
-    job_id: String,
-) -> Result<AcquisitionJob, AppError> {
-    let database = state.database.clone();
-    tauri::async_runtime::spawn_blocking(move || acquisition::pause(&app, &database, job_id))
-        .await
-        .map_err(|error| AppError::new("background-task-failed", error.to_string()))?
-}
-
-#[tauri::command]
-#[specta::specta]
-async fn resume_acquisition(
-    app: AppHandle,
-    state: State<'_, AppState>,
-    job_id: String,
-) -> Result<AcquisitionJob, AppError> {
-    let database = state.database.clone();
-    tauri::async_runtime::spawn_blocking(move || acquisition::resume(&app, &database, job_id))
-        .await
-        .map_err(|error| AppError::new("background-task-failed", error.to_string()))?
-}
-
-#[tauri::command]
-#[specta::specta]
-async fn cancel_acquisition(
-    app: AppHandle,
-    state: State<'_, AppState>,
-    job_id: String,
-) -> Result<AcquisitionJob, AppError> {
-    let database = state.database.clone();
-    tauri::async_runtime::spawn_blocking(move || acquisition::cancel(&app, &database, job_id))
-        .await
-        .map_err(|error| AppError::new("background-task-failed", error.to_string()))?
-}
-
-#[tauri::command]
-#[specta::specta]
-async fn import_acquisition(
-    app: AppHandle,
-    state: State<'_, AppState>,
-    job_id: String,
-    root_id: String,
-) -> Result<AcquisitionJob, AppError> {
-    let database = state.database.clone();
-    let artwork_cache = state.artwork_cache.clone();
-    tauri::async_runtime::spawn_blocking(move || {
-        let (job, _) = acquisition::import(&app, &database, job_id, root_id.clone())?;
-        let root = database.get_root(root_id)?;
-        scan_root(&app, &database, &artwork_cache, root)?;
-        Ok(job)
-    })
-    .await
-    .map_err(|error| AppError::new("background-task-failed", error.to_string()))?
 }
 
 #[tauri::command]
@@ -635,7 +510,7 @@ fn set_library_view_preference(
 ) -> Result<PlayerPreferences, AppError> {
     if !matches!(
         library_view.as_str(),
-        "artists" | "albums" | "genres" | "tracks"
+        "artists" | "albums" | "genres" | "tracks" | "playlists"
     ) {
         return Err(AppError::new(
             "library-view-invalid",
@@ -727,6 +602,57 @@ fn disconnect_lastfm(state: State<'_, AppState>) -> Result<Vec<IntegrationStatus
 
 #[tauri::command]
 #[specta::specta]
+fn acquire_track(
+    state: State<'_, AppState>,
+    request: AcquisitionTrackRequest,
+) -> Result<AcquisitionJobDto, AppError> {
+    state.acquisition.enqueue_track(request)
+}
+
+#[tauri::command]
+#[specta::specta]
+fn acquire_album(
+    state: State<'_, AppState>,
+    request: AcquisitionAlbumRequest,
+) -> Result<Vec<AcquisitionJobDto>, AppError> {
+    state.acquisition.enqueue_album(request)
+}
+
+#[tauri::command]
+#[specta::specta]
+fn get_acquisition_queue(state: State<'_, AppState>) -> Result<Vec<AcquisitionJobDto>, AppError> {
+    state.acquisition.get_queue()
+}
+
+#[tauri::command]
+#[specta::specta]
+fn cancel_acquisition(state: State<'_, AppState>, job_id: String) -> Result<(), AppError> {
+    state.acquisition.cancel(&job_id)
+}
+
+#[tauri::command]
+#[specta::specta]
+fn retry_acquisition(state: State<'_, AppState>, job_id: String) -> Result<(), AppError> {
+    state.acquisition.retry(&job_id)
+}
+
+#[tauri::command]
+#[specta::specta]
+fn get_acquisition_settings(state: State<'_, AppState>) -> Result<AcquisitionSettings, AppError> {
+    state.acquisition.get_settings()
+}
+
+#[tauri::command]
+#[specta::specta]
+fn save_acquisition_settings(
+    state: State<'_, AppState>,
+    settings: AcquisitionSettings,
+) -> Result<AcquisitionSettings, AppError> {
+    state.acquisition.save_settings(settings)
+}
+
+#[tauri::command]
+#[specta::specta]
 fn set_favorite(
     app: AppHandle,
     state: State<'_, AppState>,
@@ -761,6 +687,38 @@ fn list_playlists(state: State<'_, AppState>) -> Result<Vec<PlaylistSummary>, Ap
 
 #[tauri::command]
 #[specta::specta]
+fn get_playlist(state: State<'_, AppState>, playlist_id: String) -> Result<Playlist, AppError> {
+    state.database.get_playlist(playlist_id)
+}
+
+#[tauri::command]
+#[specta::specta]
+fn rename_playlist(
+    state: State<'_, AppState>,
+    playlist_id: String,
+    name: String,
+) -> Result<PlaylistSummary, AppError> {
+    state.database.rename_playlist(playlist_id, name)
+}
+
+#[tauri::command]
+#[specta::specta]
+fn delete_playlist(state: State<'_, AppState>, playlist_id: String) -> Result<(), AppError> {
+    state.database.delete_playlist(playlist_id)
+}
+
+#[tauri::command]
+#[specta::specta]
+fn duplicate_playlist(
+    state: State<'_, AppState>,
+    playlist_id: String,
+    name: String,
+) -> Result<PlaylistSummary, AppError> {
+    state.database.duplicate_playlist(playlist_id, name)
+}
+
+#[tauri::command]
+#[specta::specta]
 fn get_playlist_tracks(
     state: State<'_, AppState>,
     playlist_id: String,
@@ -778,10 +736,158 @@ fn set_playlist_tracks(
     state.database.set_playlist_tracks(playlist_id, track_ids)
 }
 
+fn generate_playlist_from_database(
+    database: &DatabaseWorker,
+    request: &PlaylistGenerationRequest,
+) -> Result<GeneratedPlaylist, AppError> {
+    let candidates = database.list_generation_candidates()?;
+    let analyzed_track_count = candidates
+        .iter()
+        .filter(|candidate| candidate.features.is_some())
+        .count() as u32;
+    let ranked = song_dna::rank_candidates(&candidates, request);
+    let mut selections = Vec::with_capacity(ranked.len());
+    let mut total_duration_ms = 0_u64;
+    for selection in ranked {
+        let track = database.get_track(selection.track_id)?;
+        total_duration_ms = total_duration_ms.saturating_add(track.duration_ms.unwrap_or(0));
+        selections.push(PlaylistSelection {
+            track,
+            score: selection.score,
+            explanation: selection.explanation,
+        });
+    }
+    Ok(GeneratedPlaylist {
+        selections,
+        total_duration_ms,
+        analyzed_track_count,
+    })
+}
+
+#[tauri::command]
+#[specta::specta]
+async fn generate_playlist(
+    state: State<'_, AppState>,
+    request: PlaylistGenerationRequest,
+) -> Result<GeneratedPlaylist, AppError> {
+    let database = state.database.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        generate_playlist_from_database(&database, &request)
+    })
+    .await
+    .map_err(|error| AppError::new("background-task-failed", error.to_string()))?
+}
+
+#[tauri::command]
+#[specta::specta]
+async fn create_generated_playlist(
+    state: State<'_, AppState>,
+    name: String,
+    request: PlaylistGenerationRequest,
+) -> Result<Playlist, AppError> {
+    let database = state.database.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let generated = generate_playlist_from_database(&database, &request)?;
+        let request_json = serde_json::to_string(&request)
+            .map_err(|error| AppError::new("playlist-request-invalid", error.to_string()))?;
+        let summary = database.save_generated_playlist(
+            name,
+            request_json,
+            generated
+                .selections
+                .iter()
+                .map(|selection| selection.track.id.clone())
+                .collect(),
+        )?;
+        database.get_playlist(summary.id)
+    })
+    .await
+    .map_err(|error| AppError::new("background-task-failed", error.to_string()))?
+}
+
+#[tauri::command]
+#[specta::specta]
+async fn analyze_audio_features(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    track_ids: Vec<String>,
+    force: bool,
+) -> Result<Vec<AudioFeatures>, AppError> {
+    if state
+        .audio_analysis_running
+        .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
+        .is_err()
+    {
+        return Err(AppError::new(
+            "audio-analysis-running",
+            "Song DNA analysis is already running.",
+        ));
+    }
+    let database = state.database.clone();
+    let running = Arc::clone(&state.audio_analysis_running);
+    tauri::async_runtime::spawn_blocking(move || {
+        let result = (|| {
+            let mut analyzed = Vec::new();
+            let mut failed_track_ids = Vec::new();
+            let total = track_ids.len() as u32;
+            for (index, track_id) in track_ids.into_iter().enumerate() {
+                let result = if !force {
+                    database.get_audio_features(track_id.clone())?
+                } else {
+                    None
+                };
+                let result = if let Some(features) = result {
+                    Ok(features)
+                } else {
+                    database
+                        .resolve_track_id(track_id.clone())
+                        .and_then(|path| song_dna::analyze_file(&track_id, &path))
+                        .and_then(|features| {
+                            database.save_audio_features(features.clone())?;
+                            Ok(features)
+                        })
+                };
+                match result {
+                    Ok(features) => analyzed.push(features),
+                    Err(_) => failed_track_ids.push(track_id.clone()),
+                }
+                let _ = app.emit(
+                    "analysis://progress",
+                    AudioAnalysisProgress {
+                        completed: index as u32 + 1,
+                        total,
+                        current_track_id: Some(track_id),
+                        failed_track_ids: failed_track_ids.clone(),
+                    },
+                );
+                // Keep background analysis deliberately low-priority beside playback and scanning.
+                thread::sleep(Duration::from_millis(12));
+            }
+            Ok(analyzed)
+        })();
+        running.store(false, Ordering::Release);
+        result
+    })
+    .await
+    .map_err(|error| AppError::new("background-task-failed", error.to_string()))?
+}
+
 #[tauri::command]
 #[specta::specta]
 fn get_home_snapshot(state: State<'_, AppState>) -> Result<HomeSnapshot, AppError> {
     state.database.get_home_snapshot()
+}
+
+#[tauri::command]
+#[specta::specta]
+async fn get_track_lyrics(
+    state: State<'_, AppState>,
+    track_id: String,
+) -> Result<LyricsDocument, AppError> {
+    let database = state.database.clone();
+    tauri::async_runtime::spawn_blocking(move || resolve_lyrics(&database, track_id))
+        .await
+        .map_err(|error| AppError::state_unavailable(&format!("lyrics-worker:{error}")))?
 }
 
 fn validate_ui_preference_key(key: &str) -> Result<(), AppError> {
@@ -904,6 +1010,7 @@ fn query_catalog_tracks(
     state: State<'_, AppState>,
     query: CatalogQuery,
 ) -> Result<TrackPage, AppError> {
+    let _span = metrics::Span::new("tauri.query_catalog_tracks");
     state.database.query_tracks(query)
 }
 
@@ -913,22 +1020,218 @@ fn query_discovery(
     state: State<'_, AppState>,
     query: DiscoveryQuery,
 ) -> Result<DiscoveryCatalog, AppError> {
+    let _span = metrics::Span::new("tauri.query_discovery");
     state.database.query_discovery(query)
 }
 
 #[tauri::command]
 #[specta::specta]
-fn get_artist_detail(
+fn query_artists_page(
+    state: State<'_, AppState>,
+    query: ArtistCatalogQuery,
+) -> Result<ArtistCatalogPage, AppError> {
+    let _span = metrics::Span::new("tauri.query_artists_page");
+    state.database.query_artists_page(query)
+}
+
+#[tauri::command]
+#[specta::specta]
+async fn get_artist_detail(
     state: State<'_, AppState>,
     artist_id: String,
 ) -> Result<ArtistDetail, AppError> {
-    state.database.get_artist_detail(artist_id)
+    let database = state.database.clone();
+    let detail = database.get_artist_detail(artist_id.clone())?;
+    let has_remote = detail
+        .albums
+        .iter()
+        .any(|a| a.availability != crate::catalog::EntityAvailability::InLibrary);
+
+    if !has_remote {
+        let musicbrainz = Arc::clone(&state.musicbrainz);
+        let artist_id_clone = artist_id.clone();
+        let enriched_opt = tauri::async_runtime::spawn_blocking(move || {
+            enrichment::refresh_artist_discography(
+                &database,
+                musicbrainz.as_ref(),
+                &artist_id_clone,
+            )
+        })
+        .await;
+
+        if let Ok(Ok(enriched)) = enriched_opt {
+            return Ok(enriched);
+        }
+    }
+
+    Ok(detail)
+}
+
+#[tauri::command]
+#[specta::specta]
+async fn refresh_artist_discography(
+    state: State<'_, AppState>,
+    artist_id: String,
+) -> Result<ArtistDetail, AppError> {
+    let database = state.database.clone();
+    let musicbrainz = Arc::clone(&state.musicbrainz);
+    tauri::async_runtime::spawn_blocking(move || {
+        enrichment::refresh_artist_discography(&database, musicbrainz.as_ref(), &artist_id)
+    })
+    .await
+    .map_err(|error| AppError::state_unavailable(&format!("refresh-discography-worker:{error}")))?
+}
+
+/// Cache the MusicBrainz discography for every artist in the library.
+///
+/// Runs on a background thread and reports progress over `DISCOGRAPHY_SYNC_EVENT`.
+/// Artists refreshed within `stale_after_days` are skipped, so this is safe to
+/// call after every scan. MusicBrainz rate limiting means a large library takes a
+/// while, but results are cached locally and the sync resumes where it left off.
+#[tauri::command]
+#[specta::specta]
+async fn sync_library_discographies(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    stale_after_days: Option<u32>,
+) -> Result<(), AppError> {
+    if !state.musicbrainz.enabled() {
+        return Err(AppError::new(
+            "musicbrainz-disabled",
+            "MusicBrainz enrichment is disabled. Enable it explicitly in Settings.",
+        ));
+    }
+    if state.discography_sync_running.swap(true, Ordering::SeqCst) {
+        return Err(AppError::new(
+            "discography-sync-running",
+            "A library discography sync is already running.",
+        ));
+    }
+
+    let database = state.database.clone();
+    let musicbrainz = Arc::clone(&state.musicbrainz);
+    let running = Arc::clone(&state.running);
+    let sync_running = Arc::clone(&state.discography_sync_running);
+    let stale_after_days = stale_after_days.unwrap_or(30) as i64;
+
+    thread::spawn(move || {
+        let result = enrichment::sync_library_discographies(
+            &database,
+            musicbrainz.as_ref(),
+            stale_after_days,
+            &|| running.load(Ordering::SeqCst),
+            &|progress| {
+                let _ = app.emit(DISCOGRAPHY_SYNC_EVENT, &progress);
+            },
+        );
+        if let Err(error) = result {
+            let _ = app.emit(DISCOGRAPHY_SYNC_EVENT, &error);
+        }
+        sync_running.store(false, Ordering::SeqCst);
+    });
+
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+async fn merge_catalog_entities(
+    state: State<'_, AppState>,
+    local_type: String,
+    local_id: String,
+    remote_id: String,
+) -> Result<(), AppError> {
+    let database = state.database.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        database.record_entity_merge(local_type, local_id, remote_id, true)
+    })
+    .await
+    .map_err(|error| AppError::state_unavailable(&format!("merge-entities-worker:{error}")))?
+}
+
+#[tauri::command]
+#[specta::specta]
+async fn unmerge_catalog_entities(
+    state: State<'_, AppState>,
+    local_type: String,
+    local_id: String,
+    remote_id: String,
+) -> Result<(), AppError> {
+    let database = state.database.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        database.remove_entity_merge(local_type, local_id, remote_id)
+    })
+    .await
+    .map_err(|error| AppError::state_unavailable(&format!("unmerge-entities-worker:{error}")))?
+}
+
+#[tauri::command]
+#[specta::specta]
+async fn get_artist_information(
+    state: State<'_, AppState>,
+    artist_id: String,
+) -> Result<ArtistInformation, AppError> {
+    let database = state.database.clone();
+    let musicbrainz = Arc::clone(&state.musicbrainz);
+    tauri::async_runtime::spawn_blocking(move || {
+        load_artist_information(&database, musicbrainz.as_ref(), artist_id)
+    })
+    .await
+    .map_err(|error| AppError::state_unavailable(&format!("artist-information-worker:{error}")))?
 }
 
 #[tauri::command]
 #[specta::specta]
 fn get_album_detail(state: State<'_, AppState>, album_id: String) -> Result<AlbumDetail, AppError> {
     state.database.get_album_detail(album_id)
+}
+
+#[tauri::command]
+#[specta::specta]
+async fn get_unified_album_detail(
+    state: State<'_, AppState>,
+    album_id: String,
+) -> Result<UnifiedAlbumDetail, AppError> {
+    let database = state.database.clone();
+    let detail = database.get_unified_album_detail(album_id.clone())?;
+
+    // No cached remote tracks yet: fetch this release's tracklist from MusicBrainz
+    // once, store it, and serve every later visit from the local cache.
+    if detail.tracks.iter().all(|t| t.is_local) || detail.tracks.is_empty() {
+        let Some(release) = database.resolve_album_release_group(album_id.clone())? else {
+            return Ok(detail);
+        };
+        if !state.musicbrainz.enabled() {
+            return Ok(detail);
+        }
+
+        let musicbrainz = Arc::clone(&state.musicbrainz);
+        let album_id_clone = album_id.clone();
+
+        let updated_detail = tauri::async_runtime::spawn_blocking(move || {
+            let _ = enrichment::sync_release_tracklist(
+                &database,
+                musicbrainz.as_ref(),
+                &release.id,
+                &release.musicbrainz_release_group_id,
+            );
+            if !album_id_clone.starts_with("remote:") {
+                let _ = database.record_entity_merge(
+                    "album".into(),
+                    album_id_clone.clone(),
+                    release.id,
+                    true,
+                );
+            }
+            database.get_unified_album_detail(album_id_clone)
+        })
+        .await
+        .map_err(|e| AppError::new("resolve-tracks-failed", e.to_string()))??;
+
+        return Ok(updated_detail);
+    }
+
+    Ok(detail)
 }
 
 #[tauri::command]
@@ -947,6 +1250,25 @@ fn get_track_metadata(
     track_id: String,
 ) -> Result<TrackSummary, AppError> {
     state.database.get_track(track_id)
+}
+
+#[tauri::command]
+#[specta::specta]
+async fn get_metadata_patch(
+    state: State<'_, AppState>,
+    track_id: String,
+) -> Result<MetadataPatch, AppError> {
+    let database = state.database.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let track = database.get_track(track_id.clone())?;
+        let path = database.resolve_track_id(track_id)?;
+        let mut patch = read_metadata_patch(&path)
+            .map_err(|error| AppError::new("metadata-read-failed", error))?;
+        patch.artwork_id = track.artwork_id;
+        Ok(patch)
+    })
+    .await
+    .map_err(|error| AppError::new("background-task-failed", error.to_string()))?
 }
 
 #[tauri::command]
@@ -989,17 +1311,56 @@ fn save_metadata_drafts(
 
 #[tauri::command]
 #[specta::specta]
+fn preview_metadata_changes(
+    state: State<'_, AppState>,
+    track_ids: Vec<String>,
+    patch: MetadataPatch,
+    source: String,
+    confidence: f64,
+) -> Result<MetadataReview, AppError> {
+    if track_ids.is_empty() {
+        return Err(AppError::new(
+            "metadata-review-empty",
+            "Select at least one track to preview metadata changes.",
+        ));
+    }
+    let mut affected_files = Vec::with_capacity(track_ids.len());
+    let mut diffs = Vec::new();
+    for track_id in track_ids {
+        let track = state.database.get_track(track_id)?;
+        affected_files.push(track.path.clone());
+        let before = read_metadata_patch(std::path::Path::new(&track.path))
+            .map_err(|error| AppError::new("metadata-read-failed", error))?;
+        diffs.extend(diff_metadata_patches(
+            &track.id,
+            &before,
+            &patch,
+            &source,
+            confidence.clamp(0.0, 1.0),
+        ));
+    }
+    Ok(MetadataReview {
+        affected_files,
+        diffs,
+    })
+}
+
+#[tauri::command]
+#[specta::specta]
 async fn write_metadata_to_file(
     app: AppHandle,
     state: State<'_, AppState>,
     track_id: String,
 ) -> Result<MetadataWriteResult, AppError> {
-    ensure_track_not_playing(&state, &track_id)?;
     let database = state.database.clone();
+    let playback = Arc::clone(&state.playback);
+    let metadata_writes = Arc::clone(&state.metadata_writes);
     let task_track_id = track_id.clone();
     let path = state.database.resolve_track_id(track_id.clone())?;
     state.watcher.suppress_path(path.clone());
     let result = tauri::async_runtime::spawn_blocking(move || {
+        let _reservation =
+            wait_for_metadata_write_reservation(&playback, &metadata_writes, &task_track_id)?;
         if path
             .metadata()
             .map_err(|error| AppError::new("track-unavailable", error.to_string()))?
@@ -1040,11 +1401,14 @@ async fn rollback_metadata_file(
     state: State<'_, AppState>,
     track_id: String,
 ) -> Result<MetadataWriteResult, AppError> {
-    ensure_track_not_playing(&state, &track_id)?;
+    let playback = Arc::clone(&state.playback);
+    let metadata_writes = Arc::clone(&state.metadata_writes);
     let task_track_id = track_id.clone();
     let path = state.database.resolve_track_id(track_id.clone())?;
     state.watcher.suppress_path(path.clone());
     let result = tauri::async_runtime::spawn_blocking(move || {
+        let _reservation =
+            wait_for_metadata_write_reservation(&playback, &metadata_writes, &task_track_id)?;
         let backup = restore_backup(&path)
             .map_err(|error| AppError::new("metadata-rollback-failed", error))?;
         Ok(MetadataWriteResult {
@@ -1059,25 +1423,6 @@ async fn rollback_metadata_file(
     Ok(result)
 }
 
-fn ensure_track_not_playing(state: &AppState, track_id: &str) -> Result<(), AppError> {
-    let playback = state
-        .playback
-        .lock()
-        .map_err(|_| AppError::state_unavailable("playback-engine"))?;
-    if playback.state.track_id.as_deref() == Some(track_id)
-        && matches!(
-            playback.state.status,
-            PlaybackStatus::Loading | PlaybackStatus::Playing | PlaybackStatus::Paused
-        )
-    {
-        return Err(AppError::new(
-            "metadata-track-active",
-            "Stop this track before writing or restoring its file tags.",
-        ));
-    }
-    Ok(())
-}
-
 #[tauri::command]
 #[specta::specta]
 fn set_musicbrainz_enabled(state: State<'_, AppState>, enabled: bool) -> bool {
@@ -1089,6 +1434,342 @@ fn set_musicbrainz_enabled(state: State<'_, AppState>, enabled: bool) -> bool {
 #[specta::specta]
 fn get_musicbrainz_enabled(state: State<'_, AppState>) -> bool {
     state.musicbrainz.enabled()
+}
+
+#[tauri::command]
+#[specta::specta]
+fn configure_acoustid_client_key(
+    state: State<'_, AppState>,
+    client_key: String,
+) -> Result<bool, AppError> {
+    state.musicbrainz.set_acoustid_key(&client_key)?;
+    Ok(state.musicbrainz.acoustid_configured())
+}
+
+#[tauri::command]
+#[specta::specta]
+fn get_acoustid_configured(state: State<'_, AppState>) -> bool {
+    state.musicbrainz.acoustid_configured()
+}
+
+#[tauri::command]
+#[specta::specta]
+fn list_metadata_jobs(state: State<'_, AppState>) -> Result<Vec<MetadataJob>, AppError> {
+    state.database.list_metadata_jobs()
+}
+
+#[tauri::command]
+#[specta::specta]
+fn get_metadata_job(state: State<'_, AppState>, job_id: String) -> Result<MetadataJob, AppError> {
+    state.database.get_metadata_job(job_id)
+}
+
+#[tauri::command]
+#[specta::specta]
+fn start_metadata_job(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    scope: MetadataJobScope,
+    scope_id: Option<String>,
+) -> Result<MetadataJob, AppError> {
+    if !state.musicbrainz.enabled() {
+        return Err(AppError::new(
+            "musicbrainz-disabled",
+            "Enable MusicBrainz before starting a metadata job.",
+        ));
+    }
+    let job = state.database.create_metadata_job(scope, scope_id)?;
+    spawn_metadata_job(
+        app,
+        state.database.clone(),
+        Arc::clone(&state.musicbrainz),
+        Arc::clone(&state.playback),
+        Arc::clone(&state.metadata_writes),
+        job.id.clone(),
+        false,
+    );
+    Ok(job)
+}
+
+#[tauri::command]
+#[specta::specta]
+fn pause_metadata_job(state: State<'_, AppState>, job_id: String) -> Result<MetadataJob, AppError> {
+    state
+        .database
+        .set_metadata_job_status(job_id, MetadataJobStatus::Paused, None, None)
+}
+
+#[tauri::command]
+#[specta::specta]
+fn cancel_metadata_job(
+    state: State<'_, AppState>,
+    job_id: String,
+) -> Result<MetadataJob, AppError> {
+    state
+        .database
+        .set_metadata_job_status(job_id, MetadataJobStatus::Cancelled, None, None)
+}
+
+#[tauri::command]
+#[specta::specta]
+fn resume_metadata_job(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    job_id: String,
+    retry_failed: bool,
+) -> Result<MetadataJob, AppError> {
+    let current = state.database.get_metadata_job(job_id.clone())?;
+    if matches!(
+        current.status,
+        MetadataJobStatus::Complete | MetadataJobStatus::Cancelled
+    ) {
+        return Err(AppError::new(
+            "metadata-job-terminal",
+            "Completed or cancelled metadata jobs cannot be resumed.",
+        ));
+    }
+    let job = state.database.set_metadata_job_status(
+        job_id.clone(),
+        MetadataJobStatus::Queued,
+        None,
+        None,
+    )?;
+    spawn_metadata_job(
+        app,
+        state.database.clone(),
+        Arc::clone(&state.musicbrainz),
+        Arc::clone(&state.playback),
+        Arc::clone(&state.metadata_writes),
+        job_id,
+        retry_failed,
+    );
+    Ok(job)
+}
+
+fn spawn_metadata_job(
+    app: AppHandle,
+    database: DatabaseWorker,
+    client: Arc<MusicBrainzClient>,
+    playback: Arc<Mutex<PlaybackEngine>>,
+    metadata_writes: Arc<Mutex<HashSet<String>>>,
+    job_id: String,
+    retry_errors: bool,
+) {
+    tauri::async_runtime::spawn_blocking(move || {
+        let track_ids = match database.pending_metadata_job_tracks(job_id.clone(), retry_errors) {
+            Ok(track_ids) => track_ids,
+            Err(error) => {
+                let _ = database.set_metadata_job_status(
+                    job_id,
+                    MetadataJobStatus::Error,
+                    None,
+                    Some(error.message),
+                );
+                return;
+            }
+        };
+        for track_id in track_ids {
+            let Ok(current_job) = database.get_metadata_job(job_id.clone()) else {
+                return;
+            };
+            if matches!(
+                current_job.status,
+                MetadataJobStatus::Paused | MetadataJobStatus::Cancelled
+            ) {
+                return;
+            }
+            let _ = database.set_metadata_job_status(
+                job_id.clone(),
+                MetadataJobStatus::Running,
+                Some(track_id.clone()),
+                None,
+            );
+
+            if !wait_for_track_release(&app, &database, &playback, &job_id, &track_id) {
+                return;
+            }
+
+            let result = enrich_track(&database, &client, track_id.clone());
+            let job = match result {
+                Ok(enrichment) => {
+                    let candidates_json = serde_json::to_string(&enrichment.candidates).ok();
+                    let source = enrichment
+                        .candidates
+                        .first()
+                        .map(|candidate| candidate.source.clone());
+                    if enrichment.auto_applied {
+                        if !wait_for_track_release(&app, &database, &playback, &job_id, &track_id) {
+                            return;
+                        }
+                        let reservation = wait_for_metadata_write_reservation(
+                            &playback,
+                            &metadata_writes,
+                            &track_id,
+                        );
+                        let written =
+                            database
+                                .resolve_track_id(track_id.clone())
+                                .and_then(|path| {
+                                    let _reservation = reservation?;
+                                    let patch = database
+                                        .get_metadata_draft(track_id.clone())?
+                                        .ok_or_else(|| {
+                                            AppError::new(
+                                                "metadata-draft-not-found",
+                                                "The automatic match did not create a draft.",
+                                            )
+                                        })?;
+                                    write_patch_atomically(&path, &patch).map_err(|error| {
+                                        AppError::new("metadata-write-failed", error)
+                                    })?;
+                                    Ok(())
+                                });
+                        match written {
+                            Ok(()) => database.record_metadata_job_track(
+                                job_id.clone(),
+                                track_id.clone(),
+                                "written".into(),
+                                source,
+                                None,
+                                None,
+                                candidates_json,
+                            ),
+                            Err(error) => database.record_metadata_job_track(
+                                job_id.clone(),
+                                track_id.clone(),
+                                "error".into(),
+                                source,
+                                None,
+                                serde_json::to_string(&error).ok(),
+                                candidates_json,
+                            ),
+                        }
+                    } else {
+                        database.record_metadata_job_track(
+                            job_id.clone(),
+                            track_id.clone(),
+                            "review".into(),
+                            source,
+                            None,
+                            None,
+                            candidates_json,
+                        )
+                    }
+                }
+                Err(error) => database.record_metadata_job_track(
+                    job_id.clone(),
+                    track_id.clone(),
+                    "error".into(),
+                    None,
+                    None,
+                    serde_json::to_string(&error).ok(),
+                    None,
+                ),
+            };
+            if let Ok(job) = job {
+                let _ = app.emit(METADATA_JOB_PROGRESS_EVENT, &job);
+            }
+        }
+        if let Ok(job) = database.get_metadata_job(job_id.clone()) {
+            let status = if job.review_tracks > 0 {
+                MetadataJobStatus::Review
+            } else if job.failed_tracks > 0 || job.deferred_tracks > 0 {
+                MetadataJobStatus::Error
+            } else {
+                MetadataJobStatus::Complete
+            };
+            if let Ok(job) = database.set_metadata_job_status(job_id, status, None, None) {
+                let _ = app.emit(METADATA_JOB_PROGRESS_EVENT, &job);
+            }
+        }
+    });
+}
+
+fn wait_for_track_release(
+    app: &AppHandle,
+    database: &DatabaseWorker,
+    playback: &Arc<Mutex<PlaybackEngine>>,
+    job_id: &str,
+    track_id: &str,
+) -> bool {
+    while track_is_active(playback, track_id) {
+        if let Ok(job) = database.record_metadata_job_track(
+            job_id.into(),
+            track_id.into(),
+            "deferred".into(),
+            None,
+            None,
+            None,
+            None,
+        ) {
+            let _ = app.emit(METADATA_JOB_PROGRESS_EVENT, &job);
+        }
+        thread::sleep(Duration::from_millis(250));
+        let Ok(job) = database.get_metadata_job(job_id.into()) else {
+            return false;
+        };
+        if matches!(
+            job.status,
+            MetadataJobStatus::Paused | MetadataJobStatus::Cancelled
+        ) {
+            return false;
+        }
+    }
+    true
+}
+
+fn track_is_active(playback: &Arc<Mutex<PlaybackEngine>>, track_id: &str) -> bool {
+    playback.lock().is_ok_and(|playback| {
+        playback.state.track_id.as_deref() == Some(track_id)
+            && matches!(
+                playback.state.status,
+                PlaybackStatus::Loading | PlaybackStatus::Playing | PlaybackStatus::Paused
+            )
+    })
+}
+
+struct MetadataWriteReservation {
+    track_id: String,
+    writes: Arc<Mutex<HashSet<String>>>,
+}
+
+impl Drop for MetadataWriteReservation {
+    fn drop(&mut self) {
+        if let Ok(mut writes) = self.writes.lock() {
+            writes.remove(&self.track_id);
+        }
+    }
+}
+
+fn wait_for_metadata_write_reservation(
+    playback: &Arc<Mutex<PlaybackEngine>>,
+    writes: &Arc<Mutex<HashSet<String>>>,
+    track_id: &str,
+) -> Result<MetadataWriteReservation, AppError> {
+    loop {
+        let mut active_writes = writes
+            .lock()
+            .map_err(|_| AppError::state_unavailable("metadata-write-coordinator"))?;
+        let active = playback
+            .lock()
+            .map_err(|_| AppError::state_unavailable("playback-engine"))
+            .map(|playback| {
+                playback.state.track_id.as_deref() == Some(track_id)
+                    && matches!(
+                        playback.state.status,
+                        PlaybackStatus::Loading | PlaybackStatus::Playing | PlaybackStatus::Paused
+                    )
+            })?;
+        if !active && !active_writes.contains(track_id) {
+            active_writes.insert(track_id.into());
+            return Ok(MetadataWriteReservation {
+                track_id: track_id.into(),
+                writes: Arc::clone(writes),
+            });
+        }
+        drop(active_writes);
+        thread::sleep(Duration::from_millis(250));
+    }
 }
 
 #[tauri::command]
@@ -1137,6 +1818,7 @@ async fn apply_musicbrainz_candidate(
     let saved = tauri::async_runtime::spawn_blocking(move || {
         let track = database.get_track(task_track_id.clone())?;
         let mut patch = patch_from_candidate(&track, &candidate);
+        preserve_local_only_fields(&track, &mut patch);
         if let Some(release_id) = candidate.release_id.as_deref()
             && let Ok(Some((bytes, mime))) = client.cover_art(release_id)
             && let Ok(artwork) = cache_external_artwork(
@@ -1315,6 +1997,16 @@ fn play_track(
             return Err(error);
         }
     };
+    let metadata_writes = state
+        .metadata_writes
+        .lock()
+        .map_err(|_| AppError::state_unavailable("metadata-write-coordinator"))?;
+    if metadata_writes.contains(&track_id) {
+        return Err(AppError::new(
+            "metadata-write-active",
+            "This track is being verified and tagged. Try playback again when the metadata write finishes.",
+        ));
+    }
     let extension = match AudioExtension::from_path(&path) {
         Some(extension) => extension,
         None => {
@@ -1357,6 +2049,7 @@ fn play_track(
     emit_playback_state(&app, &engine.state);
     let snapshot = engine.state.clone();
     drop(engine);
+    drop(metadata_writes);
     start_active_session(&state, track_id.clone(), previous_was_playing);
     if let Ok(track) = state.database.get_track(track_id.clone()) {
         state
@@ -1689,60 +2382,78 @@ fn shutdown_playback(state: &AppState) {
 fn ipc_bindings() -> Builder<tauri::Wry> {
     Builder::<tauri::Wry>::new()
         .commands(collect_commands![
+            acquire_track,
+            acquire_album,
             add_library_root,
+            analyze_audio_features,
             apply_musicbrainz_candidate,
             cancel_acquisition,
+            cancel_metadata_job,
             check_for_updates,
             cleanup_missing_tracks,
-            configure_slskd_api_key,
             configure_lastfm_session,
+            configure_acoustid_client_key,
             create_playlist,
-            disconnect_slskd,
+            create_generated_playlist,
+            delete_playlist,
             disconnect_lastfm,
-            enqueue_acquisition,
-            get_acquisition_search,
+            get_acquisition_queue,
             get_acquisition_settings,
             get_album_detail,
+            get_unified_album_detail,
             get_artist_detail,
+            get_artist_information,
             get_desktop_state,
             get_metadata_draft,
+            get_metadata_patch,
+            get_metadata_job,
             get_home_snapshot,
             get_integration_settings,
             get_integration_statuses,
             get_persistent_player_state,
+            get_playlist,
             get_playlist_tracks,
             get_musicbrainz_enabled,
+            get_acoustid_configured,
             get_playback_state,
             get_track_metadata,
+            get_track_lyrics,
             get_ui_preference,
-            import_acquisition,
             install_update,
-            list_acquisition_jobs,
+            list_metadata_jobs,
             list_library_roots,
             list_favorites,
             list_playlists,
             list_audio_output_devices,
-            pause_acquisition,
+            generate_playlist,
+            pause_metadata_job,
             pause_playback,
             play_track,
             query_catalog_tracks,
             query_discovery,
+            query_artists_page,
+            preview_metadata_changes,
+            rename_playlist,
             remove_library_root,
             rescan_library_root,
-            resume_acquisition,
+            resume_metadata_job,
             resume_playback,
             restore_library_root,
+            refresh_artist_discography,
+            sync_library_discographies,
+            retry_acquisition,
+            merge_catalog_entities,
+            unmerge_catalog_entities,
             rollback_metadata_file,
             run_musicbrainz_enrichment,
+            save_acquisition_settings,
             save_metadata_draft,
             save_metadata_drafts,
             save_player_preferences,
             save_player_queue,
             scan_library,
-            search_acquisition,
             select_audio_output_device,
             seek_playback,
-            set_acquisition_settings,
             set_hifi_mode,
             set_integration_settings,
             set_library_root_enabled,
@@ -1755,48 +2466,74 @@ fn ipc_bindings() -> Builder<tauri::Wry> {
             set_ui_preference,
             set_volume,
             set_visualization_enabled,
+            duplicate_playlist,
             stop_playback,
-            test_slskd_connection,
+            start_metadata_job,
             write_metadata_to_file
         ])
-        .typ::<AcquisitionJob>()
-        .typ::<AcquisitionSearch>()
-        .typ::<AcquisitionSearchFile>()
-        .typ::<AcquisitionSearchGroup>()
-        .typ::<AcquisitionSettings>()
-        .typ::<AcquisitionStatus>()
         .typ::<AppError>()
+        .typ::<AcquisitionTrackRequest>()
+        .typ::<AcquisitionAlbumRequest>()
+        .typ::<AcquisitionJobDto>()
+        .typ::<AcquisitionJobStatus>()
+        .typ::<AcquisitionSettings>()
+        .typ::<AcquisitionProgressPayload>()
         .typ::<AlbumDetail>()
         .typ::<AlbumSummary>()
         .typ::<ArtistDetail>()
+        .typ::<ArtistInformation>()
         .typ::<ArtistSummary>()
+        .typ::<EntityAvailability>()
+        .typ::<EntityProvenance>()
+        .typ::<ArtistCatalogQuery>()
+        .typ::<ArtistCatalogPage>()
         .typ::<AudioOutputDevice>()
         .typ::<AudioOutputState>()
+        .typ::<AudioAnalysisProgress>()
+        .typ::<AudioFeatures>()
+        .typ::<AudioSpecs>()
         .typ::<CatalogQuery>()
         .typ::<DiscoveryCatalog>()
         .typ::<DiscoveryQuery>()
         .typ::<EnrichmentCandidate>()
         .typ::<EnrichmentJob>()
         .typ::<FavoriteReference>()
+        .typ::<enrichment::DiscographySyncProgress>()
         .typ::<GenreSummary>()
         .typ::<LibraryChanged>()
         .typ::<LibraryRoot>()
         .typ::<LibraryScan>()
+        .typ::<LyricLine>()
+        .typ::<LyricsDocument>()
+        .typ::<LyricsSource>()
         .typ::<HomeSnapshot>()
         .typ::<IntegrationSettings>()
         .typ::<IntegrationStatus>()
         .typ::<MetadataPatch>()
+        .typ::<MetadataDiff>()
+        .typ::<MetadataJob>()
+        .typ::<MetadataJobScope>()
+        .typ::<MetadataJobStatus>()
+        .typ::<MetadataReview>()
         .typ::<MetadataWriteResult>()
         .typ::<PersistentPlayerState>()
+        .typ::<Playlist>()
+        .typ::<GeneratedPlaylist>()
+        .typ::<PlaylistGenerationRequest>()
+        .typ::<PlaylistMood>()
+        .typ::<PlaylistSelection>()
         .typ::<PlaybackState>()
         .typ::<PlayerPreferences>()
         .typ::<PlaylistSummary>()
+        .typ::<RemoteTrackPayload>()
         .typ::<SpectrumFrame>()
         .typ::<ScanProgress>()
         .typ::<SortDirection>()
         .typ::<TrackPage>()
         .typ::<TrackSort>()
         .typ::<TrackSummary>()
+        .typ::<UnifiedAlbumDetail>()
+        .typ::<UnifiedTrackSummary>()
         .typ::<UpdateProgress>()
         .typ::<UpdateStatus>()
         .dangerously_cast_bigints_to_number()

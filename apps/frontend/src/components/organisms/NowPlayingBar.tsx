@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   Play,
   Pause,
@@ -14,7 +14,7 @@ import {
   Maximize2,
 } from 'lucide-react';
 import { TrackItem } from '@/types';
-import { MonstercatVisualizer } from '@/components/organisms/MonstercatVisualizer';
+import { PeakHoldVisualizer } from '@/components/organisms/PeakHoldVisualizer';
 import { useTheme } from '@/services/themeService';
 
 interface NowPlayingBarProps {
@@ -39,39 +39,7 @@ interface NowPlayingBarProps {
   onUnlockVolume?: () => void | Promise<unknown>;
   spectrumAvailable?: boolean;
   frequencyDataProvider?: (outputArray: Uint8Array) => Uint8Array;
-  spectrumBins?: readonly number[];
-}
-
-// Deterministic SoundCloud waveform bars generator
-function generateCompactWaveform(track: TrackItem, count: number = 75): number[] {
-  let seed = 7;
-  const str = `${track.title}-${track.artist}-${track.durationSeconds || 240}`;
-  for (let i = 0; i < str.length; i++) {
-    seed += str.charCodeAt(i) * (i + 1);
-  }
-
-  const data: number[] = [];
-  for (let i = 0; i < count; i++) {
-    const progress = i / count;
-    let structure = 0.4;
-    if (progress < 0.1) {
-      structure = 0.3 + (progress / 0.1) * 0.35;
-    } else if (progress < 0.4) {
-      structure = 0.6 + Math.sin(progress * 20) * 0.2;
-    } else if (progress < 0.65) {
-      structure = 0.9 + Math.sin(progress * 25) * 0.1;
-    } else if (progress < 0.78) {
-      structure = 0.45 + Math.sin(progress * 12) * 0.15;
-    } else if (progress < 0.92) {
-      structure = 0.95 + Math.sin(progress * 30) * 0.05;
-    } else {
-      structure = Math.max(0.2, (1 - (progress - 0.92) / 0.08) * 0.6);
-    }
-    const noise = Math.abs(Math.sin((seed + i * 5.3) * 1000) % 1);
-    const snap = i % 4 === 0 ? 0.25 : i % 2 === 0 ? 0.1 : 0;
-    data.push(Math.max(0.2, Math.min(1.0, structure * 0.65 + noise * 0.25 + snap)));
-  }
-  return data;
+  getSpectrumBins?: () => readonly number[];
 }
 
 export const NowPlayingBar: React.FC<NowPlayingBarProps> = ({
@@ -96,7 +64,7 @@ export const NowPlayingBar: React.FC<NowPlayingBarProps> = ({
   onUnlockVolume,
   spectrumAvailable = true,
   frequencyDataProvider,
-  spectrumBins,
+  getSpectrumBins,
 }) => {
   const { currentTheme } = useTheme();
   const handleToggle = onTogglePlay || onPlayPause || (() => {});
@@ -110,11 +78,6 @@ export const NowPlayingBar: React.FC<NowPlayingBarProps> = ({
   const [isHoveringSeek, setIsHoveringSeek] = useState(false);
   const [hoverRatio, setHoverRatio] = useState<number | null>(null);
   const [isDraggingSeek, setIsDraggingSeek] = useState(false);
-
-  const waveformBars = useMemo(() => {
-    if (!currentTrack) return [];
-    return generateCompactWaveform(currentTrack, 75);
-  }, [currentTrack?.id, currentTrack?.title, currentTrack?.artist]);
 
   const volume = controlledVolume === undefined ? localVolume : Math.round(controlledVolume * 100);
   const isMuted = controlledMuted ?? localMuted;
@@ -139,7 +102,7 @@ export const NowPlayingBar: React.FC<NowPlayingBarProps> = ({
           backgroundColor: `${currentTheme.bgCard}fa`,
           borderColor: currentTheme.borderColor,
         }}
-        className="fixed bottom-0 left-0 right-0 z-40 flex min-h-[5.5rem] items-center justify-between border-t px-4 font-sans shadow-[0_-10px_30px_rgba(0,0,0,0.8)] backdrop-blur-xl sm:px-6 lg:px-10 2xl:px-14"
+        className="fixed bottom-0 left-0 right-0 z-40 flex min-h-[5.5rem] items-center justify-between border-t px-4 font-sans shadow-[0_-10px_30px_rgba(0,0,0,0.8)] sm:px-6 lg:px-10 2xl:px-14"
       >
         <div className="flex min-w-[200px] items-center gap-3 text-neutral-400">
           <span className="flex h-12 w-12 items-center justify-center rounded-lg border border-neutral-700 bg-neutral-900">
@@ -209,21 +172,20 @@ export const NowPlayingBar: React.FC<NowPlayingBarProps> = ({
         backgroundColor: `${currentTheme.bgCard}fa`,
         borderColor: currentTheme.borderColor,
       }}
-      className="fixed bottom-0 left-0 right-0 z-40 flex min-h-[5.5rem] select-none items-center justify-between overflow-hidden border-t px-4 font-sans shadow-[0_-10px_30px_rgba(0,0,0,0.8)] backdrop-blur-xl transition-colors duration-300 sm:px-6 lg:px-10 2xl:px-14"
+      className="fixed bottom-0 left-0 right-0 z-40 flex min-h-[5.5rem] select-none items-center justify-between overflow-hidden border-t px-4 font-sans shadow-[0_-10px_30px_rgba(0,0,0,0.8)] transition-colors duration-300 sm:px-6 lg:px-10 2xl:px-14"
     >
-      {/* Full-Width Monstercat Visualizer expanding across the entire Now Playing Bar */}
-      <div className="absolute inset-0 pointer-events-none opacity-25 z-0 flex items-end">
-        <MonstercatVisualizer
+      {/* Peak-hold spectrum as a full-height bed behind the bar's contents. */}
+      <div className="absolute inset-0 pointer-events-none opacity-30 z-0 flex items-end">
+        <PeakHoldVisualizer
           isPlaying={spectrumAvailable && isPlaying}
-          height={42}
+          height={88}
           barWidth={3}
           barGap={2}
           color={currentTheme.visualizerPrimary}
-          secondaryColor={currentTheme.visualizerSecondary}
           glowEffect={currentTheme.waveformGlow}
           autoFillWidth={true}
           frequencyDataProvider={frequencyDataProvider}
-          spectrumBins={spectrumBins}
+          getSpectrumBins={getSpectrumBins}
         />
       </div>
 
@@ -252,7 +214,7 @@ export const NowPlayingBar: React.FC<NowPlayingBarProps> = ({
           {/* Up Chevron / Arrow on Hover */}
           <div
             id="artwork-expand-overlay"
-            className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all duration-200 backdrop-blur-[1px]"
+            className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all duration-200"
           >
             <div
               className="w-7 h-7 rounded-full text-black flex items-center justify-center shadow-lg transform -translate-y-1 group-hover:translate-y-0 transition-transform duration-200"
@@ -368,7 +330,7 @@ export const NowPlayingBar: React.FC<NowPlayingBarProps> = ({
           </div>
         </div>
 
-        {/* SoundCloud-Style Mini Waveform Seek Bar (High-Contrast, Visible & Interactive) */}
+        {/* Plain seek bar — a waveform is unreadable at this height. */}
         <div className="w-full flex items-center gap-2.5 text-xs font-mono text-neutral-300">
           <span
             className="w-10 text-right font-bold text-xs"
@@ -377,9 +339,8 @@ export const NowPlayingBar: React.FC<NowPlayingBarProps> = ({
             {formatTime(currentTimeSeconds)}
           </span>
 
-          {/* SoundCloud Waveform Container */}
           <div
-            id="now-playing-soundcloud-track"
+            id="now-playing-seek"
             ref={scrubberRef}
             onPointerDown={handlePointerDown}
             onPointerMove={handlePointerMove}
@@ -390,101 +351,49 @@ export const NowPlayingBar: React.FC<NowPlayingBarProps> = ({
               setHoverRatio(null);
               setIsDraggingSeek(false);
             }}
-            style={{
-              backgroundColor: currentTheme.bgSurface,
-              borderColor: currentTheme.borderColor,
-            }}
-            className="relative flex-1 h-7 rounded-md px-1.5 py-0.5 cursor-pointer group flex flex-col justify-center shadow-inner border transition-colors overflow-visible"
+            className="relative flex-1 h-4 cursor-pointer group flex items-center"
           >
-            {/* Top Upper Bars (70% height) */}
-            <div className="w-full h-3.5 flex items-end justify-between gap-[1.5px]">
-              {waveformBars.map((amp, idx) => {
-                const barRatio = (idx + 0.5) / waveformBars.length;
-                const isPlayed = barRatio <= progressRatio;
-                const isHoverSeek =
-                  hoverRatio !== null &&
-                  ((hoverRatio >= progressRatio &&
-                    barRatio > progressRatio &&
-                    barRatio <= hoverRatio) ||
-                    (hoverRatio < progressRatio &&
-                      barRatio >= hoverRatio &&
-                      barRatio <= progressRatio));
-
-                const barHeight = Math.max(2, amp * 14);
-
-                let barBg = currentTheme.waveformUnplayedTop;
-                let boxShadow = undefined;
-                if (isPlayed) {
-                  barBg = currentTheme.waveformPlayedTop;
-                  if (currentTheme.waveformGlow) {
-                    boxShadow = `0 0 4px ${currentTheme.accentGlow}`;
-                  }
-                } else if (isHoverSeek) {
-                  barBg = currentTheme.secondary;
-                }
-
-                return (
-                  <div
-                    key={`np-top-${idx}`}
-                    className="flex-1 max-w-[2.5px] rounded-t-xs transition-colors duration-75"
-                    style={{
-                      height: `${barHeight}px`,
-                      backgroundColor: barBg,
-                      boxShadow: boxShadow,
-                    }}
-                  />
-                );
-              })}
-            </div>
-
-            {/* 1px Baseline Divider */}
-            <div className="w-full h-[1px] bg-neutral-700/80 my-[0.5px] relative">
+            <div
+              className="relative w-full rounded-full overflow-visible transition-all"
+              style={{
+                height: isHoveringSeek ? '6px' : '4px',
+                backgroundColor: currentTheme.waveformUnplayedBot,
+              }}
+            >
               <div
-                className="h-full"
+                className="absolute inset-y-0 left-0 rounded-full"
                 style={{
                   width: `${progressRatio * 100}%`,
+                  background: `linear-gradient(90deg, ${currentTheme.waveformPlayedBot} 0%, ${currentTheme.primary} 100%)`,
+                }}
+              />
+
+              {/* Hover-ahead preview of where a click would land */}
+              {isHoveringSeek && hoverRatio !== null && hoverRatio > progressRatio && (
+                <div
+                  className="absolute inset-y-0 rounded-full opacity-40"
+                  style={{
+                    left: `${progressRatio * 100}%`,
+                    width: `${(hoverRatio - progressRatio) * 100}%`,
+                    backgroundColor: currentTheme.secondary,
+                  }}
+                />
+              )}
+
+              <div
+                className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 rounded-full transition-all"
+                style={{
+                  left: `${progressRatio * 100}%`,
+                  width: isHoveringSeek ? '12px' : '9px',
+                  height: isHoveringSeek ? '12px' : '9px',
                   backgroundColor: currentTheme.primary,
+                  boxShadow: currentTheme.waveformGlow
+                    ? `0 0 10px ${currentTheme.accentGlow}`
+                    : undefined,
                 }}
               />
             </div>
 
-            {/* Bottom Reflection Bars (30% height) */}
-            <div className="w-full h-1.5 flex items-start justify-between gap-[1.5px]">
-              {waveformBars.map((amp, idx) => {
-                const barRatio = (idx + 0.5) / waveformBars.length;
-                const isPlayed = barRatio <= progressRatio;
-                const isHoverSeek =
-                  hoverRatio !== null &&
-                  ((hoverRatio >= progressRatio &&
-                    barRatio > progressRatio &&
-                    barRatio <= hoverRatio) ||
-                    (hoverRatio < progressRatio &&
-                      barRatio >= hoverRatio &&
-                      barRatio <= progressRatio));
-
-                const barHeight = Math.max(1, amp * 6);
-
-                let barBg = currentTheme.waveformUnplayedBot;
-                if (isPlayed) {
-                  barBg = currentTheme.waveformPlayedBot;
-                } else if (isHoverSeek) {
-                  barBg = currentTheme.waveformPlayedTop;
-                }
-
-                return (
-                  <div
-                    key={`np-bot-${idx}`}
-                    className="flex-1 max-w-[2.5px] rounded-b-xs transition-colors duration-75"
-                    style={{
-                      height: `${barHeight}px`,
-                      backgroundColor: barBg,
-                    }}
-                  />
-                );
-              })}
-            </div>
-
-            {/* Hover Tooltip Timestamp */}
             {isHoveringSeek && hoverRatio !== null && (
               <div
                 className="absolute -top-7 pointer-events-none z-30 transform -translate-x-1/2"
@@ -502,20 +411,6 @@ export const NowPlayingBar: React.FC<NowPlayingBarProps> = ({
                 </div>
               </div>
             )}
-
-            {/* Vertical White/Amber Playhead Indicator */}
-            <div
-              className="absolute top-0 bottom-0 w-[1.5px] bg-white pointer-events-none z-20"
-              style={{
-                left: `${progressRatio * 100}%`,
-                boxShadow: `0 0 6px ${currentTheme.primary}`,
-              }}
-            >
-              <div
-                className="absolute -top-1 left-1/2 -translate-x-1/2 w-2.5 h-2.5 rounded-full border border-white shadow-sm"
-                style={{ backgroundColor: currentTheme.primary }}
-              />
-            </div>
           </div>
 
           <span className="w-10 text-neutral-400 font-medium text-xs">
@@ -532,7 +427,7 @@ export const NowPlayingBar: React.FC<NowPlayingBarProps> = ({
           <span className="text-amber-300 font-semibold">
             {!spectrumAvailable
               ? 'Spectrum disabled'
-              : spectrumBins
+              : getSpectrumBins
                 ? 'Native PCM FFT · 64 bands'
                 : 'Web Audio FFT'}
           </span>

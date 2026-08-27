@@ -14,6 +14,22 @@ import {
   toLibrarySnapshot,
   toTrackItem,
 } from '@/services/libraryService';
+import { syncLibraryDiscographies } from '@/services/catalogService';
+
+/**
+ * Kick off the library-wide MusicBrainz discography sync after a scan.
+ *
+ * Failures here must never surface as scan failures: the sync is best-effort
+ * background enrichment, and it is rejected outright when one is already running
+ * or MusicBrainz is disabled.
+ */
+async function startDiscographySync() {
+  try {
+    await syncLibraryDiscographies();
+  } catch (cause) {
+    console.warn('Discography sync unavailable:', cause);
+  }
+}
 
 export function useLibraryScan(search = '') {
   const [library, setLibrary] = useState(initialLibraryScan);
@@ -92,6 +108,7 @@ export function useLibraryScan(search = '') {
         warnings: [...toLibrarySnapshot(scan, current.progress).warnings, ...catalog.warnings],
         progress: current.progress,
       }));
+      void startDiscographySync();
     } catch (cause) {
       setLibrary(errorSnapshot(cause as AppError));
     }
@@ -110,6 +127,7 @@ export function useLibraryScan(search = '') {
       setLibrary((current) => ({ ...current, phase: 'scanning' }));
       await rescanLibraryRoot(rootId);
       setLibrary(await loadLibraryCatalog(search));
+      void startDiscographySync();
     },
     [search],
   );

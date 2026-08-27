@@ -3,6 +3,7 @@ import { AlbumsGridView } from './AlbumsGridView';
 import { ArtistsGridView } from './ArtistsGridView';
 import { GenresGridView, LOCAL_GENRES, type GenreCategory } from './GenresGridView';
 import { TracksTableView } from './TracksTableView';
+import { PlaylistsView } from './PlaylistsView';
 import { AlbumItem, ArtistItem, LibrarySubTab, TrackItem } from '@/types';
 
 interface LibraryViewProps {
@@ -23,6 +24,12 @@ interface LibraryViewProps {
   selectedSubTab?: LibrarySubTab;
   onSubTabChange?: (tab: LibrarySubTab) => void;
   showDemoDiscovery?: boolean;
+  artistHasMore?: boolean;
+  artistLoading?: boolean;
+  onLoadMoreArtists?: () => void;
+  queue?: TrackItem[];
+  onReplaceQueue?: (tracks: TrackItem[]) => void;
+  onAppendQueue?: (tracks: TrackItem[]) => void;
 }
 
 export const LibraryView: React.FC<LibraryViewProps> = ({
@@ -43,10 +50,14 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
   onFavoriteChange,
   selectedSubTab,
   onSubTabChange,
+  artistHasMore,
+  artistLoading,
+  onLoadMoreArtists,
+  queue = [],
+  onReplaceQueue,
+  onAppendQueue,
 }) => {
-  const [localSubTab, setLocalSubTab] = useState<LibrarySubTab>(
-    showDemoDiscovery ? 'artists' : 'tracks',
-  );
+  const [localSubTab, setLocalSubTab] = useState<LibrarySubTab>('artists');
   const activeSubTab = selectedSubTab ?? localSubTab;
   const setActiveSubTab = (tab: LibrarySubTab) => {
     setLocalSubTab(tab);
@@ -67,29 +78,33 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
         className="flex flex-wrap items-center justify-between gap-3 border-b border-neutral-800 pb-2"
       >
         <div className="flex flex-wrap items-center gap-2 font-mono text-xs">
-          {(['artists', 'albums', 'genres', 'tracks'] as LibrarySubTab[]).map((tab) => (
-            <button
-              key={tab}
-              id={`subtab-${tab}`}
-              type="button"
-              onClick={() => setActiveSubTab(tab)}
-              className={`rounded border px-3 py-1 capitalize transition-colors ${
-                activeSubTab === tab
-                  ? 'border-amber-500/60 bg-amber-500/20 font-bold text-amber-400'
-                  : 'border-neutral-800 bg-neutral-900 text-neutral-400 hover:text-neutral-200'
-              }`}
-            >
-              [
-              {tab === 'albums'
-                ? 'Album'
-                : tab === 'artists'
-                  ? 'Artist'
-                  : tab === 'genres'
-                    ? 'Genre'
-                    : 'Tracks'}
-              ]
-            </button>
-          ))}
+          {(['artists', 'albums', 'genres', 'tracks', 'playlists'] as LibrarySubTab[]).map(
+            (tab) => (
+              <button
+                key={tab}
+                id={`subtab-${tab}`}
+                type="button"
+                onClick={() => setActiveSubTab(tab)}
+                className={`rounded border px-3 py-1 capitalize transition-colors ${
+                  activeSubTab === tab
+                    ? 'border-amber-500/60 bg-amber-500/20 font-bold text-amber-400'
+                    : 'border-neutral-800 bg-neutral-900 text-neutral-400 hover:text-neutral-200'
+                }`}
+              >
+                [
+                {tab === 'albums'
+                  ? 'Album'
+                  : tab === 'artists'
+                    ? 'Artist'
+                    : tab === 'genres'
+                      ? 'Genre'
+                      : tab === 'playlists'
+                        ? 'Playlists'
+                        : 'Tracks'}
+                ]
+              </button>
+            ),
+          )}
         </div>
         <div className="font-mono text-xs text-neutral-500">
           {activeSubTab === 'tracks' &&
@@ -122,6 +137,9 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
             artists={artists}
             onPlayArtist={onPlayArtist}
             onSelectArtist={onSelectArtist}
+            hasMore={artistHasMore}
+            isLoading={artistLoading}
+            onLoadMore={onLoadMoreArtists}
           />
         ) : (
           showDiscoveryEmptyState()
@@ -148,6 +166,15 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
         ) : (
           showDiscoveryEmptyState()
         ))}
+      {activeSubTab === 'playlists' ? (
+        <PlaylistsView
+          tracks={tracks}
+          queue={queue}
+          onPlayTrack={onPlayTrack}
+          onReplaceQueue={onReplaceQueue ?? (() => undefined)}
+          onAppendQueue={onAppendQueue ?? (() => undefined)}
+        />
+      ) : null}
     </div>
   );
 };

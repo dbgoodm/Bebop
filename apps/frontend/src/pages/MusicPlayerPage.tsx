@@ -15,8 +15,6 @@ import { AlbumDetailPage } from '@/components/organisms/AlbumDetailPage';
 import { NowPlayingBar } from '@/components/organisms/NowPlayingBar';
 import { FullscreenNowPlaying } from '@/components/organisms/FullscreenNowPlaying';
 import { NowPlayingQueueModal } from '@/components/organisms/NowPlayingQueueModal';
-import { AntraEngineProvider } from '@/services/antraEngineService';
-import { AntraQueueDrawer } from '@/components/organisms/AntraQueueDrawer';
 import {
   NavTab,
   ContinueListeningItem,
@@ -27,6 +25,7 @@ import {
   ArtistItem,
 } from '@/types';
 import { LOCAL_TRACKS, LOCAL_ALBUMS, LOCAL_ARTISTS } from '@/demo/catalog';
+import { loadArtistDetail, loadAlbumDetail } from '@/services/catalogService';
 
 import { ThemeProvider, useTheme } from '@/services/themeService';
 import { ThemeSelectorModal } from '@/components/organisms/ThemeSelectorModal';
@@ -41,9 +40,7 @@ export default function MusicPlayerPage() {
   return (
     <ThemeProvider>
       {demoMode ? (
-        <AntraEngineProvider>
-          <DemoMusicPlayer />
-        </AntraEngineProvider>
+        <DemoMusicPlayer />
       ) : (
         <DesktopLibraryPage />
       )}
@@ -217,59 +214,40 @@ function DemoMusicPlayer() {
     });
   };
 
-  const handleSelectArtist = (artistOrName: ArtistItem | string) => {
+  const handleSelectArtist = async (artistOrName: ArtistItem | string) => {
     setSelectedAlbum(null);
     if (typeof artistOrName === 'string') {
+      try {
+        const detailed = await loadArtistDetail(artistOrName);
+        setSelectedArtist(detailed);
+        return;
+      } catch {
+        // Fallback
+      }
       const match = LOCAL_ARTISTS.find(
-        (a) =>
-          a.name.toLowerCase() === artistOrName.toLowerCase() ||
-          a.displayName?.toLowerCase().includes(artistOrName.toLowerCase()) ||
-          artistOrName.toLowerCase().includes(a.name.toLowerCase()),
+        (a) => a.name.toLowerCase() === artistOrName.toLowerCase(),
       );
       if (match) {
         setSelectedArtist(match);
-      } else {
-        const artistTracks = LOCAL_TRACKS.filter(
-          (t) =>
-            t.artist.toLowerCase().includes(artistOrName.toLowerCase()) ||
-            artistOrName.toLowerCase().includes(t.artist.toLowerCase()),
-        );
-        setSelectedArtist({
-          id: `artist-${artistOrName.toLowerCase().replace(/[^a-z0-9]/g, '-')}`,
-          name: artistOrName,
-          genres: ['Lossless Audiophile'],
-          albumCount: 1,
-          trackCount: artistTracks.length || 1,
-          totalDuration: '45m 12s',
-          avatarUrl:
-            artistTracks[0]?.coverUrl ||
-            'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=600&auto=format&fit=crop&q=80',
-          featuredCoverUrl:
-            artistTracks[0]?.coverUrl ||
-            'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=600&auto=format&fit=crop&q=80',
-          losslessPlaytime: '12.4 hrs',
-          losslessPercentage: '100% Lossless',
-          topTracks: artistTracks.map((t, idx) => ({
-            id: t.id,
-            rank: idx + 1,
-            title: t.title,
-            artist: t.artist,
-            album: t.album,
-            dynamicRange: t.dynamicRange,
-            format: t.sampleRate,
-            playCount: 42 - idx * 2,
-            duration: t.duration,
-            durationSeconds: t.durationSeconds,
-          })),
-        });
       }
     } else {
       setSelectedArtist(artistOrName);
     }
   };
 
-  const handleSelectAlbum = (albumOrTitle: AlbumItem | string) => {
+  const handleSelectAlbum = async (albumOrTitle: AlbumItem | string) => {
     setSelectedArtist(null);
+    const albumId = typeof albumOrTitle === 'string' ? albumOrTitle : albumOrTitle.id;
+    try {
+      const detailed = await loadAlbumDetail(albumId);
+      if (detailed && detailed.tracks && detailed.tracks.length > 0) {
+        setSelectedAlbum(detailed);
+        return;
+      }
+    } catch {
+      // Fallback
+    }
+
     if (typeof albumOrTitle === 'string') {
       const match = LOCAL_ALBUMS.find(
         (a) =>
@@ -546,9 +524,6 @@ function DemoMusicPlayer() {
           </button>
         </div>
       )}
-
-      {/* Antra Library Engine Download Drawer */}
-      <AntraQueueDrawer onSelectAlbum={handleSelectAlbum} />
 
       {/* Persistent Bottom Audiophile Now-Playing Bar */}
       <NowPlayingBar

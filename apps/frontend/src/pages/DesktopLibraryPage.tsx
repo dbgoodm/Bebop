@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Disc3, FolderOpen, Play, RefreshCw, Square, TriangleAlert } from 'lucide-react';
+import { Compass, Disc3, Play, Square, TriangleAlert } from 'lucide-react';
 import { EmptyState } from '@/components/atoms/EmptyState';
 import { ContinueListeningRail } from '@/components/molecules/ContinueListeningRail';
 import { ListeningStats } from '@/components/molecules/ListeningStats';
@@ -10,31 +10,33 @@ import { LibraryView } from '@/components/organisms/LibraryView';
 import { ArtistDetailPage } from '@/components/organisms/ArtistDetailPage';
 import { AlbumDetailPage } from '@/components/organisms/AlbumDetailPage';
 import { MetadataEditor } from '@/components/organisms/MetadataEditor';
-import { AcquisitionPanel } from '@/components/organisms/AcquisitionPanel';
 import { UpdatePanel } from '@/components/organisms/UpdatePanel';
 import { FullscreenNowPlaying } from '@/components/organisms/FullscreenNowPlaying';
 import { NowPlayingBar } from '@/components/organisms/NowPlayingBar';
 import { NowPlayingQueueModal } from '@/components/organisms/NowPlayingQueueModal';
+import { AcquisitionQueueDrawer } from '@/components/organisms/AcquisitionQueueDrawer';
 import { AppShell } from '@/components/templates/AppShell';
 import { useLibraryScan } from '@/hooks/useLibraryScan';
-import { useCatalogDiscovery } from '@/hooks/useCatalogDiscovery';
+import { useArtistCatalog, useCatalogDiscovery } from '@/hooks/useCatalogDiscovery';
 import { useNativePlayback } from '@/hooks/useNativePlayback';
 import { useTheme } from '@/services/themeService';
-import { ThemeSelectorModal } from '@/components/organisms/ThemeSelectorModal';
-import { loadAlbumDetail, loadArtistDetail } from '@/services/catalogService';
+import { SettingsView } from '@/components/organisms/SettingsView';
+import {
+  loadAlbumDetail,
+  loadArtistDetail,
+  loadArtistInformation,
+} from '@/services/catalogService';
 import { toTrackItem } from '@/services/libraryService';
+import { markPerformance, measurePerformance } from '@/services/performance';
 import {
   loadFavoriteTrackIds,
   loadHomeSnapshot,
-  loadPlaylistTracks,
-  loadPlaylists,
   loadPersistentPlayerState,
-  createPlaylistFromQueue,
   savePlayerQueue,
   saveLibraryViewPreference,
   setTrackFavorite,
 } from '@/services/playerStateService';
-import type { HomeSnapshot, PlaylistSummary } from '@/services/tauri-bindings';
+import type { HomeSnapshot } from '@/services/tauri-bindings';
 import type { IntegrationSettings, IntegrationStatus } from '@/services/tauri-bindings';
 import {
   connectLastFm,
@@ -72,7 +74,6 @@ function formatBytes(bytes: number) {
   return `${(bytes / 1_024 ** index).toFixed(index < 2 ? 0 : 1)} ${units[index]}`;
 }
 
-const EMPTY_SPECTRUM_BINS: readonly number[] = [];
 
 export function DesktopLibraryPage() {
   const { currentTheme } = useTheme();
@@ -81,13 +82,12 @@ export function DesktopLibraryPage() {
   const { library, selectAndScan, setRootEnabled, rescanRoot, removeRoot } =
     useLibraryScan(searchQuery);
   const discovery = useCatalogDiscovery(searchQuery);
+  const artistCatalog = useArtistCatalog(searchQuery);
   const nativePlayback = useNativePlayback();
   const [queue, setQueue] = useState<TrackItem[]>([]);
   const [playerStateLoaded, setPlayerStateLoaded] = useState(false);
   const [home, setHome] = useState<HomeSnapshot | null>(null);
   const [favoriteTrackIds, setFavoriteTrackIds] = useState<ReadonlySet<string>>(new Set());
-  const [playlists, setPlaylists] = useState<PlaylistSummary[]>([]);
-  const [playlistName, setPlaylistName] = useState('');
   const [visualizationEnabled, setVisualizationEnabled] = useState(true);
   const [integrationSettings, setIntegrationSettings] = useState<IntegrationSettings>({
     lastfmEnabled: false,
@@ -96,7 +96,7 @@ export function DesktopLibraryPage() {
   });
   const [integrationStatuses, setIntegrationStatuses] = useState<IntegrationStatus[]>([]);
   const [lastFmSessionKey, setLastFmSessionKey] = useState('');
-  const [librarySubTab, setLibrarySubTab] = useState<LibrarySubTab>('tracks');
+  const [librarySubTab, setLibrarySubTab] = useState<LibrarySubTab>('artists');
   const resumeRef = useRef<{ trackId: string | null; positionMs: number }>({
     trackId: null,
     positionMs: 0,
@@ -160,6 +160,7 @@ export function DesktopLibraryPage() {
           lastPlayedText: 'Saved listening session',
           lastPlayedTrackName: item.title,
           totalTracksCount: 1,
+          coverUrl: item.coverUrl,
         };
       }),
     [home],
@@ -180,6 +181,7 @@ export function DesktopLibraryPage() {
           trackCount: 1,
           genre: item.genres?.[0] ?? 'Unknown Genre',
           year: item.year || undefined,
+          coverUrl: item.coverUrl,
         };
       }),
     [home],
@@ -199,6 +201,7 @@ export function DesktopLibraryPage() {
           highlightReason: item.playCount ? 'Least recently heard' : 'Unplayed local track',
           trackCount: 1,
           format: item.codec,
+          coverUrl: item.coverUrl,
         };
       }),
     [home],
@@ -207,14 +210,35 @@ export function DesktopLibraryPage() {
   const listeningRefreshBucket = Math.floor(nativePlayback.playback.positionMs / 5_000);
 
   useEffect(() => {
+    const artistId = selectedArtist?.id;
+    if (!artistId) return;
     let active = true;
-    void Promise.all([
-      loadPersistentPlayerState(),
-      loadHomeSnapshot(),
-      loadFavoriteTrackIds(),
-      loadPlaylists(),
-    ])
-      .then(([player, snapshot, favorites, savedPlaylists]) => {
+    void loadArtistInformation(artistId)
+      .then((information) => {
+        if (!active) return;
+        setSelectedArtist((current) =>
+          current?.id === artistId
+            ? {
+                ...current,
+                ...information,
+                genres: information.genres?.length ? information.genres : current.genres,
+                // Local artwork remains the preferred representation of an artist.
+                avatarUrl: current.avatarUrl ?? information.avatarUrl,
+                bannerUrl: current.bannerUrl ?? information.bannerUrl,
+              }
+            : current,
+        );
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [selectedArtist?.id]);
+
+  useEffect(() => {
+    let active = true;
+    void Promise.all([loadPersistentPlayerState(), loadHomeSnapshot(), loadFavoriteTrackIds()])
+      .then(([player, snapshot, favorites]) => {
         if (!active) return;
         setQueue(player.queue);
         setSelectedTrack(player.queue.find((track) => track.id === player.currentTrackId) ?? null);
@@ -224,8 +248,11 @@ export function DesktopLibraryPage() {
         };
         setHome(snapshot);
         setFavoriteTrackIds(favorites);
-        setPlaylists(savedPlaylists);
-        if (['artists', 'albums', 'genres', 'tracks'].includes(player.preferences.libraryView)) {
+        if (
+          ['artists', 'albums', 'genres', 'tracks', 'playlists'].includes(
+            player.preferences.libraryView,
+          )
+        ) {
           setLibrarySubTab(player.preferences.libraryView as LibrarySubTab);
         }
         setVisualizationEnabled(player.preferences.visualizationEnabled ?? true);
@@ -313,28 +340,20 @@ export function DesktopLibraryPage() {
     });
   }, []);
 
-  const saveQueueAsPlaylist = useCallback(async () => {
-    const name = playlistName.trim();
-    if (!name || queue.length === 0) return;
-    const playlist = await createPlaylistFromQueue(
-      name,
-      queue.map((track) => track.id),
-    );
-    setPlaylists((current) => [...current, playlist]);
-    setPlaylistName('');
-  }, [playlistName, queue]);
-
-  const restorePlaylistQueue = useCallback(async (playlistId: string) => {
-    const tracks = await loadPlaylistTracks(playlistId);
-    setQueue(tracks);
-    setSelectedTrack(tracks[0] ?? null);
-    resumeRef.current = { trackId: null, positionMs: 0 };
-  }, []);
-
   const changeLibrarySubTab = useCallback((tab: LibrarySubTab) => {
+    markPerformance(`library-${tab}-navigation-start`);
     setLibrarySubTab(tab);
     void saveLibraryViewPreference(tab);
   }, []);
+
+  useEffect(() => {
+    markPerformance(`library-${librarySubTab}-visible`);
+    measurePerformance(
+      `library-${librarySubTab}-visible`,
+      `library-${librarySubTab}-navigation-start`,
+      `library-${librarySubTab}-visible`,
+    );
+  }, [librarySubTab]);
 
   const selectLibrary = useCallback(async () => {
     setActiveTab('LIBRARY');
@@ -352,23 +371,28 @@ export function DesktopLibraryPage() {
       if (!summary) return;
       setSelectedAlbum(null);
       setSelectedArtist(await loadArtistDetail(summary.id));
-      setActiveTab('DISCOVER');
+      setActiveTab('LIBRARY');
     },
     [discovery.artists],
   );
 
   const selectAlbum = useCallback(
     async (album: AlbumItem | string) => {
-      const summary =
-        typeof album === 'string'
-          ? discovery.albums.find(
-              (candidate) => candidate.title.toLocaleLowerCase() === album.toLocaleLowerCase(),
-            )
-          : album;
-      if (!summary) return;
-      setSelectedArtist(null);
-      setSelectedAlbum(await loadAlbumDetail(summary.id));
-      setActiveTab('DISCOVER');
+      let albumId: string;
+      if (typeof album === 'string') {
+        const found = discovery.albums.find(
+          (candidate) =>
+            candidate.id === album ||
+            candidate.title.toLocaleLowerCase() === album.toLocaleLowerCase(),
+        );
+        albumId = found ? found.id : album;
+      } else {
+        albumId = album.id;
+      }
+      // Keep any artist already open so "back" from the album returns to that
+      // artist page instead of dropping the user out to the library root.
+      setSelectedAlbum(await loadAlbumDetail(albumId));
+      setActiveTab('LIBRARY');
     },
     [discovery.albums],
   );
@@ -481,36 +505,24 @@ export function DesktopLibraryPage() {
     <AppShell background={currentTheme.bgCanvasGradient || currentTheme.bgCanvas}>
       <TopNavRail
         activeTab={activeTab}
-        onTabChange={setActiveTab}
+        onTabChange={(tab) => {
+          markPerformance(`navigation-${tab.toLowerCase()}-start`);
+          if (tab === 'LIBRARY') setLibrarySubTab('artists');
+          setActiveTab(tab);
+          markPerformance(`navigation-${tab.toLowerCase()}-visible`);
+          measurePerformance(
+            `navigation-${tab.toLowerCase()}`,
+            `navigation-${tab.toLowerCase()}-start`,
+            `navigation-${tab.toLowerCase()}-visible`,
+          );
+        }}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
-        audioStatusLabel="Native Rust output"
         showPrototypeActions={false}
       />
-      <section className="mx-auto flex w-full max-w-7xl flex-col gap-6 pb-28">
+      <section className="mx-auto flex w-full max-w-[1800px] flex-col gap-6 px-6 pb-28">
         {activeTab === 'HOME' && (
           <div className="flex flex-col gap-6 py-8 animate-fadeIn">
-            <div className="flex flex-wrap items-end justify-between gap-4 border-b border-neutral-800 pb-5">
-              <div>
-                <p className="font-mono text-xs uppercase tracking-[0.24em] text-amber-400">
-                  Bebop local-first
-                </p>
-                <h1 className="mt-2 text-3xl font-bold text-white">Your music, on this device.</h1>
-                <p className="mt-2 max-w-2xl text-sm text-neutral-400">
-                  Scan your library, then play it through the native Rust audio engine. No mock
-                  catalog or browser-audio fallback is used here.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => void selectLibrary()}
-                className="flex items-center gap-2 rounded border border-amber-500/60 bg-amber-500/15 px-4 py-2 text-sm font-semibold text-amber-300 transition hover:bg-amber-500/25"
-              >
-                <FolderOpen className="h-4 w-4" />
-                {library.root ? 'Choose another folder' : 'Select music folder'}
-              </button>
-            </div>
-
             <ListeningStats
               stats={libraryStats}
               onCardClick={() => setActiveTab('LIBRARY')}
@@ -522,10 +534,10 @@ export function DesktopLibraryPage() {
               onResumeItem={(item) => playHomeTrack(item.id)}
               onItemClick={(item) => playHomeTrack(item.id)}
               emptyMessage="Start a local track and Bebop will retain its real listening session here."
-              emptyActionLabel={library.root ? 'Browse indexed tracks' : 'Select a music folder'}
+              emptyActionLabel={library.root ? 'Browse indexed tracks' : 'Manage library folders'}
               onEmptyAction={() => {
                 if (library.root) setActiveTab('LIBRARY');
-                else void selectLibrary();
+                else setActiveTab('SETTINGS');
               }}
             />
 
@@ -616,352 +628,218 @@ export function DesktopLibraryPage() {
 
         {activeTab === 'DISCOVER' && (
           <div className="py-8 animate-fadeIn">
-            {selectedArtist ? (
-              <ArtistDetailPage
-                artist={selectedArtist}
-                onBack={() => setSelectedArtist(null)}
-                onPlayTrack={(track) => void playTrack(track)}
-                onPlayArtist={(artist) => void playArtist(artist)}
-                onSelectAlbum={(album) => void selectAlbum(album)}
-              />
-            ) : selectedAlbum ? (
-              <AlbumDetailPage
-                album={selectedAlbum}
-                currentTrackId={currentTrack?.id}
-                isPlaying={isPlaying}
-                onBack={() => setSelectedAlbum(null)}
-                onPlayTrack={(track) => void playTrack(track)}
-                onPlayAlbum={(album) => void playAlbum(album)}
-                onSelectArtist={(artist) => void selectArtist(artist)}
-                onSelectAlbum={(album) => void selectAlbum(album)}
-              />
-            ) : (
-              <LibraryView
-                tracks={visibleTracks}
-                artists={discovery.artists}
-                albums={discovery.albums}
-                genres={discovery.genres}
-                currentTrackId={currentTrack?.id}
-                isPlaying={isPlaying}
-                onPlayTrack={(track) => void playTrack(track)}
-                onPlayAlbum={(album) => void playAlbum(album)}
-                onPlayArtist={(artist) => void playArtist(artist)}
-                onSelectArtist={(artist) => void selectArtist(artist)}
-                onSelectAlbum={(album) => void selectAlbum(album)}
-                onEditTrack={setEditingTrack}
-                favoriteTrackIds={favoriteTrackIds}
-                onFavoriteChange={changeTrackFavorite}
-                selectedSubTab={librarySubTab}
-                onSubTabChange={changeLibrarySubTab}
-              />
-            )}
+            <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-neutral-800 bg-neutral-950/40 px-6 py-20 text-center">
+              <Compass className="h-10 w-10 text-neutral-700" />
+              <h2 className="text-lg font-semibold text-neutral-200">Discover is not built yet</h2>
+              <p className="max-w-md text-sm text-neutral-500">
+                This will become a dedicated browsing surface. Artist and album pages live under
+                Library.
+              </p>
+              <button
+                type="button"
+                onClick={() => setActiveTab('LIBRARY')}
+                className="mt-2 rounded border border-neutral-700 px-4 py-2 text-xs font-semibold text-neutral-300 hover:border-neutral-500 hover:text-white"
+              >
+                Go to Library
+              </button>
+            </div>
           </div>
         )}
 
         {activeTab === 'SETTINGS' && (
-          <div className="flex max-w-3xl flex-col gap-5 py-8 animate-fadeIn">
-            <EmptyState title="Native audio settings">
-              Volume, hi-fi mode, selected output, theme, queue, and resume position are stored in
-              Bebop's local SQLite database. Playback never starts automatically after launch.
-            </EmptyState>
-            <div className="rounded border border-neutral-800 bg-neutral-950/50 p-5 text-sm text-neutral-300">
-              <label className="mb-4 block text-xs font-semibold uppercase tracking-wide text-neutral-500">
-                Output device
-                <select
-                  value={nativePlayback.outputDevices.find((device) => device.isSelected)?.id ?? ''}
-                  onChange={(event) => void nativePlayback.selectOutput(event.target.value || null)}
-                  className="mt-2 block w-full rounded border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm normal-case tracking-normal text-white"
-                >
-                  <option value="">System default</option>
-                  {nativePlayback.outputDevices.map((device) => (
-                    <option key={device.id} value={device.id}>
-                      {device.name}
-                      {device.isDefault ? ' (default)' : ''}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              {nativePlayback.playback.output ? (
-                <>
-                  <p className="font-semibold text-white">
-                    {nativePlayback.playback.output.deviceName}
-                  </p>
-                  <p className="mt-2">{nativePlayback.playback.output.disclosure}</p>
-                  <dl className="mt-3 grid grid-cols-2 gap-2 font-mono text-xs text-neutral-400">
-                    <div>
-                      <dt>Source</dt>
-                      <dd className="text-neutral-200">
-                        {nativePlayback.playback.output.sourceBitDepth ?? '—'}-bit ·{' '}
-                        {nativePlayback.playback.output.sourceSampleRate} Hz ·{' '}
-                        {nativePlayback.playback.output.sourceChannels} ch
-                      </dd>
-                    </div>
-                    <div>
-                      <dt>Output</dt>
-                      <dd className="text-neutral-200">
-                        {nativePlayback.playback.output.outputSampleFormat} ·{' '}
-                        {nativePlayback.playback.output.outputSampleRate} Hz ·{' '}
-                        {nativePlayback.playback.output.outputChannels} ch
-                      </dd>
-                    </div>
-                  </dl>
-                </>
-              ) : (
-                <p>Play a scanned track to inspect the active output stream.</p>
-              )}
-              <button
-                type="button"
-                onClick={() => void nativePlayback.setHifi(!nativePlayback.playback.hifiMode)}
-                className="mt-4 text-sm font-semibold text-amber-300 underline"
-              >
-                {nativePlayback.playback.hifiMode
-                  ? 'Allow software volume'
-                  : 'Enable hi-fi unity gain'}
-              </button>
-              <label className="mt-4 flex items-center gap-2 text-sm text-neutral-300">
-                <input
-                  type="checkbox"
-                  checked={visualizationEnabled}
-                  onChange={(event) => {
-                    const enabled = event.target.checked;
-                    setVisualizationEnabled(enabled);
-                    void nativePlayback.setVisualization(enabled);
-                  }}
-                />
-                Native 64-band spectrum visualization
-              </label>
-            </div>
-            <div className="rounded border border-neutral-800 bg-neutral-950/50 p-5">
-              <h2 className="text-sm font-semibold text-white">Manual playlists</h2>
-              <p className="mt-1 text-xs text-neutral-500">
-                Save the current {queue.length}-track queue as a persistent playlist.
-              </p>
-              <div className="mt-3 flex gap-2">
-                <input
-                  value={playlistName}
-                  onChange={(event) => setPlaylistName(event.target.value)}
-                  placeholder="Playlist name"
-                  className="min-w-0 flex-1 rounded border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white"
-                />
+          <SettingsView
+            roots={library.roots}
+            isScanning={isScanning}
+            onAddRoot={() => void selectLibrary()}
+            onRescanRoot={(rootId) => void rescanRoot(rootId)}
+            onSetRootEnabled={(rootId, enabled) => void setRootEnabled(rootId, enabled)}
+            onRemoveRoot={(root) => {
+              if (
+                window.confirm(`Remove ${root.label} from Bebop? Music files will not be deleted.`)
+              ) {
+                void removeRoot(root.id);
+              }
+            }}
+            audioSlot={
+              <>
+              <div className="rounded border border-neutral-800 bg-neutral-950/50 p-5 text-sm text-neutral-300">
+                <label className="mb-4 block text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                  Output device
+                  <select
+                    value={nativePlayback.outputDevices.find((device) => device.isSelected)?.id ?? ''}
+                    onChange={(event) => void nativePlayback.selectOutput(event.target.value || null)}
+                    className="mt-2 block w-full rounded border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm normal-case tracking-normal text-white"
+                  >
+                    <option value="">System default</option>
+                    {nativePlayback.outputDevices.map((device) => (
+                      <option key={device.id} value={device.id}>
+                        {device.name}
+                        {device.isDefault ? ' (default)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                {nativePlayback.playback.output ? (
+                  <>
+                    <p className="font-semibold text-white">
+                      {nativePlayback.playback.output.deviceName}
+                    </p>
+                    <p className="mt-2">{nativePlayback.playback.output.disclosure}</p>
+                    <dl className="mt-3 grid grid-cols-2 gap-2 font-mono text-xs text-neutral-400">
+                      <div>
+                        <dt>Source</dt>
+                        <dd className="text-neutral-200">
+                          {nativePlayback.playback.output.sourceBitDepth ?? '—'}-bit ·{' '}
+                          {nativePlayback.playback.output.sourceSampleRate} Hz ·{' '}
+                          {nativePlayback.playback.output.sourceChannels} ch
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Output</dt>
+                        <dd className="text-neutral-200">
+                          {nativePlayback.playback.output.outputSampleFormat} ·{' '}
+                          {nativePlayback.playback.output.outputSampleRate} Hz ·{' '}
+                          {nativePlayback.playback.output.outputChannels} ch
+                        </dd>
+                      </div>
+                    </dl>
+                  </>
+                ) : (
+                  <p>Play a scanned track to inspect the active output stream.</p>
+                )}
                 <button
                   type="button"
-                  disabled={!playlistName.trim() || queue.length === 0}
-                  onClick={() => void saveQueueAsPlaylist()}
-                  className="rounded border border-amber-500/50 px-3 py-2 text-sm font-semibold text-amber-300 disabled:opacity-40"
+                  onClick={() => void nativePlayback.setHifi(!nativePlayback.playback.hifiMode)}
+                  className="mt-4 text-sm font-semibold text-amber-300 underline"
                 >
-                  Save queue
+                  {nativePlayback.playback.hifiMode
+                    ? 'Allow software volume'
+                    : 'Enable hi-fi unity gain'}
                 </button>
+                <label className="mt-4 flex items-center gap-2 text-sm text-neutral-300">
+                  <input
+                    type="checkbox"
+                    checked={visualizationEnabled}
+                    onChange={(event) => {
+                      const enabled = event.target.checked;
+                      setVisualizationEnabled(enabled);
+                      void nativePlayback.setVisualization(enabled);
+                    }}
+                  />
+                  Native 64-band spectrum visualization
+                </label>
               </div>
-              {playlists.length === 0 ? (
-                <p className="mt-3 text-xs text-neutral-400">No playlists saved.</p>
-              ) : (
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {playlists.map((playlist) => (
-                    <button
-                      key={playlist.id}
-                      type="button"
-                      onClick={() => void restorePlaylistQueue(playlist.id)}
-                      className="rounded border border-neutral-700 px-2 py-1 text-xs text-neutral-300 hover:border-amber-500/50 hover:text-amber-300"
-                    >
-                      Load {playlist.name} ({playlist.trackCount})
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-            <div className="rounded border border-neutral-800 bg-neutral-950/50 p-5 text-sm text-neutral-300">
-              <h2 className="text-sm font-semibold text-white">Optional online integrations</h2>
-              <p className="mt-1 text-xs text-neutral-500">
-                Disabled by default. Integration failures never interrupt local playback.
-              </p>
-              <div className="mt-4 space-y-4">
-                <div className="rounded border border-neutral-800 p-3">
-                  <label className="flex items-center justify-between gap-3">
-                    <span>
-                      <span className="block font-semibold text-white">Last.fm scrobbling</span>
-                      <span className="text-xs text-neutral-500">
-                        {lastFmStatus?.configured
-                          ? `${lastFmStatus.pendingJobs} queued scrobbles`
-                          : 'Requires a release API key and account session'}
+              </>
+            }
+            onlineSlot={
+              <>
+              <div className="rounded border border-neutral-800 bg-neutral-950/50 p-5 text-sm text-neutral-300">
+                <h2 className="text-sm font-semibold text-white">Optional online integrations</h2>
+                <p className="mt-1 text-xs text-neutral-500">
+                  Disabled by default. Integration failures never interrupt local playback.
+                </p>
+                <div className="mt-4 space-y-4">
+                  <div className="rounded border border-neutral-800 p-3">
+                    <label className="flex items-center justify-between gap-3">
+                      <span>
+                        <span className="block font-semibold text-white">Last.fm scrobbling</span>
+                        <span className="text-xs text-neutral-500">
+                          {lastFmStatus?.configured
+                            ? `${lastFmStatus.pendingJobs} queued scrobbles`
+                            : 'Requires a release API key and account session'}
+                        </span>
                       </span>
-                    </span>
-                    <input
-                      type="checkbox"
-                      checked={integrationSettings.lastfmEnabled ?? false}
-                      onChange={(event) =>
-                        void updateIntegrations({
-                          ...integrationSettings,
-                          lastfmEnabled: event.target.checked,
-                        })
-                      }
-                    />
-                  </label>
-                  <div className="mt-3 flex gap-2">
-                    <input
-                      type="password"
-                      value={lastFmSessionKey}
-                      onChange={(event) => setLastFmSessionKey(event.target.value)}
-                      placeholder="Last.fm session key"
-                      autoComplete="off"
-                      className="min-w-0 flex-1 rounded border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs text-white"
-                    />
-                    <button
-                      type="button"
-                      disabled={!lastFmSessionKey.trim()}
-                      onClick={() => {
-                        const key = lastFmSessionKey;
-                        setLastFmSessionKey('');
-                        void connectLastFm(key).then(setIntegrationStatuses);
-                      }}
-                      className="rounded border border-neutral-700 px-3 py-2 text-xs disabled:opacity-40"
-                    >
-                      Store in OS credentials
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => void disconnectLastFm().then(setIntegrationStatuses)}
-                      className="rounded border border-neutral-700 px-3 py-2 text-xs"
-                    >
-                      Disconnect
-                    </button>
+                      <input
+                        type="checkbox"
+                        checked={integrationSettings.lastfmEnabled ?? false}
+                        onChange={(event) =>
+                          void updateIntegrations({
+                            ...integrationSettings,
+                            lastfmEnabled: event.target.checked,
+                          })
+                        }
+                      />
+                    </label>
+                    <div className="mt-3 flex gap-2">
+                      <input
+                        type="password"
+                        value={lastFmSessionKey}
+                        onChange={(event) => setLastFmSessionKey(event.target.value)}
+                        placeholder="Last.fm session key"
+                        autoComplete="off"
+                        className="min-w-0 flex-1 rounded border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs text-white"
+                      />
+                      <button
+                        type="button"
+                        disabled={!lastFmSessionKey.trim()}
+                        onClick={() => {
+                          const key = lastFmSessionKey;
+                          setLastFmSessionKey('');
+                          void connectLastFm(key).then(setIntegrationStatuses);
+                        }}
+                        className="rounded border border-neutral-700 px-3 py-2 text-xs disabled:opacity-40"
+                      >
+                        Store in OS credentials
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void disconnectLastFm().then(setIntegrationStatuses)}
+                        className="rounded border border-neutral-700 px-3 py-2 text-xs"
+                      >
+                        Disconnect
+                      </button>
+                    </div>
+                  </div>
+                  <div className="rounded border border-neutral-800 p-3">
+                    <label className="flex items-center justify-between gap-3">
+                      <span>
+                        <span className="block font-semibold text-white">Discord Rich Presence</span>
+                        <span className="text-xs text-neutral-500">
+                          {discordStatus?.configured
+                            ? discordStatus.connected
+                              ? 'Connected'
+                              : 'Ready when Discord is running'
+                            : 'Requires a release application ID'}
+                        </span>
+                      </span>
+                      <input
+                        type="checkbox"
+                        checked={integrationSettings.discordEnabled ?? false}
+                        onChange={(event) =>
+                          void updateIntegrations({
+                            ...integrationSettings,
+                            discordEnabled: event.target.checked,
+                          })
+                        }
+                      />
+                    </label>
+                    <label className="mt-3 block text-xs text-neutral-500">
+                      Shared detail
+                      <select
+                        value={integrationSettings.discordDetail ?? 'full'}
+                        onChange={(event) =>
+                          void updateIntegrations({
+                            ...integrationSettings,
+                            discordDetail: event.target.value,
+                          })
+                        }
+                        className="mt-1 block rounded border border-neutral-700 bg-neutral-900 px-2 py-1 text-neutral-200"
+                      >
+                        <option value="full">Title, artist, album, and time</option>
+                        <option value="private">Only “Listening locally”</option>
+                      </select>
+                    </label>
                   </div>
                 </div>
-                <div className="rounded border border-neutral-800 p-3">
-                  <label className="flex items-center justify-between gap-3">
-                    <span>
-                      <span className="block font-semibold text-white">Discord Rich Presence</span>
-                      <span className="text-xs text-neutral-500">
-                        {discordStatus?.configured
-                          ? discordStatus.connected
-                            ? 'Connected'
-                            : 'Ready when Discord is running'
-                          : 'Requires a release application ID'}
-                      </span>
-                    </span>
-                    <input
-                      type="checkbox"
-                      checked={integrationSettings.discordEnabled ?? false}
-                      onChange={(event) =>
-                        void updateIntegrations({
-                          ...integrationSettings,
-                          discordEnabled: event.target.checked,
-                        })
-                      }
-                    />
-                  </label>
-                  <label className="mt-3 block text-xs text-neutral-500">
-                    Shared detail
-                    <select
-                      value={integrationSettings.discordDetail ?? 'full'}
-                      onChange={(event) =>
-                        void updateIntegrations({
-                          ...integrationSettings,
-                          discordDetail: event.target.value,
-                        })
-                      }
-                      className="mt-1 block rounded border border-neutral-700 bg-neutral-900 px-2 py-1 text-neutral-200"
-                    >
-                      <option value="full">Title, artist, album, and time</option>
-                      <option value="private">Only “Listening locally”</option>
-                    </select>
-                  </label>
-                </div>
               </div>
-            </div>
-            <AcquisitionPanel roots={library.roots} />
-            <UpdatePanel />
-          </div>
+              </>
+            }
+            updatesSlot={<UpdatePanel />}
+          />
         )}
 
         {activeTab === 'LIBRARY' && (
           <div className="flex flex-col gap-6 animate-fadeIn">
-            <header className="flex flex-wrap items-end justify-between gap-4 border-b border-neutral-800 pb-5">
-              <div>
-                <p className="font-mono text-xs uppercase tracking-[0.24em] text-amber-400">
-                  Local library
-                </p>
-                <h1 className="mt-2 text-3xl font-bold text-white">Your music, on this device.</h1>
-                <p className="mt-2 text-sm text-neutral-400">
-                  Select folders to index FLAC, WAV, MP3, Ogg Vorbis, AAC, AIFF, and M4A/ALAC. Bebop
-                  never uploads them.
-                </p>
-              </div>
-              <button
-                id="select-library-folder"
-                type="button"
-                onClick={() => void selectLibrary()}
-                disabled={isScanning}
-                className="flex items-center gap-2 rounded border border-amber-500/60 bg-amber-500/15 px-4 py-2 text-sm font-semibold text-amber-300 transition hover:bg-amber-500/25 disabled:cursor-wait disabled:opacity-60"
-              >
-                {isScanning ? (
-                  <RefreshCw className="h-4 w-4 animate-spin" />
-                ) : (
-                  <FolderOpen className="h-4 w-4" />
-                )}
-                {library.root ? 'Choose another folder' : 'Select music folder'}
-              </button>
-            </header>
-
-            {library.roots.length > 0 && (
-              <section aria-label="Library roots" className="grid gap-3 lg:grid-cols-2">
-                {library.roots.map((root) => (
-                  <article
-                    key={root.id}
-                    className="rounded border border-neutral-800 bg-neutral-950/50 p-4 text-sm"
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="min-w-0">
-                        <p className="truncate font-semibold text-white">{root.label}</p>
-                        <p className="mt-1 truncate font-mono text-xs text-neutral-500">
-                          {root.path}
-                        </p>
-                        <p className="mt-2 text-xs text-neutral-400">
-                          {root.trackCount.toLocaleString()} tracks · {root.availability}
-                        </p>
-                      </div>
-                      <span
-                        className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${
-                          root.availability === 'online' ? 'bg-emerald-400' : 'bg-amber-400'
-                        }`}
-                        aria-label={root.availability}
-                      />
-                    </div>
-                    <div className="mt-4 flex flex-wrap gap-3 text-xs font-semibold">
-                      <button
-                        type="button"
-                        className="text-amber-300 underline"
-                        onClick={() => void rescanRoot(root.id)}
-                      >
-                        Rescan
-                      </button>
-                      <button
-                        type="button"
-                        className="text-neutral-300 underline"
-                        onClick={() => void setRootEnabled(root.id, !root.enabled)}
-                      >
-                        {root.enabled ? 'Disable' : 'Restore'}
-                      </button>
-                      <button
-                        type="button"
-                        className="text-red-300 underline"
-                        onClick={() => {
-                          if (
-                            window.confirm(
-                              `Remove ${root.label} from Bebop? Music files will not be deleted.`,
-                            )
-                          ) {
-                            void removeRoot(root.id);
-                          }
-                        }}
-                      >
-                        Remove from catalog
-                      </button>
-                    </div>
-                  </article>
-                ))}
-              </section>
-            )}
-
             {isScanning && (
               <div
                 role="status"
@@ -1059,10 +937,33 @@ export function DesktopLibraryPage() {
               </div>
             )}
 
-            {(library.phase === 'complete' || library.phase === 'partial-error') && (
+            {selectedAlbum ? (
+              <AlbumDetailPage
+                album={selectedAlbum}
+                currentTrackId={currentTrack?.id}
+                isPlaying={isPlaying}
+                backLabel={selectedArtist ? 'Back to Artist' : 'Back to Library'}
+                onBack={() => setSelectedAlbum(null)}
+                onPlayTrack={(track) => void playTrack(track)}
+                onEditTrack={setEditingTrack}
+                onPlayAlbum={(album) => void playAlbum(album)}
+                onSelectArtist={(artist) => void selectArtist(artist)}
+                onSelectAlbum={(album) => void selectAlbum(album)}
+              />
+            ) : selectedArtist ? (
+              <ArtistDetailPage
+                artist={selectedArtist}
+                onBack={() => setSelectedArtist(null)}
+                onPlayTrack={(track) => void playTrack(track)}
+                onEditTrack={setEditingTrack}
+                onPlayArtist={(artist) => void playArtist(artist)}
+                onSelectAlbum={(album) => void selectAlbum(album)}
+              />
+            ) : (
+              (library.phase === 'complete' || library.phase === 'partial-error') && (
               <LibraryView
                 tracks={visibleTracks}
-                artists={discovery.artists}
+                artists={artistCatalog.items}
                 albums={discovery.albums}
                 genres={discovery.genres}
                 currentTrackId={currentTrack?.id}
@@ -1077,7 +978,19 @@ export function DesktopLibraryPage() {
                 onFavoriteChange={changeTrackFavorite}
                 selectedSubTab={librarySubTab}
                 onSubTabChange={changeLibrarySubTab}
+                artistHasMore={Boolean(artistCatalog.nextCursor)}
+                artistLoading={artistCatalog.loading}
+                onLoadMoreArtists={() => void artistCatalog.loadMore()}
+                queue={queue}
+                onReplaceQueue={setQueue}
+                onAppendQueue={(tracks) =>
+                  setQueue((current) => [
+                    ...current,
+                    ...tracks.filter((track) => !current.some((item) => item.id === track.id)),
+                  ])
+                }
               />
+              )
             )}
           </div>
         )}
@@ -1101,7 +1014,7 @@ export function DesktopLibraryPage() {
         volumeLocked={nativePlayback.playback.hifiMode}
         onUnlockVolume={() => nativePlayback.setHifi(false)}
         spectrumAvailable={visualizationEnabled}
-        spectrumBins={nativePlayback.spectrum?.bins ?? EMPTY_SPECTRUM_BINS}
+        getSpectrumBins={nativePlayback.getSpectrumBins}
         onSelectArtist={(artist) => void selectArtist(artist)}
         onSelectAlbum={(album) => void selectAlbum(album)}
       />
@@ -1140,14 +1053,14 @@ export function DesktopLibraryPage() {
         volumeLocked={nativePlayback.playback.hifiMode}
         onUnlockVolume={() => nativePlayback.setHifi(false)}
         spectrumAvailable={visualizationEnabled}
-        spectrumBins={nativePlayback.spectrum?.bins ?? EMPTY_SPECTRUM_BINS}
+        getSpectrumBins={nativePlayback.getSpectrumBins}
         onSelectArtist={(artist) => void selectArtist(artist)}
         onSelectAlbum={(album) => void selectAlbum(album)}
       />
-      <ThemeSelectorModal />
       {editingTrack && (
         <MetadataEditor track={editingTrack} onClose={() => setEditingTrack(null)} />
       )}
+      <AcquisitionQueueDrawer />
     </AppShell>
   );
 }

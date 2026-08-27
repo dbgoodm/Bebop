@@ -21,6 +21,5 @@ The database and artwork cache are never placed in a music root. The only Bebop-
 beside music is `.bebop-backups/`, created after an explicit tag-file write and containing one
 retained full-file backup per edited source file.
 
-Last.fm and slskd secrets live in the platform credential store under the Bebop service, outside
-the frontend and SQLite. slskd's completed-download inbox is user-selected and remains separate
-from library roots until explicit import.
+Last.fm secrets live in the platform credential store under the Bebop service, outside
+the frontend and SQLite.

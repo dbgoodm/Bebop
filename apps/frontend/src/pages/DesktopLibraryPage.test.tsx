@@ -92,6 +92,14 @@ vi.mock('@/hooks/useNativePlayback', () => ({
 
 vi.mock('@/hooks/useCatalogDiscovery', () => ({
   useCatalogDiscovery: () => ({ artists: [], albums: [], genres: [] }),
+  useArtistCatalog: () => ({
+    items: [],
+    nextCursor: null,
+    pageSize: 72,
+    loading: false,
+    refresh: vi.fn(),
+    loadMore: vi.fn(),
+  }),
 }));
 
 vi.mock('@/services/themeService', () => ({
@@ -205,6 +213,15 @@ vi.mock('@/components/organisms/NowPlayingQueueModal', () => ({
 vi.mock('@/components/organisms/FullscreenNowPlaying', () => ({
   FullscreenNowPlaying: () => null,
 }));
+vi.mock('@/services/acquisitionService', () => ({
+  getAcquisitionQueue: () => Promise.resolve([]),
+  onAcquisitionJobAdded: () => Promise.resolve(() => undefined),
+  onAcquisitionProgress: () => Promise.resolve(() => undefined),
+  onAcquisitionCompleted: () => Promise.resolve(() => undefined),
+  onAcquisitionFailed: () => Promise.resolve(() => undefined),
+  cancelAcquisition: vi.fn(),
+  retryAcquisition: vi.fn(),
+}));
 
 import { DesktopLibraryPage } from './DesktopLibraryPage';
 
@@ -225,8 +242,9 @@ describe('DesktopLibraryPage', () => {
   it('connects scanned tracks and transport controls to native playback', () => {
     render(<DesktopLibraryPage />);
 
-    expect(screen.getByText(/Bebop local-first/i)).toBeInTheDocument();
-    expect(screen.getByText('Native Rust output')).toBeInTheDocument();
+    // Home leads with listening data, not a marketing header.
+    expect(screen.queryByText(/Bebop local-first/i)).not.toBeInTheDocument();
+    expect(screen.queryByText('Native Rust output')).not.toBeInTheDocument();
     expect(screen.getByText('Native-only actions')).toBeInTheDocument();
     expect(screen.getByText(/Continue Listening/i)).toBeInTheDocument();
     expect(screen.getAllByText('Scanned track')).toHaveLength(1);

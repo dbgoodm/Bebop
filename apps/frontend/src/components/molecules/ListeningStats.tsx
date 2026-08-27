@@ -9,10 +9,7 @@ import {
   Radio,
   History,
   HardDrive,
-  TrendingUp,
-  ShieldCheck,
   Award,
-  Zap,
   Quote,
 } from 'lucide-react';
 import { ListeningStatsData } from '@/types';
@@ -59,7 +56,6 @@ export const ListeningStats: React.FC<ListeningStatsProps> = ({
       id: 'time-listened',
       label: 'TIME LISTENED',
       value: stats.timeListened,
-      subtext: `▲ ${stats.timeListenedGrowth}`,
       icon: Clock,
       colorConfig: statsColors?.timeListened || {
         borderTop: currentTheme.primary,
@@ -73,7 +69,6 @@ export const ListeningStats: React.FC<ListeningStatsProps> = ({
       id: 'total-tracks',
       label: 'TOTAL TRACKS',
       value: stats.totalTracks,
-      subtext: stats.verifiedLocal,
       icon: Music,
       colorConfig: statsColors?.totalTracks || {
         borderTop: currentTheme.secondary,
@@ -87,7 +82,6 @@ export const ListeningStats: React.FC<ListeningStatsProps> = ({
       id: 'artists-in-library',
       label: 'ARTISTS IN LIBRARY',
       value: stats.totalArtists,
-      subtext: stats.artistsCachedStatus,
       icon: Users,
       colorConfig: statsColors?.artists || {
         borderTop: '#818cf8',
@@ -101,7 +95,6 @@ export const ListeningStats: React.FC<ListeningStatsProps> = ({
       id: 'albums',
       label: 'ALBUMS',
       value: stats.totalAlbums,
-      subtext: stats.albumsMastering,
       icon: Disc3,
       colorConfig: statsColors?.albums || {
         borderTop: '#ef4444',
@@ -115,7 +108,6 @@ export const ListeningStats: React.FC<ListeningStatsProps> = ({
       id: 'library-duration',
       label: 'LIBRARY DURATION',
       value: stats.libraryDuration,
-      subtext: stats.libraryDurationSub,
       icon: Hourglass,
       colorConfig: statsColors?.duration || {
         borderTop: '#10b981',
@@ -132,8 +124,6 @@ export const ListeningStats: React.FC<ListeningStatsProps> = ({
       id: 'most-listened-artist',
       label: 'TOP ARTIST AFFINITY',
       value: stats.mostListenedArtist,
-      subtext: stats.artistLosslessHours,
-      badgeText: 'Rank #1 Heavy Rotation',
       icon: Award,
       badgeColor: currentTheme.primary,
     },
@@ -141,8 +131,6 @@ export const ListeningStats: React.FC<ListeningStatsProps> = ({
       id: 'top-genre-affinity',
       label: 'ACOUSTIC SPECTRUM',
       value: stats.topGenre,
-      subtext: stats.topGenrePercentage,
-      badgeText: 'Dominant Signature',
       icon: Radio,
       badgeColor: currentTheme.secondary,
     },
@@ -150,8 +138,6 @@ export const ListeningStats: React.FC<ListeningStatsProps> = ({
       id: 'favorite-acoustic-era',
       label: 'FAVORITE MASTERS ERA',
       value: stats.favoriteEra,
-      subtext: stats.dynamicRange,
-      badgeText: 'Audiophile Grade',
       icon: History,
       badgeColor: currentTheme.accentTertiary || '#c084fc',
     },
@@ -159,8 +145,6 @@ export const ListeningStats: React.FC<ListeningStatsProps> = ({
       id: 'library-size-disk',
       label: 'STORAGE ON DISK',
       value: stats.libraryDiskSize,
-      subtext: stats.losslessPercentage,
-      badgeText: 'Bit-Perfect Local',
       icon: HardDrive,
       badgeColor: '#10b981',
     },
@@ -267,26 +251,6 @@ export const ListeningStats: React.FC<ListeningStatsProps> = ({
                 </span>
               </div>
 
-              {/* Card Footer: Subtext & Growth pill */}
-              <div className="flex items-center justify-between gap-1 pt-2 border-t border-neutral-800/60">
-                <span
-                  className="text-xs font-semibold tracking-tight truncate flex items-center gap-1"
-                  style={{ color: item.colorConfig.badgeText }}
-                >
-                  {item.subtext.startsWith('▲') ? (
-                    <TrendingUp className="w-3 h-3 shrink-0" />
-                  ) : item.subtext.includes('Verified') ? (
-                    <ShieldCheck className="w-3 h-3 shrink-0" />
-                  ) : (
-                    <Zap className="w-3 h-3 shrink-0" />
-                  )}
-                  <span className="truncate">{item.subtext}</span>
-                </span>
-                <span
-                  className="w-1.5 h-1.5 rounded-full shrink-0"
-                  style={{ backgroundColor: item.colorConfig.borderTop }}
-                />
-              </div>
             </div>
           );
         })}
@@ -317,15 +281,10 @@ export const ListeningStats: React.FC<ListeningStatsProps> = ({
                     {item.label}
                   </span>
                   <span
-                    className="px-2 py-0.5 rounded text-[10px] font-mono font-semibold border truncate"
-                    style={{
-                      backgroundColor: `${item.badgeColor}18`,
-                      color: item.badgeColor,
-                      borderColor: `${item.badgeColor}50`,
-                    }}
-                  >
-                    {item.badgeText}
-                  </span>
+                    className="w-2.5 h-2.5 rounded-full"
+                    style={{ backgroundColor: item.badgeColor }}
+                    aria-hidden="true"
+                  />
                 </div>
 
                 <div className="my-2.5 flex items-center gap-3">
@@ -347,21 +306,6 @@ export const ListeningStats: React.FC<ListeningStatsProps> = ({
                   </span>
                 </div>
 
-                <div
-                  className="pt-2 border-t flex items-center justify-between text-xs"
-                  style={{ borderColor: currentTheme.borderColor }}
-                >
-                  <span
-                    className="font-medium truncate tracking-tight"
-                    style={{ color: item.badgeColor }}
-                  >
-                    {item.subtext}
-                  </span>
-                  <span
-                    className="w-1.5 h-1.5 rounded-full shrink-0"
-                    style={{ backgroundColor: item.badgeColor }}
-                  />
-                </div>
               </div>
             );
           })}

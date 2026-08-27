@@ -24,8 +24,7 @@ bit-perfect path.
 ## An integration is unavailable
 
 Local playback is independent of every integration. Last.fm needs release application credentials
-and a user session. Discord needs the desktop client and release application identifier. slskd must
-be installed separately and reachable; non-loopback endpoints require HTTPS and confirmation.
+and a user session. Discord needs the desktop client and release application identifier.
 Errors stay visible in Settings and persisted outboxes retry only where safe.
 
 ## An update fails

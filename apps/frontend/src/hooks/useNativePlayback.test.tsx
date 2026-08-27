@@ -126,7 +126,8 @@ describe('useNativePlayback', () => {
       });
     });
     expect(result.current.playback.positionMs).toBe(1_250);
-    expect(result.current.spectrum?.bins).toHaveLength(64);
+    // Spectrum frames bypass React state so a 60 Hz feed cannot re-render consumers.
+    expect(result.current.getSpectrumBins()).toHaveLength(64);
 
     await act(async () => {
       await result.current.playTrack(track);

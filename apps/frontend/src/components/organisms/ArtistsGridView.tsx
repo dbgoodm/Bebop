@@ -6,12 +6,18 @@ interface ArtistsGridViewProps {
   artists?: ArtistItem[];
   onSelectArtist?: (artist: ArtistItem) => void;
   onPlayArtist?: (artist: ArtistItem) => void;
+  hasMore?: boolean;
+  isLoading?: boolean;
+  onLoadMore?: () => void;
 }
 
 export const ArtistsGridView: React.FC<ArtistsGridViewProps> = ({
   artists = [],
   onSelectArtist,
   onPlayArtist,
+  hasMore = false,
+  isLoading = false,
+  onLoadMore,
 }) => {
   return (
     <div id="artists-grid-container" className="w-full flex flex-col gap-4 font-sans">
@@ -45,7 +51,7 @@ export const ArtistsGridView: React.FC<ArtistsGridViewProps> = ({
                   e.stopPropagation();
                   onPlayArtist?.(artist);
                 }}
-                className="absolute inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-pointer"
+                className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-pointer"
                 aria-label={`Play ${artist.name}`}
               >
                 <div className="w-11 h-11 rounded-full bg-amber-500 text-black flex items-center justify-center shadow-lg hover:scale-105 transition-transform">
@@ -85,6 +91,16 @@ export const ArtistsGridView: React.FC<ArtistsGridViewProps> = ({
           </div>
         ))}
       </div>
+      {hasMore ? (
+        <button
+          type="button"
+          onClick={onLoadMore}
+          disabled={isLoading}
+          className="self-center rounded border border-neutral-700 px-4 py-2 text-xs font-semibold text-neutral-300 transition hover:border-amber-500/50 hover:text-amber-300 disabled:opacity-50"
+        >
+          {isLoading ? 'Loading artists…' : 'Load more artists'}
+        </button>
+      ) : null}
     </div>
   );
 };

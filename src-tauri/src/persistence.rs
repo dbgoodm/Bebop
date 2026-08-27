@@ -1,5 +1,5 @@
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     fs,
     path::{Path, PathBuf},
     sync::mpsc::{self, Receiver, Sender},
@@ -9,31 +9,84 @@ use std::{
 
 use chrono::Utc;
 use rusqlite::{Connection, OpenFlags, OptionalExtension, Transaction, params};
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::{
     AppError,
-    acquisition::AcquisitionRecord,
     catalog::{
-        AlbumDetail, AlbumSummary, ArtistDetail, ArtistSummary, AudioExtension, CatalogQuery,
-        DiscoveryCatalog, DiscoveryQuery, GenreSummary, LibraryRoot, RootAvailability,
-        ScannedLibrary, SortDirection, TrackPage, TrackSort, TrackSummary, WatchMode,
+        AlbumDetail, AlbumSummary, ArtistCatalogPage, ArtistCatalogQuery, ArtistDetail,
+        ArtistSummary, AudioExtension, AudioSpecs, CatalogQuery, DiscoveryCatalog, DiscoveryQuery,
+        EntityAvailability, EntityProvenance, GenreSummary, LibraryRoot, RemoteTrackPayload,
+        RootAvailability, ScannedLibrary, SortDirection, TrackPage, TrackSort, TrackSummary,
+        UnifiedAlbumDetail, UnifiedTrackSummary, WatchMode,
     },
     integrations::IntegrationJob,
     metadata::{CachedArtwork, MetadataPatch},
+    metadata_jobs::{MetadataJob, MetadataJobScope, MetadataJobStatus},
+    song_dna::{
+        AUDIO_FEATURE_VERSION, AudioFeatures, GenerationCandidate, Playlist,
+        PlaylistGenerationRequest,
+    },
     user_state::{
         FavoriteReference, HomeSnapshot, PersistentPlayerState, PlayerPreferences, PlaylistSummary,
     },
 };
 
-const SCHEMA_VERSION: i64 = 4;
+const SCHEMA_VERSION: i64 = 13;
 const MIGRATIONS: &[(i64, &str)] = &[
     (1, include_str!("migrations/0001_catalog.sql")),
     (2, include_str!("migrations/0002_live_indexing.sql")),
     (3, include_str!("migrations/0003_player_state.sql")),
     (4, include_str!("migrations/0004_acquisition.sql")),
+    (5, include_str!("migrations/0005_catalog_performance.sql")),
+    (6, include_str!("migrations/0006_lyrics_cache.sql")),
+    (7, include_str!("migrations/0007_metadata_jobs.sql")),
+    (8, include_str!("migrations/0008_song_dna.sql")),
+    (9, include_str!("migrations/0009_remote_catalog.sql")),
+    (10, include_str!("migrations/0010_cleanup_acquisition.sql")),
+    (11, include_str!("migrations/0011_remote_tracklists.sql")),
+    (12, include_str!("migrations/0012_discography_sync.sql")),
+    (
+        13,
+        include_str!("migrations/0013_remote_provenance_cleanup.sql"),
+    ),
 ];
 type CatalogSignatures = HashMap<String, (String, u64, Option<i64>, bool)>;
+
+/// Minimal artist row used by the library-wide discography sync.
+#[derive(Clone, Debug)]
+pub(crate) struct ArtistSyncRow {
+    pub id: String,
+    pub name: String,
+}
+
+/// Remote release awaiting a cached tracklist.
+#[derive(Clone, Debug)]
+pub(crate) struct ReleaseSyncRow {
+    pub id: String,
+    pub musicbrainz_release_group_id: String,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RemoteReleasePayload {
+    pub id: String,
+    pub musicbrainz_release_group_id: String,
+    pub title: String,
+    pub year: Option<u32>,
+    pub date: Option<String>,
+    pub primary_type: Option<String>,
+    pub secondary_types: Vec<String>,
+    pub disambiguation: Option<String>,
+    pub catalog_number: Option<String>,
+    pub label: Option<String>,
+    pub artwork_url: Option<String>,
+    pub artwork_attribution: Option<String>,
+    pub artwork_source: Option<String>,
+    pub artists: Vec<crate::ArtistReference>,
+    pub raw_json: String,
+}
 
 #[derive(Clone)]
 pub(crate) struct DatabaseWorker {
@@ -46,6 +99,48 @@ pub(crate) struct Reconciliation {
 }
 
 enum Request {
+    SaveRemoteDiscography {
+        artist_mbid: String,
+        artist_name: String,
+        releases: Vec<RemoteReleasePayload>,
+        reply: Sender<Result<(), AppError>>,
+    },
+    #[allow(dead_code)]
+    SaveRemoteTracks {
+        release_id: String,
+        tracks: Vec<RemoteTrackPayload>,
+        reply: Sender<Result<(), AppError>>,
+    },
+    RecordEntityMerge {
+        local_type: String,
+        local_id: String,
+        remote_id: String,
+        reviewed: bool,
+        reply: Sender<Result<(), AppError>>,
+    },
+    RemoveEntityMerge {
+        local_type: String,
+        local_id: String,
+        remote_id: String,
+        reply: Sender<Result<(), AppError>>,
+    },
+    SetArtistMusicbrainzId {
+        artist_id: String,
+        mbid: String,
+        reply: Sender<Result<(), AppError>>,
+    },
+    ListArtistsForDiscographySync {
+        stale_after_days: i64,
+        reply: Sender<Result<Vec<ArtistSyncRow>, AppError>>,
+    },
+    MarkArtistDiscographyChecked {
+        artist_id: String,
+        reply: Sender<Result<(), AppError>>,
+    },
+    ResolveAlbumReleaseGroup {
+        album_id: String,
+        reply: Sender<Result<Option<ReleaseSyncRow>, AppError>>,
+    },
     ListRoots(Sender<Result<Vec<LibraryRoot>, AppError>>),
     AddRoot {
         canonical_path: String,
@@ -87,6 +182,10 @@ enum Request {
         query: DiscoveryQuery,
         reply: Sender<Result<DiscoveryCatalog, AppError>>,
     },
+    QueryArtistsPage {
+        query: ArtistCatalogQuery,
+        reply: Sender<Result<ArtistCatalogPage, AppError>>,
+    },
     GetArtistDetail {
         id: String,
         reply: Sender<Result<ArtistDetail, AppError>>,
@@ -94,6 +193,10 @@ enum Request {
     GetAlbumDetail {
         id: String,
         reply: Sender<Result<AlbumDetail, AppError>>,
+    },
+    GetUnifiedAlbumDetail {
+        id: String,
+        reply: Sender<Result<UnifiedAlbumDetail, AppError>>,
     },
     SaveMetadataDraft {
         track_id: String,
@@ -113,15 +216,61 @@ enum Request {
         track_id: String,
         reply: Sender<Result<TrackSummary, AppError>>,
     },
+    GetEmbeddedLyrics {
+        track_id: String,
+        reply: Sender<Result<Option<String>, AppError>>,
+    },
+    GetLyricsCache {
+        cache_key: String,
+        reply: Sender<Result<Option<String>, AppError>>,
+    },
+    SaveLyricsCache {
+        cache_key: String,
+        document_json: String,
+        source_url: Option<String>,
+        reply: Sender<Result<(), AppError>>,
+    },
     GetEnrichmentCache {
         query_key: String,
         reply: Sender<Result<Option<String>, AppError>>,
     },
     SaveEnrichmentCache {
-        track_id: String,
+        track_id: Option<String>,
         query_key: String,
         result_json: String,
         reply: Sender<Result<(), AppError>>,
+    },
+    CreateMetadataJob {
+        scope: MetadataJobScope,
+        scope_id: Option<String>,
+        reply: Sender<Result<MetadataJob, AppError>>,
+    },
+    GetMetadataJob {
+        job_id: String,
+        reply: Sender<Result<MetadataJob, AppError>>,
+    },
+    ListMetadataJobs(Sender<Result<Vec<MetadataJob>, AppError>>),
+    PendingMetadataJobTracks {
+        job_id: String,
+        retry_errors: bool,
+        reply: Sender<Result<Vec<String>, AppError>>,
+    },
+    RecordMetadataJobTrack {
+        job_id: String,
+        track_id: String,
+        status: String,
+        source: Option<String>,
+        fingerprint: Option<String>,
+        error_json: Option<String>,
+        candidates_json: Option<String>,
+        reply: Sender<Result<MetadataJob, AppError>>,
+    },
+    SetMetadataJobStatus {
+        job_id: String,
+        status: MetadataJobStatus,
+        current_track_id: Option<String>,
+        last_error: Option<String>,
+        reply: Sender<Result<MetadataJob, AppError>>,
     },
     SaveArtwork {
         artwork: CachedArtwork,
@@ -163,6 +312,24 @@ enum Request {
         reply: Sender<Result<PlaylistSummary, AppError>>,
     },
     ListPlaylists(Sender<Result<Vec<PlaylistSummary>, AppError>>),
+    GetPlaylist {
+        playlist_id: String,
+        reply: Sender<Result<Playlist, AppError>>,
+    },
+    RenamePlaylist {
+        playlist_id: String,
+        name: String,
+        reply: Sender<Result<PlaylistSummary, AppError>>,
+    },
+    DeletePlaylist {
+        playlist_id: String,
+        reply: Sender<Result<(), AppError>>,
+    },
+    DuplicatePlaylist {
+        playlist_id: String,
+        name: String,
+        reply: Sender<Result<PlaylistSummary, AppError>>,
+    },
     GetPlaylistTracks {
         playlist_id: String,
         reply: Sender<Result<Vec<TrackSummary>, AppError>>,
@@ -172,6 +339,21 @@ enum Request {
         track_ids: Vec<String>,
         reply: Sender<Result<(), AppError>>,
     },
+    SaveGeneratedPlaylist {
+        name: String,
+        request_json: String,
+        track_ids: Vec<String>,
+        reply: Sender<Result<PlaylistSummary, AppError>>,
+    },
+    GetAudioFeatures {
+        track_id: String,
+        reply: Sender<Result<Option<AudioFeatures>, AppError>>,
+    },
+    SaveAudioFeatures {
+        features: AudioFeatures,
+        reply: Sender<Result<(), AppError>>,
+    },
+    ListGenerationCandidates(Sender<Result<Vec<GenerationCandidate>, AppError>>),
     StartListeningSession {
         id: String,
         track_id: String,
@@ -218,15 +400,6 @@ enum Request {
         retry: bool,
         reply: Sender<Result<(), AppError>>,
     },
-    SaveAcquisitionJob {
-        record: Box<AcquisitionRecord>,
-        reply: Sender<Result<(), AppError>>,
-    },
-    GetAcquisitionJob {
-        id: String,
-        reply: Sender<Result<AcquisitionRecord, AppError>>,
-    },
-    ListAcquisitionJobs(Sender<Result<Vec<AcquisitionRecord>, AppError>>),
 }
 
 impl DatabaseWorker {
@@ -365,12 +538,119 @@ impl DatabaseWorker {
         self.request(|reply| Request::QueryDiscovery { query, reply })
     }
 
+    pub(crate) fn query_artists_page(
+        &self,
+        query: ArtistCatalogQuery,
+    ) -> Result<ArtistCatalogPage, AppError> {
+        self.request(|reply| Request::QueryArtistsPage { query, reply })
+    }
+
     pub(crate) fn get_artist_detail(&self, id: String) -> Result<ArtistDetail, AppError> {
         self.request(|reply| Request::GetArtistDetail { id, reply })
     }
 
+    pub(crate) fn save_remote_discography(
+        &self,
+        artist_mbid: String,
+        artist_name: String,
+        releases: Vec<RemoteReleasePayload>,
+    ) -> Result<(), AppError> {
+        self.request(|reply| Request::SaveRemoteDiscography {
+            artist_mbid,
+            artist_name,
+            releases,
+            reply,
+        })
+    }
+
+    #[allow(dead_code)]
+    pub(crate) fn save_remote_tracks(
+        &self,
+        release_id: String,
+        tracks: Vec<RemoteTrackPayload>,
+    ) -> Result<(), AppError> {
+        self.request(|reply| Request::SaveRemoteTracks {
+            release_id,
+            tracks,
+            reply,
+        })
+    }
+
+    pub(crate) fn record_entity_merge(
+        &self,
+        local_type: String,
+        local_id: String,
+        remote_id: String,
+        reviewed: bool,
+    ) -> Result<(), AppError> {
+        self.request(|reply| Request::RecordEntityMerge {
+            local_type,
+            local_id,
+            remote_id,
+            reviewed,
+            reply,
+        })
+    }
+
+    pub(crate) fn remove_entity_merge(
+        &self,
+        local_type: String,
+        local_id: String,
+        remote_id: String,
+    ) -> Result<(), AppError> {
+        self.request(|reply| Request::RemoveEntityMerge {
+            local_type,
+            local_id,
+            remote_id,
+            reply,
+        })
+    }
+
+    pub(crate) fn set_artist_musicbrainz_id(
+        &self,
+        artist_id: String,
+        mbid: String,
+    ) -> Result<(), AppError> {
+        self.request(|reply| Request::SetArtistMusicbrainzId {
+            artist_id,
+            mbid,
+            reply,
+        })
+    }
+
+    pub(crate) fn list_artists_for_discography_sync(
+        &self,
+        stale_after_days: i64,
+    ) -> Result<Vec<ArtistSyncRow>, AppError> {
+        self.request(|reply| Request::ListArtistsForDiscographySync {
+            stale_after_days,
+            reply,
+        })
+    }
+
+    pub(crate) fn mark_artist_discography_checked(
+        &self,
+        artist_id: String,
+    ) -> Result<(), AppError> {
+        self.request(|reply| Request::MarkArtistDiscographyChecked { artist_id, reply })
+    }
+
+    pub(crate) fn resolve_album_release_group(
+        &self,
+        album_id: String,
+    ) -> Result<Option<ReleaseSyncRow>, AppError> {
+        self.request(|reply| Request::ResolveAlbumReleaseGroup { album_id, reply })
+    }
+
     pub(crate) fn get_album_detail(&self, id: String) -> Result<AlbumDetail, AppError> {
         self.request(|reply| Request::GetAlbumDetail { id, reply })
+    }
+
+    pub(crate) fn get_unified_album_detail(
+        &self,
+        id: String,
+    ) -> Result<UnifiedAlbumDetail, AppError> {
+        self.request(|reply| Request::GetUnifiedAlbumDetail { id, reply })
     }
 
     pub(crate) fn save_metadata_draft(
@@ -402,6 +682,28 @@ impl DatabaseWorker {
         self.request(|reply| Request::GetTrack { track_id, reply })
     }
 
+    pub(crate) fn get_embedded_lyrics(&self, track_id: String) -> Result<Option<String>, AppError> {
+        self.request(|reply| Request::GetEmbeddedLyrics { track_id, reply })
+    }
+
+    pub(crate) fn get_lyrics_cache(&self, cache_key: String) -> Result<Option<String>, AppError> {
+        self.request(|reply| Request::GetLyricsCache { cache_key, reply })
+    }
+
+    pub(crate) fn save_lyrics_cache(
+        &self,
+        cache_key: String,
+        document_json: String,
+        source_url: Option<String>,
+    ) -> Result<(), AppError> {
+        self.request(|reply| Request::SaveLyricsCache {
+            cache_key,
+            document_json,
+            source_url,
+            reply,
+        })
+    }
+
     pub(crate) fn get_enrichment_cache(
         &self,
         query_key: String,
@@ -411,7 +713,7 @@ impl DatabaseWorker {
 
     pub(crate) fn save_enrichment_cache(
         &self,
-        track_id: String,
+        track_id: Option<String>,
         query_key: String,
         result_json: String,
     ) -> Result<(), AppError> {
@@ -419,6 +721,77 @@ impl DatabaseWorker {
             track_id,
             query_key,
             result_json,
+            reply,
+        })
+    }
+
+    pub(crate) fn create_metadata_job(
+        &self,
+        scope: MetadataJobScope,
+        scope_id: Option<String>,
+    ) -> Result<MetadataJob, AppError> {
+        self.request(|reply| Request::CreateMetadataJob {
+            scope,
+            scope_id,
+            reply,
+        })
+    }
+
+    pub(crate) fn get_metadata_job(&self, job_id: String) -> Result<MetadataJob, AppError> {
+        self.request(|reply| Request::GetMetadataJob { job_id, reply })
+    }
+
+    pub(crate) fn list_metadata_jobs(&self) -> Result<Vec<MetadataJob>, AppError> {
+        self.request(Request::ListMetadataJobs)
+    }
+
+    pub(crate) fn pending_metadata_job_tracks(
+        &self,
+        job_id: String,
+        retry_errors: bool,
+    ) -> Result<Vec<String>, AppError> {
+        self.request(|reply| Request::PendingMetadataJobTracks {
+            job_id,
+            retry_errors,
+            reply,
+        })
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) fn record_metadata_job_track(
+        &self,
+        job_id: String,
+        track_id: String,
+        status: String,
+        source: Option<String>,
+        fingerprint: Option<String>,
+        error_json: Option<String>,
+        candidates_json: Option<String>,
+    ) -> Result<MetadataJob, AppError> {
+        self.request(|reply| Request::RecordMetadataJobTrack {
+            job_id,
+            track_id,
+            status,
+            source,
+            fingerprint,
+            error_json,
+            candidates_json,
+            reply,
+        })
+    }
+
+    pub(crate) fn set_metadata_job_status(
+        &self,
+        job_id: String,
+        status: MetadataJobStatus,
+        current_track_id: Option<String>,
+        last_error: Option<String>,
+    ) -> Result<MetadataJob, AppError> {
+        self.request(|reply| Request::SetMetadataJobStatus {
+            job_id,
+            status,
+            current_track_id,
+            last_error,
             reply,
         })
     }
@@ -498,6 +871,38 @@ impl DatabaseWorker {
         self.request(Request::ListPlaylists)
     }
 
+    pub(crate) fn get_playlist(&self, playlist_id: String) -> Result<Playlist, AppError> {
+        self.request(|reply| Request::GetPlaylist { playlist_id, reply })
+    }
+
+    pub(crate) fn rename_playlist(
+        &self,
+        playlist_id: String,
+        name: String,
+    ) -> Result<PlaylistSummary, AppError> {
+        self.request(|reply| Request::RenamePlaylist {
+            playlist_id,
+            name,
+            reply,
+        })
+    }
+
+    pub(crate) fn delete_playlist(&self, playlist_id: String) -> Result<(), AppError> {
+        self.request(|reply| Request::DeletePlaylist { playlist_id, reply })
+    }
+
+    pub(crate) fn duplicate_playlist(
+        &self,
+        playlist_id: String,
+        name: String,
+    ) -> Result<PlaylistSummary, AppError> {
+        self.request(|reply| Request::DuplicatePlaylist {
+            playlist_id,
+            name,
+            reply,
+        })
+    }
+
     pub(crate) fn get_playlist_tracks(
         &self,
         playlist_id: String,
@@ -515,6 +920,35 @@ impl DatabaseWorker {
             track_ids,
             reply,
         })
+    }
+
+    pub(crate) fn save_generated_playlist(
+        &self,
+        name: String,
+        request_json: String,
+        track_ids: Vec<String>,
+    ) -> Result<PlaylistSummary, AppError> {
+        self.request(|reply| Request::SaveGeneratedPlaylist {
+            name,
+            request_json,
+            track_ids,
+            reply,
+        })
+    }
+
+    pub(crate) fn get_audio_features(
+        &self,
+        track_id: String,
+    ) -> Result<Option<AudioFeatures>, AppError> {
+        self.request(|reply| Request::GetAudioFeatures { track_id, reply })
+    }
+
+    pub(crate) fn save_audio_features(&self, features: AudioFeatures) -> Result<(), AppError> {
+        self.request(|reply| Request::SaveAudioFeatures { features, reply })
+    }
+
+    pub(crate) fn list_generation_candidates(&self) -> Result<Vec<GenerationCandidate>, AppError> {
+        self.request(Request::ListGenerationCandidates)
     }
 
     pub(crate) fn start_listening_session(
@@ -605,21 +1039,6 @@ impl DatabaseWorker {
             retry,
             reply,
         })
-    }
-
-    pub(crate) fn save_acquisition_job(&self, record: AcquisitionRecord) -> Result<(), AppError> {
-        self.request(|reply| Request::SaveAcquisitionJob {
-            record: Box::new(record),
-            reply,
-        })
-    }
-
-    pub(crate) fn get_acquisition_job(&self, id: String) -> Result<AcquisitionRecord, AppError> {
-        self.request(|reply| Request::GetAcquisitionJob { id, reply })
-    }
-
-    pub(crate) fn list_acquisition_jobs(&self) -> Result<Vec<AcquisitionRecord>, AppError> {
-        self.request(Request::ListAcquisitionJobs)
     }
 }
 
@@ -772,6 +1191,78 @@ fn migrate(connection: &mut Connection) -> Result<(), AppError> {
 fn database_loop(mut connection: Connection, receiver: Receiver<Request>) {
     while let Ok(request) = receiver.recv() {
         match request {
+            Request::SaveRemoteDiscography {
+                artist_mbid,
+                artist_name,
+                releases,
+                reply,
+            } => {
+                send(
+                    reply,
+                    save_remote_discography(&mut connection, &artist_mbid, &artist_name, &releases),
+                );
+            }
+            Request::SaveRemoteTracks {
+                release_id,
+                tracks,
+                reply,
+            } => {
+                send(
+                    reply,
+                    save_remote_tracks(&mut connection, &release_id, &tracks),
+                );
+            }
+            Request::RecordEntityMerge {
+                local_type,
+                local_id,
+                remote_id,
+                reviewed,
+                reply,
+            } => {
+                send(
+                    reply,
+                    record_entity_merge(&connection, &local_type, &local_id, &remote_id, reviewed),
+                );
+            }
+            Request::RemoveEntityMerge {
+                local_type,
+                local_id,
+                remote_id,
+                reply,
+            } => {
+                send(
+                    reply,
+                    remove_entity_merge(&connection, &local_type, &local_id, &remote_id),
+                );
+            }
+            Request::SetArtistMusicbrainzId {
+                artist_id,
+                mbid,
+                reply,
+            } => {
+                send(
+                    reply,
+                    set_artist_musicbrainz_id(&connection, &artist_id, &mbid),
+                );
+            }
+            Request::ListArtistsForDiscographySync {
+                stale_after_days,
+                reply,
+            } => {
+                send(
+                    reply,
+                    list_artists_for_discography_sync(&connection, stale_after_days),
+                );
+            }
+            Request::MarkArtistDiscographyChecked { artist_id, reply } => {
+                send(
+                    reply,
+                    mark_artist_discography_checked(&connection, &artist_id),
+                );
+            }
+            Request::ResolveAlbumReleaseGroup { album_id, reply } => {
+                send(reply, resolve_album_release_group(&connection, &album_id));
+            }
             Request::ListRoots(reply) => send(reply, list_roots(&connection)),
             Request::AddRoot {
                 canonical_path,
@@ -812,11 +1303,17 @@ fn database_loop(mut connection: Connection, receiver: Receiver<Request>) {
             Request::QueryDiscovery { query, reply } => {
                 send(reply, query_discovery(&connection, query));
             }
+            Request::QueryArtistsPage { query, reply } => {
+                send(reply, query_artists_page(&connection, query));
+            }
             Request::GetArtistDetail { id, reply } => {
                 send(reply, get_artist_detail(&connection, &id));
             }
             Request::GetAlbumDetail { id, reply } => {
                 send(reply, get_album_detail(&connection, &id));
+            }
+            Request::GetUnifiedAlbumDetail { id, reply } => {
+                send(reply, get_unified_album_detail(&connection, &id));
             }
             Request::SaveMetadataDraft {
                 track_id,
@@ -838,6 +1335,28 @@ fn database_loop(mut connection: Connection, receiver: Receiver<Request>) {
             Request::GetTrack { track_id, reply } => {
                 send(reply, get_track(&connection, &track_id));
             }
+            Request::GetEmbeddedLyrics { track_id, reply } => {
+                send(reply, get_embedded_lyrics(&connection, &track_id));
+            }
+            Request::GetLyricsCache { cache_key, reply } => {
+                send(reply, get_lyrics_cache(&connection, &cache_key));
+            }
+            Request::SaveLyricsCache {
+                cache_key,
+                document_json,
+                source_url,
+                reply,
+            } => {
+                send(
+                    reply,
+                    save_lyrics_cache(
+                        &connection,
+                        &cache_key,
+                        &document_json,
+                        source_url.as_deref(),
+                    ),
+                );
+            }
             Request::GetEnrichmentCache { query_key, reply } => {
                 send(reply, get_enrichment_cache(&connection, &query_key));
             }
@@ -849,9 +1368,76 @@ fn database_loop(mut connection: Connection, receiver: Receiver<Request>) {
             } => {
                 send(
                     reply,
-                    save_enrichment_cache(&connection, &track_id, &query_key, &result_json),
+                    save_enrichment_cache(
+                        &connection,
+                        track_id.as_deref(),
+                        &query_key,
+                        &result_json,
+                    ),
                 );
             }
+            Request::CreateMetadataJob {
+                scope,
+                scope_id,
+                reply,
+            } => {
+                send(
+                    reply,
+                    create_metadata_job(&mut connection, scope, scope_id.as_deref()),
+                );
+            }
+            Request::GetMetadataJob { job_id, reply } => {
+                send(reply, get_metadata_job(&connection, &job_id));
+            }
+            Request::ListMetadataJobs(reply) => send(reply, list_metadata_jobs(&connection)),
+            Request::PendingMetadataJobTracks {
+                job_id,
+                retry_errors,
+                reply,
+            } => {
+                send(
+                    reply,
+                    pending_metadata_job_tracks(&connection, &job_id, retry_errors),
+                );
+            }
+            Request::RecordMetadataJobTrack {
+                job_id,
+                track_id,
+                status,
+                source,
+                fingerprint,
+                error_json,
+                candidates_json,
+                reply,
+            } => send(
+                reply,
+                record_metadata_job_track(
+                    &mut connection,
+                    &job_id,
+                    &track_id,
+                    &status,
+                    source.as_deref(),
+                    fingerprint.as_deref(),
+                    error_json.as_deref(),
+                    candidates_json.as_deref(),
+                ),
+            ),
+            Request::SetMetadataJobStatus {
+                job_id,
+                status,
+                current_track_id,
+                last_error,
+                reply,
+            } => send(
+                reply,
+                set_metadata_job_status(
+                    &connection,
+                    &job_id,
+                    status,
+                    current_track_id.as_deref(),
+                    last_error.as_deref(),
+                ),
+            ),
             Request::SaveArtwork { artwork, reply } => {
                 send(reply, save_artwork(&connection, &artwork));
             }
@@ -899,6 +1485,29 @@ fn database_loop(mut connection: Connection, receiver: Receiver<Request>) {
                 send(reply, create_playlist(&connection, &name));
             }
             Request::ListPlaylists(reply) => send(reply, list_playlists(&connection)),
+            Request::GetPlaylist { playlist_id, reply } => {
+                send(reply, get_playlist(&connection, &playlist_id));
+            }
+            Request::RenamePlaylist {
+                playlist_id,
+                name,
+                reply,
+            } => {
+                send(reply, rename_playlist(&connection, &playlist_id, &name));
+            }
+            Request::DeletePlaylist { playlist_id, reply } => {
+                send(reply, delete_playlist(&connection, &playlist_id));
+            }
+            Request::DuplicatePlaylist {
+                playlist_id,
+                name,
+                reply,
+            } => {
+                send(
+                    reply,
+                    duplicate_playlist(&mut connection, &playlist_id, &name),
+                );
+            }
             Request::GetPlaylistTracks { playlist_id, reply } => {
                 send(reply, get_playlist_tracks(&connection, &playlist_id));
             }
@@ -910,6 +1519,24 @@ fn database_loop(mut connection: Connection, receiver: Receiver<Request>) {
                 reply,
                 set_playlist_tracks(&mut connection, &playlist_id, &track_ids),
             ),
+            Request::SaveGeneratedPlaylist {
+                name,
+                request_json,
+                track_ids,
+                reply,
+            } => send(
+                reply,
+                save_generated_playlist(&mut connection, &name, &request_json, &track_ids),
+            ),
+            Request::GetAudioFeatures { track_id, reply } => {
+                send(reply, get_audio_features(&connection, &track_id));
+            }
+            Request::SaveAudioFeatures { features, reply } => {
+                send(reply, save_audio_features(&connection, &features));
+            }
+            Request::ListGenerationCandidates(reply) => {
+                send(reply, list_generation_candidates(&connection));
+            }
             Request::StartListeningSession {
                 id,
                 track_id,
@@ -965,15 +1592,6 @@ fn database_loop(mut connection: Connection, receiver: Receiver<Request>) {
                 reply,
                 fail_integration_job(&connection, &id, attempts, &error, retry),
             ),
-            Request::SaveAcquisitionJob { record, reply } => {
-                send(reply, save_acquisition_job(&connection, &record));
-            }
-            Request::GetAcquisitionJob { id, reply } => {
-                send(reply, get_acquisition_job(&connection, &id));
-            }
-            Request::ListAcquisitionJobs(reply) => {
-                send(reply, list_acquisition_jobs(&connection));
-            }
         }
     }
 }
@@ -1622,6 +2240,7 @@ const TRACK_COLUMNS: &str = "id, root_id, canonical_path, relative_path, title, 
     catalog_number, isrc, musicbrainz_recording_id, artwork_id, available";
 
 fn query_tracks(connection: &Connection, query: CatalogQuery) -> Result<TrackPage, AppError> {
+    let _span = crate::metrics::Span::new("sqlite.query_tracks");
     let limit = query.limit.clamp(1, 500);
     let search = query
         .search
@@ -1840,69 +2459,167 @@ fn query_artists(
     offset: u32,
     limit: u32,
 ) -> Result<Vec<ArtistSummary>, AppError> {
+    let _span = crate::metrics::Span::new("sqlite.query_artists");
     let mut statement = connection
         .prepare(
-            "SELECT a.id, a.name,
-                (SELECT COUNT(DISTINCT t.album_id) FROM track_artists ta JOIN tracks t ON t.id = ta.track_id
-                 WHERE ta.artist_id = a.id AND ta.role = 'artist'),
-                (SELECT COUNT(*) FROM track_artists ta JOIN tracks t ON t.id = ta.track_id
-                 WHERE ta.artist_id = a.id AND ta.role = 'artist'),
-                (SELECT COALESCE(SUM(t.duration_ms), 0) FROM track_artists ta JOIN tracks t ON t.id = ta.track_id
-                 WHERE ta.artist_id = a.id AND ta.role = 'artist'),
-                (SELECT COALESCE(SUM(t.file_size), 0) FROM track_artists ta JOIN tracks t ON t.id = ta.track_id
-                 WHERE ta.artist_id = a.id AND ta.role = 'artist'),
-                (SELECT al.artwork_id FROM track_artists ta JOIN tracks t ON t.id = ta.track_id
-                 JOIN albums al ON al.id = t.album_id WHERE ta.artist_id = a.id AND al.artwork_id IS NOT NULL LIMIT 1)
+            "SELECT a.id, a.name, a.musicbrainz_artist_id, COUNT(DISTINCT aa.album_id), COUNT(t.id),
+                    COALESCE(SUM(t.duration_ms), 0), COALESCE(SUM(t.file_size), 0),
+                    MIN(ar.cache_path), GROUP_CONCAT(DISTINCT g.name),
+                    ra.last_refreshed_at,
+                    (SELECT COUNT(1) FROM remote_release_artists rra WHERE rra.musicbrainz_artist_id = a.musicbrainz_artist_id)
              FROM artists a
-             WHERE (?1 IS NULL OR a.id = ?1) AND (?2 IS NULL OR a.name LIKE ?2 ESCAPE '\\' COLLATE NOCASE OR EXISTS (
-                SELECT 1 FROM track_artists ta JOIN tracks t ON t.id = ta.track_id
-                LEFT JOIN albums al ON al.id = t.album_id
-                WHERE ta.artist_id = a.id AND (
-                  t.title LIKE ?2 ESCAPE '\\' COLLATE NOCASE OR t.composer LIKE ?2 ESCAPE '\\' COLLATE NOCASE OR
-                  t.label LIKE ?2 ESCAPE '\\' COLLATE NOCASE OR t.catalog_number LIKE ?2 ESCAPE '\\' COLLATE NOCASE OR
-                  al.title LIKE ?2 ESCAPE '\\' COLLATE NOCASE OR EXISTS (
-                    SELECT 1 FROM track_genres tg JOIN genres g ON g.id = tg.genre_id
-                    WHERE tg.track_id = t.id AND g.name LIKE ?2 ESCAPE '\\' COLLATE NOCASE
-                  )
-                )
-             ))
+             JOIN album_artists aa ON aa.artist_id = a.id
+             LEFT JOIN albums al ON al.id = aa.album_id
+             LEFT JOIN tracks t ON t.album_id = al.id AND t.available = 1
+             LEFT JOIN artwork ar ON ar.id = al.artwork_id
+             LEFT JOIN track_genres tg ON tg.track_id = t.id
+             LEFT JOIN genres g ON g.id = tg.genre_id
+             LEFT JOIN remote_artists ra ON ra.musicbrainz_artist_id = a.musicbrainz_artist_id
+             WHERE (?1 IS NULL OR a.id = ?1) AND (?2 IS NULL OR a.name LIKE ?2 ESCAPE '\\' COLLATE NOCASE OR
+                    al.title LIKE ?2 ESCAPE '\\' COLLATE NOCASE OR t.title LIKE ?2 ESCAPE '\\' COLLATE NOCASE OR
+                    t.composer LIKE ?2 ESCAPE '\\' COLLATE NOCASE OR t.label LIKE ?2 ESCAPE '\\' COLLATE NOCASE OR
+                    t.catalog_number LIKE ?2 ESCAPE '\\' COLLATE NOCASE OR g.name LIKE ?2 ESCAPE '\\' COLLATE NOCASE)
+             GROUP BY a.id, a.name
              ORDER BY a.name COLLATE NOCASE, a.id LIMIT ?3 OFFSET ?4",
         )
         .map_err(database_error("prepare-artists-query"))?;
-    let mut artists = statement
+    let artists = statement
         .query_map(params![exact_id, pattern, limit, offset], |row| {
+            let last_refreshed_at: Option<String> = row.get(9)?;
+            let remote_count: i64 = row.get::<_, Option<i64>>(10)?.unwrap_or(0);
+            let provenance = if remote_count > 0 || last_refreshed_at.is_some() {
+                EntityProvenance::Both
+            } else {
+                EntityProvenance::Local
+            };
             Ok(ArtistSummary {
                 id: row.get(0)?,
                 name: row.get(1)?,
-                genres: Vec::new(),
-                album_count: row.get(2)?,
-                track_count: row.get(3)?,
-                total_duration_ms: row.get(4)?,
-                total_file_size: row.get(5)?,
-                artwork_id: row.get(6)?,
-                artwork_path: None,
+                musicbrainz_artist_id: row.get(2)?,
+                provenance,
+                availability: EntityAvailability::InLibrary,
+                provider_ids: row.get::<_, Option<String>>(2)?.into_iter().collect(),
+                last_refreshed_at,
+                genres: row
+                    .get::<_, Option<String>>(8)?
+                    .unwrap_or_default()
+                    .split(',')
+                    .filter(|value| !value.is_empty())
+                    .map(str::to_owned)
+                    .collect(),
+                album_count: row.get(3)?,
+                track_count: row.get(4)?,
+                total_duration_ms: row.get(5)?,
+                total_file_size: row.get(6)?,
+                artwork_id: None,
+                artwork_path: row.get(7)?,
             })
         })
         .map_err(database_error("query-artists"))?
         .collect::<rusqlite::Result<Vec<_>>>()
         .map_err(database_error("read-artists"))?;
-    drop(statement);
-    for artist in &mut artists {
-        artist.artwork_path = artwork_path(connection, artist.artwork_id.as_deref())?;
-        let mut genres = connection
-            .prepare(
-                "SELECT DISTINCT g.name FROM track_artists ta
-                 JOIN track_genres tg ON tg.track_id = ta.track_id JOIN genres g ON g.id = tg.genre_id
-                 WHERE ta.artist_id = ?1 ORDER BY g.name COLLATE NOCASE",
-            )
-            .map_err(database_error("prepare-artist-genres"))?;
-        artist.genres = genres
-            .query_map([&artist.id], |row| row.get(0))
-            .map_err(database_error("query-artist-genres"))?
-            .collect::<rusqlite::Result<Vec<_>>>()
-            .map_err(database_error("read-artist-genres"))?;
-    }
     Ok(artists)
+}
+
+fn query_artists_page(
+    connection: &Connection,
+    query: ArtistCatalogQuery,
+) -> Result<ArtistCatalogPage, AppError> {
+    let _span = crate::metrics::Span::new("sqlite.query_artists_page");
+    let page_size = query.page_size.clamp(1, 200);
+    let pattern = query
+        .search
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(|value| format!("%{}%", value.replace('%', "\\%").replace('_', "\\_")));
+    let cursor = query.cursor.as_deref().and_then(decode_artist_cursor);
+    let (cursor_name, cursor_id) = cursor
+        .map(|(name, id)| (Some(name), Some(id)))
+        .unwrap_or((None, None));
+    let mut statement = connection
+        .prepare(
+            "SELECT a.id, a.name, a.musicbrainz_artist_id, COUNT(DISTINCT aa.album_id), COUNT(t.id),
+                    COALESCE(SUM(t.duration_ms), 0), COALESCE(SUM(t.file_size), 0),
+                    MIN(ar.cache_path), GROUP_CONCAT(DISTINCT g.name),
+                    ra.last_refreshed_at,
+                    (SELECT COUNT(1) FROM remote_release_artists rra WHERE rra.musicbrainz_artist_id = a.musicbrainz_artist_id)
+             FROM artists a
+             JOIN album_artists aa ON aa.artist_id = a.id
+             LEFT JOIN albums al ON al.id = aa.album_id
+             LEFT JOIN tracks t ON t.album_id = al.id AND t.available = COALESCE(?1, 1)
+             LEFT JOIN artwork ar ON ar.id = al.artwork_id
+             LEFT JOIN track_genres tg ON tg.track_id = t.id
+             LEFT JOIN genres g ON g.id = tg.genre_id
+             LEFT JOIN remote_artists ra ON ra.musicbrainz_artist_id = a.musicbrainz_artist_id
+             WHERE (?2 IS NULL OR a.name LIKE ?2 ESCAPE '\\' COLLATE NOCASE OR al.title LIKE ?2 ESCAPE '\\' COLLATE NOCASE OR t.title LIKE ?2 ESCAPE '\\' COLLATE NOCASE OR g.name LIKE ?2 ESCAPE '\\' COLLATE NOCASE)
+               AND (?3 IS NULL OR a.name COLLATE NOCASE > ?3 COLLATE NOCASE OR (a.name COLLATE NOCASE = ?3 COLLATE NOCASE AND a.id > ?4))
+             GROUP BY a.id, a.name
+             ORDER BY a.name COLLATE NOCASE, a.id LIMIT ?5",
+        )
+        .map_err(database_error("prepare-artists-page"))?;
+    let available = query.available.map(i64::from);
+    let mut items = statement
+        .query_map(
+            params![available, pattern, cursor_name, cursor_id, page_size + 1],
+            |row| {
+                let last_refreshed_at: Option<String> = row.get(9)?;
+                let remote_count: i64 = row.get::<_, Option<i64>>(10)?.unwrap_or(0);
+                let provenance = if remote_count > 0 || last_refreshed_at.is_some() {
+                    EntityProvenance::Both
+                } else {
+                    EntityProvenance::Local
+                };
+                Ok(ArtistSummary {
+                    id: row.get(0)?,
+                    name: row.get(1)?,
+                    musicbrainz_artist_id: row.get(2)?,
+                    provenance,
+                    availability: EntityAvailability::InLibrary,
+                    provider_ids: row.get::<_, Option<String>>(2)?.into_iter().collect(),
+                    last_refreshed_at,
+                    album_count: row.get(3)?,
+                    track_count: row.get(4)?,
+                    total_duration_ms: row.get(5)?,
+                    total_file_size: row.get(6)?,
+                    artwork_id: None,
+                    artwork_path: row.get(7)?,
+                    genres: row
+                        .get::<_, Option<String>>(8)?
+                        .unwrap_or_default()
+                        .split(',')
+                        .filter(|value| !value.is_empty())
+                        .map(str::to_owned)
+                        .collect(),
+                })
+            },
+        )
+        .map_err(database_error("query-artists-page"))?
+        .collect::<rusqlite::Result<Vec<_>>>()
+        .map_err(database_error("read-artists-page"))?;
+    let has_next = items.len() > page_size as usize;
+    if has_next {
+        items.pop();
+    }
+    let next_cursor = has_next.then(|| {
+        let last = items.last().expect("page with next cursor has an item");
+        encode_artist_cursor(&last.name, &last.id)
+    });
+    Ok(ArtistCatalogPage {
+        items,
+        next_cursor,
+        page_size,
+    })
+}
+
+fn encode_artist_cursor(name: &str, id: &str) -> String {
+    format!("{}|{}", urlencoding::encode(name), id)
+}
+
+fn decode_artist_cursor(cursor: &str) -> Option<(String, String)> {
+    let (name, id) = cursor.rsplit_once('|')?;
+    let name = urlencoding::decode(name).ok()?.into_owned();
+    (!id.is_empty()).then(|| (name, id.to_owned()))
 }
 
 fn query_albums(
@@ -1915,8 +2632,11 @@ fn query_albums(
     let mut statement = connection
         .prepare(
             "SELECT al.id, al.title, al.year, al.label, al.catalog_number, al.artwork_id,
-                COUNT(t.id), COALESCE(SUM(t.duration_ms), 0), COALESCE(SUM(t.file_size), 0)
-             FROM albums al LEFT JOIN tracks t ON t.album_id = al.id
+                COUNT(t.id), COALESCE(SUM(t.duration_ms), 0), COALESCE(SUM(t.file_size), 0),
+                al.musicbrainz_release_id, rr.last_refreshed_at, rr.artwork_url
+             FROM albums al
+             LEFT JOIN tracks t ON t.album_id = al.id
+             LEFT JOIN remote_releases rr ON rr.musicbrainz_release_group_id = al.musicbrainz_release_id
              WHERE (?1 IS NULL OR al.id = ?1) AND (?2 IS NULL OR al.title LIKE ?2 ESCAPE '\\' COLLATE NOCASE OR
                 al.label LIKE ?2 ESCAPE '\\' COLLATE NOCASE OR al.catalog_number LIKE ?2 ESCAPE '\\' COLLATE NOCASE OR
                 EXISTS (SELECT 1 FROM album_artists aa JOIN artists a ON a.id = aa.artist_id
@@ -1926,31 +2646,49 @@ fn query_albums(
              GROUP BY al.id ORDER BY al.title COLLATE NOCASE, al.id LIMIT ?3 OFFSET ?4",
         )
         .map_err(database_error("prepare-albums-query"))?;
-    let mut albums = statement
+    let albums = statement
         .query_map(params![exact_id, pattern, limit, offset], |row| {
-            Ok(AlbumSummary {
-                id: row.get(0)?,
-                title: row.get(1)?,
-                artists: Vec::new(),
-                year: row.get(2)?,
-                label: row.get(3)?,
-                catalog_number: row.get(4)?,
-                artwork_id: row.get(5)?,
-                track_count: row.get(6)?,
-                total_duration_ms: row.get(7)?,
-                total_file_size: row.get(8)?,
-                artwork_path: None,
-            })
+            let mb_id: Option<String> = row.get(9)?;
+            let last_refreshed_at: Option<String> = row.get(10)?;
+            let remote_artwork_url: Option<String> = row.get(11)?;
+            let has_remote = mb_id.is_some() && last_refreshed_at.is_some();
+            let provenance = if has_remote {
+                EntityProvenance::Both
+            } else {
+                EntityProvenance::Local
+            };
+            Ok((
+                AlbumSummary {
+                    id: row.get(0)?,
+                    title: row.get(1)?,
+                    artists: Vec::new(),
+                    year: row.get(2)?,
+                    label: row.get(3)?,
+                    catalog_number: row.get(4)?,
+                    artwork_id: row.get(5)?,
+                    track_count: row.get(6)?,
+                    total_duration_ms: row.get(7)?,
+                    total_file_size: row.get(8)?,
+                    artwork_path: None,
+                    provenance,
+                    availability: EntityAvailability::InLibrary,
+                    provider_ids: mb_id.into_iter().collect(),
+                    last_refreshed_at,
+                },
+                remote_artwork_url,
+            ))
         })
         .map_err(database_error("query-albums"))?
         .collect::<rusqlite::Result<Vec<_>>>()
         .map_err(database_error("read-albums"))?;
     drop(statement);
-    for album in &mut albums {
-        album.artwork_path = artwork_path(connection, album.artwork_id.as_deref())?;
+    let mut result = Vec::with_capacity(albums.len());
+    for (mut album, remote_art) in albums {
+        album.artwork_path = artwork_path(connection, album.artwork_id.as_deref())?.or(remote_art);
         album.artists = album_artists(connection, &album.id)?;
+        result.push(album);
     }
-    Ok(albums)
+    Ok(result)
 }
 
 fn album_artists(
@@ -2030,16 +2768,39 @@ fn query_genres(
 }
 
 fn get_artist_detail(connection: &Connection, id: &str) -> Result<ArtistDetail, AppError> {
-    let artist = query_artists(connection, Some(id), None, 0, 1)?
+    let artist_opt = query_artists(connection, Some(id), None, 0, 1)?
         .into_iter()
-        .next()
-        .ok_or_else(|| {
-            AppError::new("artist-not-found", "The requested artist no longer exists.")
-        })?;
+        .next();
+
+    if artist_opt.is_none() {
+        if let Some(remote_artist) = get_remote_artist_summary(connection, id)? {
+            let mbid = remote_artist
+                .musicbrainz_artist_id
+                .clone()
+                .unwrap_or_default();
+            let albums = if !mbid.is_empty() {
+                get_remote_releases_for_mbid(connection, &mbid)?
+            } else {
+                Vec::new()
+            };
+            return Ok(ArtistDetail {
+                artist: remote_artist,
+                albums,
+                tracks: Vec::new(),
+            });
+        }
+        return Err(AppError::new(
+            "artist-not-found",
+            "The requested artist no longer exists.",
+        ));
+    }
+    let mut artist = artist_opt.unwrap();
+
     let mut album_statement = connection
         .prepare(
-            "SELECT DISTINCT t.album_id FROM track_artists ta JOIN tracks t ON t.id = ta.track_id
-             WHERE ta.artist_id = ?1 AND t.album_id IS NOT NULL ORDER BY t.album_id",
+            "SELECT aa.album_id FROM album_artists aa
+             JOIN tracks t ON t.album_id = aa.album_id AND t.available = 1
+             WHERE aa.artist_id = ?1 GROUP BY aa.album_id ORDER BY aa.album_id",
         )
         .map_err(database_error("prepare-artist-albums"))?;
     let album_ids = album_statement
@@ -2057,9 +2818,97 @@ fn get_artist_detail(connection: &Connection, id: &str) -> Result<ArtistDetail, 
             albums.push(album);
         }
     }
+
+    let mut remote_releases = Vec::new();
+    if let Some(mbid) = artist.musicbrainz_artist_id.as_deref() {
+        if let Ok(rels) = get_remote_releases_for_mbid(connection, mbid) {
+            remote_releases.extend(rels);
+        }
+    }
+    let fallback_artist_id = format!("artist-{}", artist.id);
+    if let Ok(rels) = get_remote_releases_for_mbid(connection, &fallback_artist_id) {
+        for r in rels {
+            if !remote_releases.iter().any(|existing| existing.id == r.id) {
+                remote_releases.push(r);
+            }
+        }
+    }
+    if let Ok(rels) = get_remote_releases_by_artist_name(connection, &artist.name) {
+        for r in rels {
+            if !remote_releases.iter().any(|existing| existing.id == r.id) {
+                remote_releases.push(r);
+            }
+        }
+    }
+
+    if !remote_releases.is_empty() {
+        artist.provenance = EntityProvenance::Both;
+        let latest_refresh = remote_releases
+            .iter()
+            .filter_map(|r| r.last_refreshed_at.as_deref())
+            .max();
+        if let Some(refreshed) = latest_refresh {
+            artist.last_refreshed_at = Some(refreshed.to_string());
+        }
+
+        let mut merge_stmt = connection
+            .prepare(
+                "SELECT local_id, remote_id FROM entity_merges WHERE local_entity_type = 'album' AND reviewed = 1",
+            )
+            .map_err(database_error("prepare-merges"))?;
+        let merges: Vec<(String, String)> = merge_stmt
+            .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))
+            .map_err(database_error("query-merges"))?
+            .collect::<rusqlite::Result<Vec<_>>>()
+            .map_err(database_error("read-merges"))?;
+        drop(merge_stmt);
+
+        let mut matched_remote_ids = HashSet::new();
+
+        for album in &mut albums {
+            let mb_rel_id: Option<String> = connection
+                .query_row(
+                    "SELECT musicbrainz_release_id FROM albums WHERE id = ?1",
+                    [&album.id],
+                    |row| row.get(0),
+                )
+                .optional()
+                .unwrap_or(None);
+
+            let matching_remote = remote_releases.iter().find(|rr| {
+                if let Some(ref mb_id) = mb_rel_id {
+                    if !mb_id.is_empty() && rr.provider_ids.iter().any(|p| p == mb_id) {
+                        return true;
+                    }
+                }
+                merges
+                    .iter()
+                    .any(|(local, remote)| local == &album.id && remote == &rr.id)
+            });
+
+            if let Some(remote) = matching_remote {
+                matched_remote_ids.insert(remote.id.clone());
+                album.provenance = EntityProvenance::Both;
+                album.availability = EntityAvailability::InLibrary;
+                album.provider_ids = remote.provider_ids.clone();
+                album.last_refreshed_at = remote.last_refreshed_at.clone();
+                if album.artwork_path.is_none() {
+                    album.artwork_path = remote.artwork_path.clone();
+                }
+            }
+        }
+
+        for remote in remote_releases {
+            if !matched_remote_ids.contains(&remote.id) {
+                albums.push(remote);
+            }
+        }
+    }
+
     let tracks = tracks_for_entity(
         connection,
-        "SELECT DISTINCT track_id FROM track_artists WHERE artist_id = ?1",
+        "SELECT DISTINCT t.id FROM tracks t JOIN album_artists aa ON aa.album_id = t.album_id
+         WHERE aa.artist_id = ?1 AND t.available = 1",
         id,
     )?;
     Ok(ArtistDetail {
@@ -2069,13 +2918,1156 @@ fn get_artist_detail(connection: &Connection, id: &str) -> Result<ArtistDetail, 
     })
 }
 
-fn get_album_detail(connection: &Connection, id: &str) -> Result<AlbumDetail, AppError> {
-    let album = query_albums(connection, Some(id), None, 0, 1)?
+fn get_remote_artist_summary(
+    connection: &Connection,
+    id: &str,
+) -> Result<Option<ArtistSummary>, AppError> {
+    let row = connection
+        .query_row(
+            "SELECT id, name, musicbrainz_artist_id, last_refreshed_at FROM remote_artists
+             WHERE id = ?1 OR musicbrainz_artist_id = ?1",
+            [id],
+            |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, String>(2)?,
+                    row.get::<_, Option<String>>(3)?,
+                ))
+            },
+        )
+        .optional()
+        .map_err(database_error("query-remote-artist"))?;
+
+    let Some((actual_id, name, mbid, last_refreshed_at)) = row else {
+        return Ok(None);
+    };
+
+    let album_count: u64 = connection
+        .query_row(
+            "SELECT COUNT(DISTINCT remote_release_id) FROM remote_release_artists WHERE musicbrainz_artist_id = ?1",
+            [&mbid],
+            |row| row.get(0),
+        )
+        .unwrap_or(0);
+
+    Ok(Some(ArtistSummary {
+        id: actual_id,
+        name,
+        musicbrainz_artist_id: Some(mbid.clone()),
+        provenance: EntityProvenance::Remote,
+        availability: EntityAvailability::NotLocal,
+        provider_ids: vec![mbid],
+        last_refreshed_at,
+        genres: Vec::new(),
+        album_count,
+        track_count: 0,
+        total_duration_ms: 0,
+        total_file_size: 0,
+        artwork_id: None,
+        artwork_path: None,
+    }))
+}
+
+fn get_remote_releases_for_mbid(
+    connection: &Connection,
+    mbid: &str,
+) -> Result<Vec<AlbumSummary>, AppError> {
+    let mut statement = connection
+        .prepare(
+            "SELECT r.id, r.musicbrainz_release_group_id, r.title, r.year, r.label,
+                    r.catalog_number, r.artwork_url, r.last_refreshed_at
+             FROM remote_releases r
+             JOIN remote_release_artists ra ON ra.remote_release_id = r.id
+             WHERE ra.musicbrainz_artist_id = ?1
+             ORDER BY COALESCE(r.year, 0) DESC, r.title COLLATE NOCASE",
+        )
+        .map_err(database_error("prepare-remote-releases"))?;
+    let rows = statement
+        .query_map([mbid], |row| {
+            let id: String = row.get(0)?;
+            let mb_rg_id: String = row.get(1)?;
+            let title: String = row.get(2)?;
+            let year: Option<u32> = row.get(3)?;
+            let label: Option<String> = row.get(4)?;
+            let catalog_number: Option<String> = row.get(5)?;
+            let artwork_url: Option<String> = row.get(6)?;
+            let last_refreshed_at: Option<String> = row.get(7)?;
+            Ok((
+                id,
+                mb_rg_id,
+                title,
+                year,
+                label,
+                catalog_number,
+                artwork_url,
+                last_refreshed_at,
+            ))
+        })
+        .map_err(database_error("query-remote-releases"))?
+        .collect::<rusqlite::Result<Vec<_>>>()
+        .map_err(database_error("read-remote-releases"))?;
+    drop(statement);
+
+    let mut summaries = Vec::with_capacity(rows.len());
+    for (id, mb_rg_id, title, year, label, catalog_number, artwork_url, last_refreshed_at) in rows {
+        let mut artist_statement = connection
+            .prepare(
+                "SELECT musicbrainz_artist_id, artist_name FROM remote_release_artists
+                 WHERE remote_release_id = ?1 ORDER BY position",
+            )
+            .map_err(database_error("prepare-remote-artists"))?;
+        let artists = artist_statement
+            .query_map([&id], |row| {
+                Ok(crate::ArtistReference {
+                    id: row.get::<_, Option<String>>(0)?.unwrap_or_default(),
+                    name: row.get(1)?,
+                })
+            })
+            .map_err(database_error("query-remote-artists"))?
+            .collect::<rusqlite::Result<Vec<_>>>()
+            .map_err(database_error("read-remote-artists"))?;
+        drop(artist_statement);
+
+        summaries.push(AlbumSummary {
+            id,
+            title,
+            artists,
+            year,
+            label,
+            catalog_number,
+            artwork_id: None,
+            track_count: 0,
+            total_duration_ms: 0,
+            total_file_size: 0,
+            artwork_path: artwork_url,
+            provenance: EntityProvenance::Remote,
+            availability: EntityAvailability::NotLocal,
+            provider_ids: vec![mb_rg_id],
+            last_refreshed_at,
+        });
+    }
+    Ok(summaries)
+}
+
+fn get_remote_releases_by_artist_name(
+    connection: &Connection,
+    artist_name: &str,
+) -> Result<Vec<AlbumSummary>, AppError> {
+    let mut statement = connection
+        .prepare(
+            "SELECT DISTINCT r.id, r.musicbrainz_release_group_id, r.title, r.year, r.label,
+                    r.catalog_number, r.artwork_url, r.last_refreshed_at
+             FROM remote_releases r
+             JOIN remote_release_artists ra ON ra.remote_release_id = r.id
+             WHERE ra.artist_name = ?1 COLLATE NOCASE
+             ORDER BY COALESCE(r.year, 0) DESC, r.title COLLATE NOCASE",
+        )
+        .map_err(database_error("prepare-remote-releases-by-name"))?;
+    let rows = statement
+        .query_map([artist_name], |row| {
+            let id: String = row.get(0)?;
+            let mb_rg_id: String = row.get(1)?;
+            let title: String = row.get(2)?;
+            let year: Option<u32> = row.get(3)?;
+            let label: Option<String> = row.get(4)?;
+            let catalog_number: Option<String> = row.get(5)?;
+            let artwork_url: Option<String> = row.get(6)?;
+            let last_refreshed_at: Option<String> = row.get(7)?;
+            Ok((
+                id,
+                mb_rg_id,
+                title,
+                year,
+                label,
+                catalog_number,
+                artwork_url,
+                last_refreshed_at,
+            ))
+        })
+        .map_err(database_error("query-remote-releases-by-name"))?
+        .collect::<rusqlite::Result<Vec<_>>>()
+        .map_err(database_error("read-remote-releases-by-name"))?;
+    drop(statement);
+
+    let mut summaries = Vec::with_capacity(rows.len());
+    for (id, mb_rg_id, title, year, label, catalog_number, artwork_url, last_refreshed_at) in rows {
+        let mut artist_statement = connection
+            .prepare(
+                "SELECT musicbrainz_artist_id, artist_name FROM remote_release_artists
+                 WHERE remote_release_id = ?1 ORDER BY position",
+            )
+            .map_err(database_error("prepare-remote-artists"))?;
+        let artists = artist_statement
+            .query_map([&id], |row| {
+                Ok(crate::ArtistReference {
+                    id: row.get::<_, Option<String>>(0)?.unwrap_or_default(),
+                    name: row.get(1)?,
+                })
+            })
+            .map_err(database_error("query-remote-artists"))?
+            .collect::<rusqlite::Result<Vec<_>>>()
+            .map_err(database_error("read-remote-artists"))?;
+        drop(artist_statement);
+
+        summaries.push(AlbumSummary {
+            id,
+            title,
+            artists,
+            year,
+            label,
+            catalog_number,
+            artwork_id: None,
+            track_count: 0,
+            total_duration_ms: 0,
+            total_file_size: 0,
+            artwork_path: artwork_url,
+            provenance: EntityProvenance::Remote,
+            availability: EntityAvailability::NotLocal,
+            provider_ids: vec![mb_rg_id],
+            last_refreshed_at,
+        });
+    }
+    Ok(summaries)
+}
+
+fn normalize_title(title: &str) -> String {
+    title
+        .trim()
+        .to_lowercase()
+        .chars()
+        .filter(|c| c.is_alphanumeric() || c.is_whitespace())
+        .collect::<String>()
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+fn match_and_unify_tracks(
+    local_tracks: Vec<TrackSummary>,
+    remote_tracks: Vec<RemoteTrackPayload>,
+    album: &AlbumSummary,
+) -> (Vec<TrackSummary>, Vec<UnifiedTrackSummary>) {
+    if remote_tracks.is_empty() {
+        let unified = local_tracks
+            .iter()
+            .map(|t| UnifiedTrackSummary {
+                id: Some(t.id.clone()),
+                remote_id: t
+                    .musicbrainz_recording_id
+                    .clone()
+                    .unwrap_or_else(|| format!("local:{}", t.id)),
+                track_number: t.track_number.unwrap_or(1),
+                disc_number: t.disc_number.unwrap_or(1),
+                title: t.title.clone(),
+                artists: if !t.artists.is_empty() {
+                    t.artists.clone()
+                } else {
+                    album.artists.clone()
+                },
+                duration_ms: t.duration_ms,
+                is_local: true,
+                audio_specs: Some(AudioSpecs {
+                    extension: t.extension,
+                    sample_rate: t.sample_rate,
+                    bit_depth: t.bit_depth,
+                    channels: t.channels,
+                }),
+                isrc: t.isrc.clone(),
+                musicbrainz_recording_id: t.musicbrainz_recording_id.clone(),
+                spotify_track_id: None,
+                acquisition_status: None,
+            })
+            .collect();
+        return (local_tracks, unified);
+    }
+
+    let mut matched_local = vec![false; local_tracks.len()];
+    let mut remote_match: Vec<Option<usize>> = vec![None; remote_tracks.len()];
+
+    // Pass 1: MusicBrainz Recording ID match
+    for (r_idx, r) in remote_tracks.iter().enumerate() {
+        if remote_match[r_idx].is_none() {
+            if let Some(ref r_mbid) = r.musicbrainz_recording_id {
+                if !r_mbid.trim().is_empty() {
+                    for (l_idx, l) in local_tracks.iter().enumerate() {
+                        if !matched_local[l_idx]
+                            && l.musicbrainz_recording_id.as_deref() == Some(r_mbid.as_str())
+                        {
+                            matched_local[l_idx] = true;
+                            remote_match[r_idx] = Some(l_idx);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Pass 2: ISRC match
+    for (r_idx, r) in remote_tracks.iter().enumerate() {
+        if remote_match[r_idx].is_none() {
+            if let Some(ref r_isrc) = r.isrc {
+                if !r_isrc.trim().is_empty() {
+                    for (l_idx, l) in local_tracks.iter().enumerate() {
+                        if !matched_local[l_idx] {
+                            if let Some(ref l_isrc) = l.isrc {
+                                if l_isrc.trim().eq_ignore_ascii_case(r_isrc.trim()) {
+                                    matched_local[l_idx] = true;
+                                    remote_match[r_idx] = Some(l_idx);
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Pass 3: (disc_number, track_number, title) match
+    for (r_idx, r) in remote_tracks.iter().enumerate() {
+        if remote_match[r_idx].is_none() {
+            for (l_idx, l) in local_tracks.iter().enumerate() {
+                if !matched_local[l_idx] {
+                    let l_disc = l.disc_number.unwrap_or(1);
+                    let l_track = l.track_number.unwrap_or(0);
+                    if l_disc == r.disc_number && l_track == r.track_number {
+                        let norm_l = normalize_title(&l.title);
+                        let norm_r = normalize_title(&r.title);
+                        if norm_l == norm_r || norm_l.is_empty() || norm_r.is_empty() {
+                            matched_local[l_idx] = true;
+                            remote_match[r_idx] = Some(l_idx);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Pass 4: (disc_number, track_number) match fallback
+    for (r_idx, r) in remote_tracks.iter().enumerate() {
+        if remote_match[r_idx].is_none() {
+            for (l_idx, l) in local_tracks.iter().enumerate() {
+                if !matched_local[l_idx] {
+                    let l_disc = l.disc_number.unwrap_or(1);
+                    let l_track = l.track_number.unwrap_or(0);
+                    if l_disc == r.disc_number && l_track == r.track_number {
+                        matched_local[l_idx] = true;
+                        remote_match[r_idx] = Some(l_idx);
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    // Pass 5: Title match (ignoring case, whitespace, and punctuation)
+    for (r_idx, r) in remote_tracks.iter().enumerate() {
+        if remote_match[r_idx].is_none() {
+            let norm_r = normalize_title(&r.title);
+            if !norm_r.is_empty() {
+                for (l_idx, l) in local_tracks.iter().enumerate() {
+                    if !matched_local[l_idx] {
+                        let norm_l = normalize_title(&l.title);
+                        if norm_l == norm_r {
+                            matched_local[l_idx] = true;
+                            remote_match[r_idx] = Some(l_idx);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    let mut combined_tracks: Vec<TrackSummary> = Vec::new();
+    let mut unified_tracks: Vec<UnifiedTrackSummary> = Vec::new();
+
+    for (r_idx, r) in remote_tracks.iter().enumerate() {
+        if let Some(l_idx) = remote_match[r_idx] {
+            let l = &local_tracks[l_idx];
+            let mut track_summary = l.clone();
+            track_summary.available = true;
+            if track_summary.track_number.is_none() {
+                track_summary.track_number = Some(r.track_number);
+            }
+            if track_summary.disc_number.is_none() {
+                track_summary.disc_number = Some(r.disc_number);
+            }
+            if track_summary.isrc.is_none() {
+                track_summary.isrc = r.isrc.clone();
+            }
+            if track_summary.musicbrainz_recording_id.is_none() {
+                track_summary.musicbrainz_recording_id = r.musicbrainz_recording_id.clone();
+            }
+            combined_tracks.push(track_summary);
+
+            unified_tracks.push(UnifiedTrackSummary {
+                id: Some(l.id.clone()),
+                remote_id: r.id.clone(),
+                track_number: r.track_number,
+                disc_number: r.disc_number,
+                title: if !l.title.is_empty() {
+                    l.title.clone()
+                } else {
+                    r.title.clone()
+                },
+                artists: if !l.artists.is_empty() {
+                    l.artists.clone()
+                } else {
+                    album.artists.clone()
+                },
+                duration_ms: l.duration_ms.or(r.duration_ms),
+                is_local: true,
+                audio_specs: Some(AudioSpecs {
+                    extension: l.extension,
+                    sample_rate: l.sample_rate,
+                    bit_depth: l.bit_depth,
+                    channels: l.channels,
+                }),
+                isrc: l.isrc.clone().or_else(|| r.isrc.clone()),
+                musicbrainz_recording_id: l
+                    .musicbrainz_recording_id
+                    .clone()
+                    .or_else(|| r.musicbrainz_recording_id.clone()),
+                spotify_track_id: r.spotify_track_id.clone(),
+                acquisition_status: None,
+            });
+        } else {
+            combined_tracks.push(TrackSummary {
+                id: r.id.clone(),
+                root_id: String::new(),
+                path: String::new(),
+                relative_path: String::new(),
+                title: r.title.clone(),
+                sort_title: None,
+                artists: album.artists.clone(),
+                album_artists: album.artists.clone(),
+                album_id: Some(album.id.clone()),
+                album: album.title.clone(),
+                genres: Vec::new(),
+                track_number: Some(r.track_number),
+                track_total: None,
+                disc_number: Some(r.disc_number),
+                disc_total: None,
+                year: album.year,
+                date: None,
+                composer: None,
+                label: album.label.clone(),
+                catalog_number: album.catalog_number.clone(),
+                isrc: r.isrc.clone(),
+                musicbrainz_recording_id: r.musicbrainz_recording_id.clone(),
+                artwork_id: album.artwork_id.clone(),
+                artwork_path: album.artwork_path.clone(),
+                extension: AudioExtension::Flac,
+                file_size: 0,
+                duration_ms: r.duration_ms,
+                sample_rate: None,
+                channels: None,
+                bit_depth: None,
+                play_count: 0,
+                available: false,
+            });
+
+            unified_tracks.push(UnifiedTrackSummary {
+                id: None,
+                remote_id: r.id.clone(),
+                track_number: r.track_number,
+                disc_number: r.disc_number,
+                title: r.title.clone(),
+                artists: album.artists.clone(),
+                duration_ms: r.duration_ms,
+                is_local: false,
+                audio_specs: None,
+                isrc: r.isrc.clone(),
+                musicbrainz_recording_id: r.musicbrainz_recording_id.clone(),
+                spotify_track_id: r.spotify_track_id.clone(),
+                acquisition_status: None,
+            });
+        }
+    }
+
+    // Include any local tracks that weren't matched in the remote tracklist
+    for (l_idx, l) in local_tracks.into_iter().enumerate() {
+        if !matched_local[l_idx] {
+            combined_tracks.push(l.clone());
+            unified_tracks.push(UnifiedTrackSummary {
+                id: Some(l.id.clone()),
+                remote_id: l
+                    .musicbrainz_recording_id
+                    .clone()
+                    .unwrap_or_else(|| format!("local:{}", l.id)),
+                track_number: l.track_number.unwrap_or(0),
+                disc_number: l.disc_number.unwrap_or(1),
+                title: l.title.clone(),
+                artists: if !l.artists.is_empty() {
+                    l.artists.clone()
+                } else {
+                    album.artists.clone()
+                },
+                duration_ms: l.duration_ms,
+                is_local: true,
+                audio_specs: Some(AudioSpecs {
+                    extension: l.extension,
+                    sample_rate: l.sample_rate,
+                    bit_depth: l.bit_depth,
+                    channels: l.channels,
+                }),
+                isrc: l.isrc.clone(),
+                musicbrainz_recording_id: l.musicbrainz_recording_id.clone(),
+                spotify_track_id: None,
+                acquisition_status: None,
+            });
+        }
+    }
+
+    (combined_tracks, unified_tracks)
+}
+
+struct ResolvedAlbumData {
+    album: AlbumSummary,
+    combined_tracks: Vec<TrackSummary>,
+    unified_tracks: Vec<UnifiedTrackSummary>,
+}
+
+fn resolve_album_data(
+    connection: &Connection,
+    id: &str,
+) -> Result<Option<ResolvedAlbumData>, AppError> {
+    if let Some(mut album) = query_albums(connection, Some(id), None, 0, 1)?
         .into_iter()
         .next()
+    {
+        let mb_rel_id: Option<String> = connection
+            .query_row(
+                "SELECT musicbrainz_release_id FROM albums WHERE id = ?1",
+                [id],
+                |row| row.get(0),
+            )
+            .optional()
+            .unwrap_or(None);
+        let merge_remote_ids: Vec<String> = connection
+            .prepare(
+                "SELECT remote_id FROM entity_merges WHERE local_entity_type = 'album' AND local_id = ?1 AND reviewed = 1 ORDER BY updated_at DESC",
+            )
+            .and_then(|mut stmt| {
+                let rows = stmt.query_map([id], |row| row.get(0))?;
+                rows.collect::<rusqlite::Result<Vec<_>>>()
+            })
+            .unwrap_or_default();
+
+        let mut remote_release_id: Option<String> = None;
+        if let Some(ref mb_id) = mb_rel_id {
+            if let Some((rg_pk, rg_id, refreshed, art)) = connection
+                .query_row(
+                    "SELECT id, musicbrainz_release_group_id, last_refreshed_at, artwork_url FROM remote_releases WHERE musicbrainz_release_group_id = ?1",
+                    [mb_id],
+                    |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?, row.get::<_, Option<String>>(2)?, row.get::<_, Option<String>>(3)?)),
+                )
+                .optional()
+                .unwrap_or(None)
+            {
+                album.provenance = EntityProvenance::Both;
+                album.availability = EntityAvailability::InLibrary;
+                album.provider_ids = vec![rg_id];
+                album.last_refreshed_at = refreshed;
+                if album.artwork_path.is_none() {
+                    album.artwork_path = art;
+                }
+                remote_release_id = Some(rg_pk);
+            }
+        }
+
+        for remote_id in &merge_remote_ids {
+            if let Some((rg_pk, rg_id, refreshed, art)) = connection
+                .query_row(
+                    "SELECT id, musicbrainz_release_group_id, last_refreshed_at, artwork_url FROM remote_releases WHERE id = ?1 OR musicbrainz_release_group_id = ?1",
+                    [remote_id],
+                    |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?, row.get::<_, Option<String>>(2)?, row.get::<_, Option<String>>(3)?)),
+                )
+                .optional()
+                .unwrap_or(None)
+            {
+                album.provenance = EntityProvenance::Both;
+                album.availability = EntityAvailability::InLibrary;
+                if !album.provider_ids.contains(&rg_id) {
+                    album.provider_ids.push(rg_id);
+                }
+                if album.last_refreshed_at.is_none() {
+                    album.last_refreshed_at = refreshed;
+                }
+                if album.artwork_path.is_none() {
+                    album.artwork_path = art;
+                }
+                if remote_release_id.is_none() {
+                    remote_release_id = Some(rg_pk);
+                }
+            } else if remote_release_id.is_none() {
+                remote_release_id = Some(remote_id.clone());
+            }
+        }
+
+        let local_tracks =
+            tracks_for_entity(connection, "SELECT id FROM tracks WHERE album_id = ?1", id)?;
+        let mut remote_tracks = Vec::new();
+
+        // 1. Check direct remote_release_id
+        if let Some(ref rel_id) = remote_release_id {
+            remote_tracks = get_remote_tracks_for_release(connection, rel_id)?;
+        }
+
+        // 2. Check all merge_remote_ids if still empty
+        if remote_tracks.is_empty() {
+            for remote_id in &merge_remote_ids {
+                let trs = get_remote_tracks_for_release(connection, remote_id)?;
+                if !trs.is_empty() {
+                    remote_tracks = trs;
+                    break;
+                }
+            }
+        }
+
+        // 3. Check title matching in remote_releases
+        if remote_tracks.is_empty() {
+            let clean_prefix = album
+                .title
+                .split('(')
+                .next()
+                .unwrap_or(&album.title)
+                .split('[')
+                .next()
+                .unwrap_or(&album.title)
+                .trim();
+            let clean_pattern = format!("%{clean_prefix}%");
+
+            let possible_rel_ids: Vec<String> = connection
+                .prepare(
+                    "SELECT DISTINCT r.id FROM remote_releases r
+                     WHERE r.title = ?1 COLLATE NOCASE
+                        OR r.title LIKE ?2 ESCAPE '\\' COLLATE NOCASE
+                     LIMIT 5",
+                )
+                .and_then(|mut stmt| {
+                    let rows =
+                        stmt.query_map(params![&album.title, clean_pattern], |row| row.get(0))?;
+                    rows.collect::<rusqlite::Result<Vec<_>>>()
+                })
+                .unwrap_or_default();
+
+            for rel_id in possible_rel_ids {
+                let trs = get_remote_tracks_for_release(connection, &rel_id).unwrap_or_default();
+                if !trs.is_empty() {
+                    remote_tracks = trs;
+                    break;
+                }
+            }
+        }
+
+        // 4. Fallbacks
+        if remote_tracks.is_empty() {
+            let fallback_id = format!("remote:{}", id);
+            let ftrs = get_remote_tracks_for_release(connection, &fallback_id)?;
+            if !ftrs.is_empty() {
+                remote_tracks = ftrs;
+            } else {
+                remote_tracks = get_remote_tracks_for_release(connection, id)?;
+            }
+        }
+
+        let (combined_tracks, unified_tracks) =
+            match_and_unify_tracks(local_tracks, remote_tracks, &album);
+
+        if album.track_count == 0 && !combined_tracks.is_empty() {
+            album.track_count = combined_tracks.len() as u64;
+        }
+        if album.total_duration_ms == 0 && !combined_tracks.is_empty() {
+            album.total_duration_ms = combined_tracks.iter().filter_map(|t| t.duration_ms).sum();
+        }
+
+        return Ok(Some(ResolvedAlbumData {
+            album,
+            combined_tracks,
+            unified_tracks,
+        }));
+    }
+
+    let row = connection
+        .query_row(
+            "SELECT id, musicbrainz_release_group_id, title, year, label, catalog_number, artwork_url, last_refreshed_at
+             FROM remote_releases WHERE id = ?1 OR musicbrainz_release_group_id = ?1",
+            [id],
+            |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, String>(2)?,
+                    row.get::<_, Option<u32>>(3)?,
+                    row.get::<_, Option<String>>(4)?,
+                    row.get::<_, Option<String>>(5)?,
+                    row.get::<_, Option<String>>(6)?,
+                    row.get::<_, Option<String>>(7)?,
+                ))
+            },
+        )
+        .optional()
+        .map_err(database_error("query-remote-album-detail"))?;
+
+    let Some((
+        actual_id,
+        mb_rg_id,
+        title,
+        year,
+        label,
+        catalog_number,
+        artwork_url,
+        last_refreshed_at,
+    )) = row
+    else {
+        return Ok(None);
+    };
+
+    let mut artist_stmt = connection
+        .prepare(
+            "SELECT musicbrainz_artist_id, artist_name FROM remote_release_artists WHERE remote_release_id = ?1 ORDER BY position",
+        )
+        .map_err(database_error("prepare-remote-artists"))?;
+    let artists = artist_stmt
+        .query_map([&actual_id], |row| {
+            Ok(crate::ArtistReference {
+                id: row.get::<_, Option<String>>(0)?.unwrap_or_default(),
+                name: row.get(1)?,
+            })
+        })
+        .map_err(database_error("query-remote-artists"))?
+        .collect::<rusqlite::Result<Vec<_>>>()
+        .map_err(database_error("read-remote-artists"))?;
+
+    let linked_local_id: Option<String> = connection
+        .query_row(
+            "SELECT id FROM albums WHERE musicbrainz_release_id = ?1",
+            [&mb_rg_id],
+            |row| row.get(0),
+        )
+        .optional()
+        .unwrap_or(None)
+        .or_else(|| {
+            connection
+                .query_row(
+                    "SELECT local_id FROM entity_merges WHERE local_entity_type = 'album' AND (remote_id = ?1 OR remote_id = ?2) AND reviewed = 1",
+                    params![actual_id, mb_rg_id],
+                    |row| row.get(0),
+                )
+                .optional()
+                .unwrap_or(None)
+        });
+
+    let (provenance, availability, local_tracks) = if let Some(ref local_id) = linked_local_id {
+        let tracks = tracks_for_entity(
+            connection,
+            "SELECT id FROM tracks WHERE album_id = ?1",
+            local_id,
+        )?;
+        (
+            EntityProvenance::Both,
+            EntityAvailability::InLibrary,
+            tracks,
+        )
+    } else {
+        (
+            EntityProvenance::Remote,
+            EntityAvailability::NotLocal,
+            Vec::new(),
+        )
+    };
+
+    let remote_tracks = get_remote_tracks_for_release(connection, &actual_id)?;
+
+    let mut album = AlbumSummary {
+        id: actual_id,
+        title,
+        artists,
+        year,
+        label,
+        catalog_number,
+        artwork_id: None,
+        track_count: 0,
+        total_duration_ms: 0,
+        total_file_size: 0,
+        artwork_path: artwork_url,
+        provenance,
+        availability,
+        provider_ids: vec![mb_rg_id],
+        last_refreshed_at,
+    };
+
+    let (combined_tracks, unified_tracks) =
+        match_and_unify_tracks(local_tracks, remote_tracks, &album);
+
+    album.track_count = combined_tracks.len() as u64;
+    album.total_duration_ms = combined_tracks.iter().filter_map(|t| t.duration_ms).sum();
+
+    Ok(Some(ResolvedAlbumData {
+        album,
+        combined_tracks,
+        unified_tracks,
+    }))
+}
+
+fn get_album_detail(connection: &Connection, id: &str) -> Result<AlbumDetail, AppError> {
+    let resolved = resolve_album_data(connection, id)?
         .ok_or_else(|| AppError::new("album-not-found", "The requested album no longer exists."))?;
-    let tracks = tracks_for_entity(connection, "SELECT id FROM tracks WHERE album_id = ?1", id)?;
-    Ok(AlbumDetail { album, tracks })
+    Ok(AlbumDetail {
+        album: resolved.album,
+        tracks: resolved.combined_tracks,
+    })
+}
+
+fn get_unified_album_detail(
+    connection: &Connection,
+    id: &str,
+) -> Result<UnifiedAlbumDetail, AppError> {
+    let resolved = resolve_album_data(connection, id)?
+        .ok_or_else(|| AppError::new("album-not-found", "The requested album no longer exists."))?;
+    Ok(UnifiedAlbumDetail {
+        album: resolved.album,
+        tracks: resolved.unified_tracks,
+    })
+}
+
+pub(crate) fn save_remote_tracks(
+    connection: &mut Connection,
+    release_id: &str,
+    tracks: &[RemoteTrackPayload],
+) -> Result<(), AppError> {
+    let now = Utc::now().to_rfc3339();
+    let tx = connection
+        .transaction()
+        .map_err(database_error("begin-save-remote-tracks"))?;
+
+    tx.execute(
+        "DELETE FROM remote_tracks WHERE release_id = ?1",
+        [release_id],
+    )
+    .map_err(database_error("delete-remote-tracks"))?;
+
+    for track in tracks {
+        let track_id = if track.id.is_empty() {
+            format!(
+                "rtrack-{}-{}-{}",
+                release_id, track.disc_number, track.track_number
+            )
+        } else {
+            track.id.clone()
+        };
+        tx.execute(
+            "INSERT INTO remote_tracks
+             (id, release_id, track_number, disc_number, title, duration_ms, isrc, musicbrainz_recording_id, spotify_track_id, last_updated_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
+             ON CONFLICT(id) DO UPDATE SET
+               release_id = excluded.release_id,
+               track_number = excluded.track_number,
+               disc_number = excluded.disc_number,
+               title = excluded.title,
+               duration_ms = excluded.duration_ms,
+               isrc = excluded.isrc,
+               musicbrainz_recording_id = excluded.musicbrainz_recording_id,
+               spotify_track_id = excluded.spotify_track_id,
+               last_updated_at = excluded.last_updated_at",
+            params![
+                track_id,
+                release_id,
+                track.track_number as i64,
+                track.disc_number as i64,
+                track.title,
+                track.duration_ms.map(|d| d as i64),
+                track.isrc,
+                track.musicbrainz_recording_id,
+                track.spotify_track_id,
+                now,
+            ],
+        )
+        .map_err(database_error("insert-remote-track"))?;
+    }
+
+    tx.commit()
+        .map_err(database_error("commit-save-remote-tracks"))?;
+    Ok(())
+}
+
+pub(crate) fn get_remote_tracks_for_release(
+    connection: &Connection,
+    release_id: &str,
+) -> Result<Vec<RemoteTrackPayload>, AppError> {
+    let mut stmt = connection
+        .prepare(
+            "SELECT id, release_id, track_number, disc_number, title, duration_ms, isrc, musicbrainz_recording_id, spotify_track_id
+             FROM remote_tracks
+             WHERE release_id = ?1
+             ORDER BY disc_number ASC, track_number ASC",
+        )
+        .map_err(database_error("prepare-query-remote-tracks"))?;
+
+    let rows = stmt
+        .query_map([release_id], |row| {
+            let duration_i64: Option<i64> = row.get(5)?;
+            Ok(RemoteTrackPayload {
+                id: row.get(0)?,
+                release_id: row.get(1)?,
+                track_number: row.get::<_, i64>(2)? as u32,
+                disc_number: row.get::<_, i64>(3)? as u32,
+                title: row.get(4)?,
+                duration_ms: duration_i64.map(|d| d as u64),
+                isrc: row.get(6)?,
+                musicbrainz_recording_id: row.get(7)?,
+                spotify_track_id: row.get(8)?,
+            })
+        })
+        .map_err(database_error("query-remote-tracks"))?
+        .collect::<rusqlite::Result<Vec<_>>>()
+        .map_err(database_error("read-remote-tracks"))?;
+
+    Ok(rows)
+}
+
+fn save_remote_discography(
+    connection: &mut Connection,
+    artist_mbid: &str,
+    artist_name: &str,
+    releases: &[RemoteReleasePayload],
+) -> Result<(), AppError> {
+    let now = Utc::now().to_rfc3339();
+    let tx = connection
+        .transaction()
+        .map_err(database_error("begin-save-discography"))?;
+
+    let remote_artist_id = format!("remote:{artist_mbid}");
+    tx.execute(
+        "INSERT INTO remote_artists (id, musicbrainz_artist_id, name, last_refreshed_at, created_at, updated_at)
+         VALUES (?1, ?2, ?3, ?4, ?4, ?4)
+         ON CONFLICT(musicbrainz_artist_id) DO UPDATE SET
+           name = excluded.name,
+           last_refreshed_at = excluded.last_refreshed_at,
+           updated_at = excluded.updated_at",
+        params![remote_artist_id, artist_mbid, artist_name, now],
+    )
+    .map_err(database_error("save-remote-artist"))?;
+
+    for release in releases {
+        let sec_types = release.secondary_types.join(",");
+        tx.execute(
+            "INSERT INTO remote_releases
+               (id, musicbrainz_release_group_id, title, sort_title, year, date, primary_type,
+                secondary_types, disambiguation, catalog_number, label, artwork_url,
+                artwork_attribution, artwork_source, raw_json, last_refreshed_at, created_at, updated_at)
+             VALUES (?1, ?2, ?3, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?15, ?15)
+             ON CONFLICT(musicbrainz_release_group_id) DO UPDATE SET
+               title = excluded.title,
+               sort_title = excluded.sort_title,
+               year = excluded.year,
+               date = excluded.date,
+               primary_type = excluded.primary_type,
+               secondary_types = excluded.secondary_types,
+               disambiguation = excluded.disambiguation,
+               artwork_url = excluded.artwork_url,
+               artwork_attribution = excluded.artwork_attribution,
+               artwork_source = excluded.artwork_source,
+               raw_json = excluded.raw_json,
+               last_refreshed_at = excluded.last_refreshed_at,
+               updated_at = excluded.updated_at",
+            params![
+                release.id,
+                release.musicbrainz_release_group_id,
+                release.title,
+                release.year,
+                release.date,
+                release.primary_type,
+                sec_types,
+                release.disambiguation,
+                release.catalog_number,
+                release.label,
+                release.artwork_url,
+                release.artwork_attribution,
+                release.artwork_source,
+                release.raw_json,
+                now,
+            ],
+        )
+        .map_err(database_error("save-remote-release"))?;
+
+        tx.execute(
+            "DELETE FROM remote_release_artists WHERE remote_release_id = ?1",
+            [&release.id],
+        )
+        .map_err(database_error("clear-remote-release-artists"))?;
+
+        for (position, artist) in release.artists.iter().enumerate() {
+            tx.execute(
+                "INSERT INTO remote_release_artists (remote_release_id, artist_name, musicbrainz_artist_id, position)
+                 VALUES (?1, ?2, ?3, ?4)",
+                params![
+                    release.id,
+                    artist.name,
+                    if artist.id.is_empty() {
+                        None
+                    } else {
+                        Some(&artist.id)
+                    },
+                    position as i64
+                ],
+            )
+            .map_err(database_error("save-remote-release-artist"))?;
+        }
+    }
+
+    tx.commit()
+        .map_err(database_error("commit-save-discography"))?;
+    Ok(())
+}
+
+fn set_artist_musicbrainz_id(
+    connection: &Connection,
+    artist_id: &str,
+    mbid: &str,
+) -> Result<(), AppError> {
+    let now = Utc::now().to_rfc3339();
+    connection
+        .execute(
+            "UPDATE artists SET musicbrainz_artist_id = ?1, updated_at = ?2 WHERE id = ?3",
+            params![mbid, now, artist_id],
+        )
+        .map_err(database_error("update-artist-mbid"))?;
+    Ok(())
+}
+
+/// Artists that have never had a discography sync, or whose last sync is older
+/// than `stale_after_days`. Ordered so never-checked artists are covered first.
+fn list_artists_for_discography_sync(
+    connection: &Connection,
+    stale_after_days: i64,
+) -> Result<Vec<ArtistSyncRow>, AppError> {
+    let mut statement = connection
+        .prepare(
+            "SELECT id, name FROM artists
+             WHERE discography_checked_at IS NULL
+                OR julianday('now') - julianday(discography_checked_at) >= ?1
+             ORDER BY discography_checked_at IS NOT NULL, name COLLATE NOCASE",
+        )
+        .map_err(database_error("list-discography-sync-artists"))?;
+    let rows = statement
+        .query_map(params![stale_after_days], |row| {
+            Ok(ArtistSyncRow {
+                id: row.get(0)?,
+                name: row.get(1)?,
+            })
+        })
+        .map_err(database_error("list-discography-sync-artists"))?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(database_error("list-discography-sync-artists"))?;
+    Ok(rows)
+}
+
+fn mark_artist_discography_checked(
+    connection: &Connection,
+    artist_id: &str,
+) -> Result<(), AppError> {
+    let now = Utc::now().to_rfc3339();
+    connection
+        .execute(
+            "UPDATE artists SET discography_checked_at = ?1 WHERE id = ?2",
+            params![now, artist_id],
+        )
+        .map_err(database_error("mark-artist-discography-checked"))?;
+    Ok(())
+}
+
+/// Resolve an album to the remote release carrying its MusicBrainz release-group
+/// id, whether the album is itself a remote entity or a local album that has been
+/// merged with one.
+fn resolve_album_release_group(
+    connection: &Connection,
+    album_id: &str,
+) -> Result<Option<ReleaseSyncRow>, AppError> {
+    let direct = connection
+        .query_row(
+            "SELECT id, musicbrainz_release_group_id FROM remote_releases WHERE id = ?1",
+            params![album_id],
+            |row| {
+                Ok(ReleaseSyncRow {
+                    id: row.get(0)?,
+                    musicbrainz_release_group_id: row.get(1)?,
+                })
+            },
+        )
+        .optional()
+        .map_err(database_error("resolve-album-release-group"))?;
+    if direct.is_some() {
+        return Ok(direct);
+    }
+
+    let merged = connection
+        .query_row(
+            "SELECT r.id, r.musicbrainz_release_group_id
+             FROM entity_merges m
+             JOIN remote_releases r ON r.id = m.remote_id
+             WHERE m.local_entity_type = 'album' AND m.local_id = ?1
+             ORDER BY m.updated_at DESC
+             LIMIT 1",
+            params![album_id],
+            |row| {
+                Ok(ReleaseSyncRow {
+                    id: row.get(0)?,
+                    musicbrainz_release_group_id: row.get(1)?,
+                })
+            },
+        )
+        .optional()
+        .map_err(database_error("resolve-album-release-group"))?;
+    Ok(merged)
+}
+
+fn record_entity_merge(
+    connection: &Connection,
+    local_type: &str,
+    local_id: &str,
+    remote_id: &str,
+    reviewed: bool,
+) -> Result<(), AppError> {
+    let now = Utc::now().to_rfc3339();
+    connection
+        .execute(
+            "INSERT INTO entity_merges (id, local_entity_type, local_id, remote_id, reviewed, created_at, updated_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?6)
+             ON CONFLICT(local_entity_type, local_id, remote_id) DO UPDATE SET
+               reviewed = excluded.reviewed,
+               updated_at = excluded.updated_at",
+            params![
+                Uuid::new_v4().to_string(),
+                local_type,
+                local_id,
+                remote_id,
+                if reviewed { 1 } else { 0 },
+                now
+            ],
+        )
+        .map_err(database_error("record-entity-merge"))?;
+    Ok(())
+}
+
+fn remove_entity_merge(
+    connection: &Connection,
+    local_type: &str,
+    local_id: &str,
+    remote_id: &str,
+) -> Result<(), AppError> {
+    connection
+        .execute(
+            "DELETE FROM entity_merges WHERE local_entity_type = ?1 AND local_id = ?2 AND remote_id = ?3",
+            params![local_type, local_id, remote_id],
+        )
+        .map_err(database_error("remove-entity-merge"))?;
+    Ok(())
 }
 
 fn tracks_for_entity(
@@ -2210,6 +4202,51 @@ fn get_track(connection: &Connection, track_id: &str) -> Result<TrackSummary, Ap
     Ok(track)
 }
 
+fn get_embedded_lyrics(
+    connection: &Connection,
+    track_id: &str,
+) -> Result<Option<String>, AppError> {
+    connection
+        .query_row(
+            "SELECT lyrics FROM tracks WHERE id = ?1",
+            [track_id],
+            |row| row.get(0),
+        )
+        .optional()
+        .map_err(database_error("read-embedded-lyrics"))
+        .map(|value: Option<Option<String>>| value.flatten())
+}
+
+fn get_lyrics_cache(connection: &Connection, cache_key: &str) -> Result<Option<String>, AppError> {
+    connection
+        .query_row(
+            "SELECT document_json FROM lyrics_cache WHERE cache_key = ?1",
+            [cache_key],
+            |row| row.get(0),
+        )
+        .optional()
+        .map_err(database_error("read-lyrics-cache"))
+}
+
+fn save_lyrics_cache(
+    connection: &Connection,
+    cache_key: &str,
+    document_json: &str,
+    source_url: Option<&str>,
+) -> Result<(), AppError> {
+    let now = Utc::now().to_rfc3339();
+    connection
+        .execute(
+            "INSERT INTO lyrics_cache (cache_key, document_json, source_url, created_at, updated_at)
+             VALUES (?1, ?2, ?3, ?4, ?4)
+             ON CONFLICT(cache_key) DO UPDATE SET document_json = excluded.document_json,
+             source_url = excluded.source_url, updated_at = excluded.updated_at",
+            params![cache_key, document_json, source_url, now],
+        )
+        .map_err(database_error("save-lyrics-cache"))?;
+    Ok(())
+}
+
 fn get_enrichment_cache(
     connection: &Connection,
     query_key: &str,
@@ -2228,7 +4265,7 @@ fn get_enrichment_cache(
 
 fn save_enrichment_cache(
     connection: &Connection,
-    track_id: &str,
+    track_id: Option<&str>,
     query_key: &str,
     result_json: &str,
 ) -> Result<(), AppError> {
@@ -2248,6 +4285,310 @@ fn save_enrichment_cache(
         )
         .map_err(database_error("save-enrichment-cache"))?;
     Ok(())
+}
+
+fn create_metadata_job(
+    connection: &mut Connection,
+    scope: MetadataJobScope,
+    scope_id: Option<&str>,
+) -> Result<MetadataJob, AppError> {
+    if !matches!(scope, MetadataJobScope::Library) && scope_id.is_none() {
+        return Err(AppError::new(
+            "metadata-scope-id-required",
+            "Track, album, and artist metadata jobs require a scope identifier.",
+        ));
+    }
+    let sql = match scope {
+        MetadataJobScope::Track => "SELECT id FROM tracks WHERE id = ?1 AND available = 1",
+        MetadataJobScope::Album => {
+            "SELECT id FROM tracks WHERE album_id = ?1 AND available = 1 ORDER BY id"
+        }
+        MetadataJobScope::Artist => {
+            "SELECT DISTINCT t.id FROM tracks t JOIN album_artists aa ON aa.album_id = t.album_id WHERE aa.artist_id = ?1 AND t.available = 1 ORDER BY t.id"
+        }
+        MetadataJobScope::Library => "SELECT id FROM tracks WHERE available = 1 ORDER BY id",
+    };
+    let mut statement = connection
+        .prepare(sql)
+        .map_err(database_error("prepare-metadata-job-scope"))?;
+    // The library-wide query takes no bind parameter; passing one anyway made every
+    // "enrich library" run fail with a parameter-count error.
+    let track_ids: Vec<String> = match scope {
+        MetadataJobScope::Library => statement
+            .query_map([], |row| row.get::<_, String>(0))
+            .map_err(database_error("query-metadata-job-scope"))?
+            .collect::<rusqlite::Result<Vec<_>>>()
+            .map_err(database_error("read-metadata-job-scope"))?,
+        _ => statement
+            .query_map([scope_id], |row| row.get::<_, String>(0))
+            .map_err(database_error("query-metadata-job-scope"))?
+            .collect::<rusqlite::Result<Vec<_>>>()
+            .map_err(database_error("read-metadata-job-scope"))?,
+    };
+    drop(statement);
+    if track_ids.is_empty() {
+        return Err(AppError::new(
+            "metadata-scope-empty",
+            "No available tracks matched this metadata job scope.",
+        ));
+    }
+    let id = Uuid::new_v4().to_string();
+    let now = Utc::now().to_rfc3339();
+    let transaction = connection
+        .transaction()
+        .map_err(database_error("begin-metadata-job"))?;
+    transaction
+        .execute(
+            "INSERT INTO metadata_jobs
+             (id, scope, scope_id, status, total_tracks, created_at, updated_at)
+             VALUES (?1, ?2, ?3, 'queued', ?4, ?5, ?5)",
+            params![id, scope.as_str(), scope_id, track_ids.len(), now],
+        )
+        .map_err(database_error("create-metadata-job"))?;
+    for track_id in track_ids {
+        transaction
+            .execute(
+                "INSERT INTO metadata_job_tracks (job_id, track_id, status, updated_at)
+                 VALUES (?1, ?2, 'pending', ?3)",
+                params![id, track_id, now],
+            )
+            .map_err(database_error("create-metadata-job-track"))?;
+    }
+    transaction
+        .commit()
+        .map_err(database_error("commit-metadata-job"))?;
+    get_metadata_job(connection, &id)
+}
+
+fn get_metadata_job(connection: &Connection, job_id: &str) -> Result<MetadataJob, AppError> {
+    connection
+        .query_row(
+            "SELECT id, scope, scope_id, status, total_tracks, processed_tracks,
+                    matched_tracks, auto_written_tracks, review_tracks, failed_tracks,
+                    deferred_tracks, current_track_id, last_error_json, created_at, updated_at
+             FROM metadata_jobs WHERE id = ?1",
+            [job_id],
+            metadata_job_from_row,
+        )
+        .optional()
+        .map_err(database_error("read-metadata-job"))?
+        .ok_or_else(|| {
+            AppError::new(
+                "metadata-job-not-found",
+                "The metadata job no longer exists.",
+            )
+        })
+}
+
+fn list_metadata_jobs(connection: &Connection) -> Result<Vec<MetadataJob>, AppError> {
+    let mut statement = connection
+        .prepare(
+            "SELECT id, scope, scope_id, status, total_tracks, processed_tracks,
+                    matched_tracks, auto_written_tracks, review_tracks, failed_tracks,
+                    deferred_tracks, current_track_id, last_error_json, created_at, updated_at
+             FROM metadata_jobs ORDER BY created_at DESC",
+        )
+        .map_err(database_error("prepare-metadata-jobs"))?;
+    statement
+        .query_map([], metadata_job_from_row)
+        .map_err(database_error("query-metadata-jobs"))?
+        .collect::<rusqlite::Result<Vec<_>>>()
+        .map_err(database_error("read-metadata-jobs"))
+}
+
+fn metadata_job_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<MetadataJob> {
+    Ok(MetadataJob {
+        id: row.get(0)?,
+        scope: MetadataJobScope::from_database(&row.get::<_, String>(1)?),
+        scope_id: row.get(2)?,
+        status: MetadataJobStatus::from_database(&row.get::<_, String>(3)?),
+        total_tracks: row.get(4)?,
+        processed_tracks: row.get(5)?,
+        matched_tracks: row.get(6)?,
+        auto_written_tracks: row.get(7)?,
+        review_tracks: row.get(8)?,
+        failed_tracks: row.get(9)?,
+        deferred_tracks: row.get(10)?,
+        current_track_id: row.get(11)?,
+        last_error: row.get(12)?,
+        created_at: row.get(13)?,
+        updated_at: row.get(14)?,
+    })
+}
+
+fn pending_metadata_job_tracks(
+    connection: &Connection,
+    job_id: &str,
+    retry_errors: bool,
+) -> Result<Vec<String>, AppError> {
+    let statuses = if retry_errors {
+        "('pending', 'deferred', 'error', 'running')"
+    } else {
+        "('pending', 'deferred', 'running')"
+    };
+    let mut statement = connection
+        .prepare(&format!(
+            "SELECT track_id FROM metadata_job_tracks WHERE job_id = ?1 AND status IN {statuses} ORDER BY rowid"
+        ))
+        .map_err(database_error("prepare-pending-metadata-tracks"))?;
+    statement
+        .query_map([job_id], |row| row.get::<_, String>(0))
+        .map_err(database_error("query-pending-metadata-tracks"))?
+        .collect::<rusqlite::Result<Vec<_>>>()
+        .map_err(database_error("read-pending-metadata-tracks"))
+}
+
+#[allow(clippy::too_many_arguments)]
+fn record_metadata_job_track(
+    connection: &mut Connection,
+    job_id: &str,
+    track_id: &str,
+    status: &str,
+    source: Option<&str>,
+    fingerprint: Option<&str>,
+    error_json: Option<&str>,
+    candidates_json: Option<&str>,
+) -> Result<MetadataJob, AppError> {
+    const VALID_STATUSES: &[&str] = &[
+        "pending",
+        "running",
+        "review",
+        "written",
+        "deferred",
+        "complete",
+        "error",
+        "cancelled",
+    ];
+    if !VALID_STATUSES.contains(&status) {
+        return Err(AppError::new(
+            "metadata-track-status-invalid",
+            "Invalid metadata track status.",
+        ));
+    }
+    let now = Utc::now().to_rfc3339();
+    let transaction = connection
+        .transaction()
+        .map_err(database_error("begin-record-metadata-track"))?;
+    let changed = transaction
+        .execute(
+            "UPDATE metadata_job_tracks SET status = ?3, source = ?4, fingerprint = COALESCE(?5, fingerprint),
+                    error_json = ?6, updated_at = ?7 WHERE job_id = ?1 AND track_id = ?2",
+            params![job_id, track_id, status, source, fingerprint, error_json, now],
+        )
+        .map_err(database_error("record-metadata-track"))?;
+    if changed == 0 {
+        return Err(AppError::new(
+            "metadata-job-track-not-found",
+            "The track is not part of this metadata job.",
+        ));
+    }
+    if let Some(json) = candidates_json {
+        transaction
+            .execute(
+                "DELETE FROM metadata_candidates WHERE job_id = ?1 AND track_id = ?2",
+                params![job_id, track_id],
+            )
+            .map_err(database_error("clear-metadata-candidates"))?;
+        let candidates: Vec<serde_json::Value> = serde_json::from_str(json).map_err(|error| {
+            AppError::persistence("parse-metadata-candidates", error.to_string())
+        })?;
+        for candidate in candidates {
+            let provider = candidate
+                .get("source")
+                .and_then(serde_json::Value::as_str)
+                .unwrap_or("unknown");
+            let recording = candidate
+                .get("recordingId")
+                .and_then(serde_json::Value::as_str);
+            let release = candidate
+                .get("releaseId")
+                .and_then(serde_json::Value::as_str);
+            let confidence = candidate
+                .get("confidence")
+                .and_then(serde_json::Value::as_f64)
+                .unwrap_or(0.0);
+            let review = candidate
+                .get("requiresReview")
+                .and_then(serde_json::Value::as_bool)
+                .unwrap_or(true);
+            transaction
+                .execute(
+                    "INSERT INTO metadata_candidates
+                     (id, job_id, track_id, provider, recording_mbid, release_mbid, confidence,
+                      requires_review, candidate_json, created_at, updated_at)
+                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?10)",
+                    params![
+                        Uuid::new_v4().to_string(),
+                        job_id,
+                        track_id,
+                        provider,
+                        recording,
+                        release,
+                        confidence,
+                        review,
+                        candidate.to_string(),
+                        now
+                    ],
+                )
+                .map_err(database_error("save-metadata-candidate"))?;
+        }
+    }
+    refresh_metadata_job_counts(&transaction, job_id, &now)?;
+    transaction
+        .commit()
+        .map_err(database_error("commit-record-metadata-track"))?;
+    get_metadata_job(connection, job_id)
+}
+
+fn refresh_metadata_job_counts(
+    connection: &Connection,
+    job_id: &str,
+    now: &str,
+) -> Result<(), AppError> {
+    connection
+        .execute(
+            "UPDATE metadata_jobs SET
+               processed_tracks = (SELECT COUNT(*) FROM metadata_job_tracks WHERE job_id = ?1 AND status IN ('review', 'written', 'complete', 'error', 'cancelled')),
+               matched_tracks = (SELECT COUNT(*) FROM metadata_job_tracks WHERE job_id = ?1 AND source IS NOT NULL),
+               auto_written_tracks = (SELECT COUNT(*) FROM metadata_job_tracks WHERE job_id = ?1 AND status = 'written'),
+               review_tracks = (SELECT COUNT(*) FROM metadata_job_tracks WHERE job_id = ?1 AND status = 'review'),
+               failed_tracks = (SELECT COUNT(*) FROM metadata_job_tracks WHERE job_id = ?1 AND status = 'error'),
+               deferred_tracks = (SELECT COUNT(*) FROM metadata_job_tracks WHERE job_id = ?1 AND status = 'deferred'),
+               updated_at = ?2
+             WHERE id = ?1",
+            params![job_id, now],
+        )
+        .map_err(database_error("refresh-metadata-job-counts"))?;
+    Ok(())
+}
+
+fn set_metadata_job_status(
+    connection: &Connection,
+    job_id: &str,
+    status: MetadataJobStatus,
+    current_track_id: Option<&str>,
+    last_error: Option<&str>,
+) -> Result<MetadataJob, AppError> {
+    let changed = connection
+        .execute(
+            "UPDATE metadata_jobs SET status = ?2, current_track_id = ?3,
+                    last_error_json = ?4, updated_at = ?5 WHERE id = ?1",
+            params![
+                job_id,
+                status.as_str(),
+                current_track_id,
+                last_error,
+                Utc::now().to_rfc3339()
+            ],
+        )
+        .map_err(database_error("set-metadata-job-status"))?;
+    if changed == 0 {
+        return Err(AppError::new(
+            "metadata-job-not-found",
+            "The metadata job no longer exists.",
+        ));
+    }
+    get_metadata_job(connection, job_id)
 }
 
 fn save_artwork(connection: &Connection, artwork: &CachedArtwork) -> Result<(), AppError> {
@@ -2456,32 +4797,201 @@ fn create_playlist(connection: &Connection, name: &str) -> Result<PlaylistSummar
             params![id, name, now],
         )
         .map_err(database_error("create-playlist"))?;
-    Ok(PlaylistSummary {
-        id,
-        name: name.into(),
-        track_count: 0,
-    })
+    playlist_summary(connection, &id)
 }
 
 fn list_playlists(connection: &Connection) -> Result<Vec<PlaylistSummary>, AppError> {
     let mut statement = connection
         .prepare(
-            "SELECT p.id, p.name, COUNT(pt.track_id) FROM playlists p
-             LEFT JOIN playlist_tracks pt ON pt.playlist_id = p.id
-             GROUP BY p.id ORDER BY p.name COLLATE NOCASE, p.id",
+            "SELECT p.id, p.name,
+                    (SELECT COUNT(*) FROM playlist_tracks pt WHERE pt.playlist_id = p.id),
+                    (SELECT COALESCE(SUM(t.duration_ms), 0) FROM playlist_tracks pt
+                     JOIN tracks t ON t.id = pt.track_id WHERE pt.playlist_id = p.id),
+                    p.generated,
+                    (SELECT GROUP_CONCAT(cache_path, char(31)) FROM (
+                       SELECT DISTINCT ar.cache_path AS cache_path FROM playlist_tracks covers
+                       JOIN tracks ct ON ct.id = covers.track_id JOIN artwork ar ON ar.id = ct.artwork_id
+                       WHERE covers.playlist_id = p.id AND ar.cache_path IS NOT NULL
+                       ORDER BY covers.position LIMIT 4
+                    ))
+             FROM playlists p ORDER BY p.name COLLATE NOCASE, p.id",
         )
         .map_err(database_error("prepare-playlists"))?;
     statement
-        .query_map([], |row| {
-            Ok(PlaylistSummary {
-                id: row.get(0)?,
-                name: row.get(1)?,
-                track_count: row.get(2)?,
-            })
-        })
+        .query_map([], playlist_summary_from_row)
         .map_err(database_error("query-playlists"))?
         .collect::<rusqlite::Result<Vec<_>>>()
         .map_err(database_error("read-playlists"))
+}
+
+fn playlist_summary_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<PlaylistSummary> {
+    Ok(PlaylistSummary {
+        id: row.get(0)?,
+        name: row.get(1)?,
+        track_count: row.get(2)?,
+        total_duration_ms: row.get(3)?,
+        generated: row.get(4)?,
+        cover_artwork_paths: split_group(row.get(5)?),
+    })
+}
+
+fn playlist_summary(
+    connection: &Connection,
+    playlist_id: &str,
+) -> Result<PlaylistSummary, AppError> {
+    connection
+        .query_row(
+            "SELECT p.id, p.name,
+                    (SELECT COUNT(*) FROM playlist_tracks pt WHERE pt.playlist_id = p.id),
+                    (SELECT COALESCE(SUM(t.duration_ms), 0) FROM playlist_tracks pt
+                     JOIN tracks t ON t.id = pt.track_id WHERE pt.playlist_id = p.id),
+                    p.generated,
+                    (SELECT GROUP_CONCAT(cache_path, char(31)) FROM (
+                       SELECT DISTINCT ar.cache_path AS cache_path FROM playlist_tracks covers
+                       JOIN tracks ct ON ct.id = covers.track_id JOIN artwork ar ON ar.id = ct.artwork_id
+                       WHERE covers.playlist_id = p.id AND ar.cache_path IS NOT NULL
+                       ORDER BY covers.position LIMIT 4
+                    ))
+             FROM playlists p WHERE p.id = ?1",
+            [playlist_id],
+            playlist_summary_from_row,
+        )
+        .optional()
+        .map_err(database_error("read-playlist-summary"))?
+        .ok_or_else(|| AppError::new("playlist-not-found", "The requested playlist no longer exists."))
+}
+
+fn get_playlist(connection: &Connection, playlist_id: &str) -> Result<Playlist, AppError> {
+    let (id, name, description, generated, request_json, created_at, updated_at) = connection
+        .query_row(
+            "SELECT id, name, description, generated, generation_request_json, created_at, updated_at
+             FROM playlists WHERE id = ?1",
+            [playlist_id],
+            |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, Option<String>>(2)?,
+                    row.get::<_, bool>(3)?,
+                    row.get::<_, Option<String>>(4)?,
+                    row.get::<_, String>(5)?,
+                    row.get::<_, String>(6)?,
+                ))
+            },
+        )
+        .optional()
+        .map_err(database_error("read-playlist"))?
+        .ok_or_else(|| AppError::new("playlist-not-found", "The requested playlist no longer exists."))?;
+    let tracks = get_playlist_tracks(connection, playlist_id)?;
+    let total_duration_ms = tracks.iter().filter_map(|track| track.duration_ms).sum();
+    let generation_request = request_json
+        .as_deref()
+        .map(serde_json::from_str::<PlaylistGenerationRequest>)
+        .transpose()
+        .map_err(|error| {
+            AppError::persistence("decode-playlist-generation-request", error.to_string())
+        })?;
+    Ok(Playlist {
+        id,
+        name,
+        description,
+        tracks,
+        total_duration_ms,
+        generated,
+        generation_request,
+        created_at,
+        updated_at,
+    })
+}
+
+fn validate_playlist_name(name: &str) -> Result<&str, AppError> {
+    let name = name.trim();
+    if name.is_empty() {
+        Err(AppError::new(
+            "playlist-name-empty",
+            "A playlist name is required.",
+        ))
+    } else {
+        Ok(name)
+    }
+}
+
+fn rename_playlist(
+    connection: &Connection,
+    playlist_id: &str,
+    name: &str,
+) -> Result<PlaylistSummary, AppError> {
+    let name = validate_playlist_name(name)?;
+    let changed = connection
+        .execute(
+            "UPDATE playlists SET name = ?2, updated_at = ?3 WHERE id = ?1",
+            params![playlist_id, name, Utc::now().to_rfc3339()],
+        )
+        .map_err(database_error("rename-playlist"))?;
+    if changed == 0 {
+        return Err(AppError::new(
+            "playlist-not-found",
+            "The requested playlist no longer exists.",
+        ));
+    }
+    playlist_summary(connection, playlist_id)
+}
+
+fn delete_playlist(connection: &Connection, playlist_id: &str) -> Result<(), AppError> {
+    let changed = connection
+        .execute("DELETE FROM playlists WHERE id = ?1", [playlist_id])
+        .map_err(database_error("delete-playlist"))?;
+    if changed == 0 {
+        return Err(AppError::new(
+            "playlist-not-found",
+            "The requested playlist no longer exists.",
+        ));
+    }
+    Ok(())
+}
+
+fn duplicate_playlist(
+    connection: &mut Connection,
+    playlist_id: &str,
+    name: &str,
+) -> Result<PlaylistSummary, AppError> {
+    let name = validate_playlist_name(name)?;
+    let transaction = connection
+        .transaction()
+        .map_err(database_error("begin-duplicate-playlist"))?;
+    let source_exists: bool = transaction
+        .query_row(
+            "SELECT EXISTS(SELECT 1 FROM playlists WHERE id = ?1)",
+            [playlist_id],
+            |row| row.get(0),
+        )
+        .map_err(database_error("find-duplicate-playlist-source"))?;
+    if !source_exists {
+        return Err(AppError::new(
+            "playlist-not-found",
+            "The requested playlist no longer exists.",
+        ));
+    }
+    let id = Uuid::new_v4().to_string();
+    let now = Utc::now().to_rfc3339();
+    transaction
+        .execute(
+            "INSERT INTO playlists (id, name, description, generated, generation_request_json, created_at, updated_at)
+             SELECT ?2, ?3, description, generated, generation_request_json, ?4, ?4 FROM playlists WHERE id = ?1",
+            params![playlist_id, id, name, now],
+        )
+        .map_err(database_error("duplicate-playlist"))?;
+    transaction
+        .execute(
+            "INSERT INTO playlist_tracks (playlist_id, track_id, position, added_at)
+             SELECT ?2, track_id, position, ?3 FROM playlist_tracks WHERE playlist_id = ?1 ORDER BY position",
+            params![playlist_id, id, now],
+        )
+        .map_err(database_error("duplicate-playlist-tracks"))?;
+    transaction
+        .commit()
+        .map_err(database_error("commit-duplicate-playlist"))?;
+    playlist_summary(connection, &id)
 }
 
 fn get_playlist_tracks(
@@ -2539,6 +5049,181 @@ fn set_playlist_tracks(
         .map_err(database_error("commit-save-playlist"))
 }
 
+fn save_generated_playlist(
+    connection: &mut Connection,
+    name: &str,
+    request_json: &str,
+    track_ids: &[String],
+) -> Result<PlaylistSummary, AppError> {
+    let name = validate_playlist_name(name)?;
+    serde_json::from_str::<PlaylistGenerationRequest>(request_json).map_err(|error| {
+        AppError::new(
+            "playlist-request-invalid",
+            "The Song DNA request was invalid.",
+        )
+        .with_context("reason", error)
+    })?;
+    let transaction = connection
+        .transaction()
+        .map_err(database_error("begin-generated-playlist"))?;
+    let id = Uuid::new_v4().to_string();
+    let now = Utc::now().to_rfc3339();
+    transaction
+        .execute(
+            "INSERT INTO playlists (id, name, generated, generation_request_json, created_at, updated_at)
+             VALUES (?1, ?2, 1, ?3, ?4, ?4)",
+            params![id, name, request_json, now],
+        )
+        .map_err(database_error("create-generated-playlist"))?;
+    for (position, track_id) in track_ids.iter().enumerate() {
+        transaction
+            .execute(
+                "INSERT INTO playlist_tracks (playlist_id, track_id, position, added_at) VALUES (?1, ?2, ?3, ?4)",
+                params![id, track_id, position, now],
+            )
+            .map_err(database_error("save-generated-playlist-track"))?;
+    }
+    transaction
+        .commit()
+        .map_err(database_error("commit-generated-playlist"))?;
+    playlist_summary(connection, &id)
+}
+
+fn get_audio_features(
+    connection: &Connection,
+    track_id: &str,
+) -> Result<Option<AudioFeatures>, AppError> {
+    connection
+        .query_row(
+            "SELECT track_id, analysis_version, bpm, musical_key, loudness_db, energy,
+                    spectral_centroid_hz, spectral_rolloff_hz, dynamic_range_db, analyzed_at
+             FROM audio_features WHERE track_id = ?1 AND analysis_version = ?2",
+            params![track_id, AUDIO_FEATURE_VERSION],
+            audio_features_from_row,
+        )
+        .optional()
+        .map_err(database_error("read-audio-features"))
+}
+
+fn audio_features_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<AudioFeatures> {
+    Ok(AudioFeatures {
+        track_id: row.get(0)?,
+        analysis_version: row.get(1)?,
+        bpm: row.get(2)?,
+        musical_key: row.get(3)?,
+        loudness_db: row.get(4)?,
+        energy: row.get(5)?,
+        spectral_centroid_hz: row.get(6)?,
+        spectral_rolloff_hz: row.get(7)?,
+        dynamic_range_db: row.get(8)?,
+        analyzed_at: row.get(9)?,
+    })
+}
+
+fn save_audio_features(connection: &Connection, features: &AudioFeatures) -> Result<(), AppError> {
+    connection
+        .execute(
+            "INSERT INTO audio_features
+             (track_id, analysis_version, bpm, musical_key, loudness_db, energy, spectral_centroid_hz,
+              spectral_rolloff_hz, dynamic_range_db, analyzed_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
+             ON CONFLICT(track_id, analysis_version) DO UPDATE SET
+               bpm = excluded.bpm, musical_key = excluded.musical_key,
+               loudness_db = excluded.loudness_db, energy = excluded.energy,
+               spectral_centroid_hz = excluded.spectral_centroid_hz,
+               spectral_rolloff_hz = excluded.spectral_rolloff_hz,
+               dynamic_range_db = excluded.dynamic_range_db, analyzed_at = excluded.analyzed_at",
+            params![
+                features.track_id,
+                features.analysis_version,
+                features.bpm,
+                features.musical_key,
+                features.loudness_db,
+                features.energy,
+                features.spectral_centroid_hz,
+                features.spectral_rolloff_hz,
+                features.dynamic_range_db,
+                features.analyzed_at,
+            ],
+        )
+        .map_err(database_error("save-audio-features"))?;
+    Ok(())
+}
+
+fn split_group(value: Option<String>) -> Vec<String> {
+    value
+        .unwrap_or_default()
+        .split('\u{1f}')
+        .filter(|part| !part.is_empty())
+        .map(str::to_owned)
+        .collect()
+}
+
+fn list_generation_candidates(
+    connection: &Connection,
+) -> Result<Vec<GenerationCandidate>, AppError> {
+    let _span = crate::metrics::Span::new("sqlite.list_generation_candidates");
+    let mut statement = connection
+        .prepare(
+            "WITH listening AS (
+               SELECT track_id, SUM(completed) AS play_count, SUM(skipped) AS skip_count,
+                      unixepoch(MAX(started_at)) AS last_played
+               FROM listening_sessions GROUP BY track_id
+             )
+             SELECT t.id, t.title, t.album_id, COALESCE(al.title, 'Unknown Album'), t.year,
+                    COALESCE(t.duration_ms, 0), COALESCE(ls.play_count, 0), COALESCE(ls.skip_count, 0),
+                    EXISTS(SELECT 1 FROM favorites f WHERE f.entity_type = 'track' AND f.entity_id = t.id),
+                    ls.last_played,
+                    (SELECT GROUP_CONCAT(a.id, char(31)) FROM track_artists ta JOIN artists a ON a.id = ta.artist_id WHERE ta.track_id = t.id AND ta.role = 'artist' ORDER BY ta.position),
+                    (SELECT GROUP_CONCAT(a.name, char(31)) FROM track_artists ta JOIN artists a ON a.id = ta.artist_id WHERE ta.track_id = t.id AND ta.role = 'artist' ORDER BY ta.position),
+                    (SELECT GROUP_CONCAT(g.name, char(31)) FROM track_genres tg JOIN genres g ON g.id = tg.genre_id WHERE tg.track_id = t.id ORDER BY g.name COLLATE NOCASE),
+                    af.track_id, af.analysis_version, af.bpm, af.musical_key, af.loudness_db, af.energy,
+                    af.spectral_centroid_hz, af.spectral_rolloff_hz, af.dynamic_range_db, af.analyzed_at
+             FROM tracks t
+             LEFT JOIN albums al ON al.id = t.album_id
+             LEFT JOIN listening ls ON ls.track_id = t.id
+             LEFT JOIN audio_features af ON af.track_id = t.id AND af.analysis_version = ?1
+             WHERE t.available = 1 ORDER BY t.id",
+        )
+        .map_err(database_error("prepare-generation-candidates"))?;
+    statement
+        .query_map([AUDIO_FEATURE_VERSION], |row| {
+            let features = row
+                .get::<_, Option<String>>(13)?
+                .map(|track_id| AudioFeatures {
+                    track_id,
+                    analysis_version: row.get(14).unwrap_or(AUDIO_FEATURE_VERSION),
+                    bpm: row.get(15).unwrap_or(None),
+                    musical_key: row.get(16).unwrap_or(None),
+                    loudness_db: row.get(17).unwrap_or(-60.0),
+                    energy: row.get(18).unwrap_or(0.0),
+                    spectral_centroid_hz: row.get(19).unwrap_or(0.0),
+                    spectral_rolloff_hz: row.get(20).unwrap_or(0.0),
+                    dynamic_range_db: row.get(21).unwrap_or(0.0),
+                    analyzed_at: row.get(22).unwrap_or_default(),
+                });
+            Ok(GenerationCandidate {
+                id: row.get(0)?,
+                title: row.get(1)?,
+                album_id: row.get(2)?,
+                album: row.get(3)?,
+                year: row.get(4)?,
+                duration_ms: row.get(5)?,
+                play_count: row.get(6)?,
+                skip_count: row.get(7)?,
+                favorite: row.get(8)?,
+                last_played_at: row.get(9)?,
+                artist_ids: split_group(row.get(10)?),
+                artist_names: split_group(row.get(11)?),
+                genres: split_group(row.get(12)?),
+                features,
+            })
+        })
+        .map_err(database_error("query-generation-candidates"))?
+        .collect::<rusqlite::Result<Vec<_>>>()
+        .map_err(database_error("read-generation-candidates"))
+}
+
 fn start_listening_session(
     connection: &Connection,
     id: &str,
@@ -2590,7 +5275,12 @@ fn get_home_snapshot(connection: &Connection) -> Result<HomeSnapshot, AppError> 
         )
         .map_err(database_error("home-library-totals"))?;
     let total_artists = connection
-        .query_row("SELECT COUNT(*) FROM artists", [], |row| row.get(0))
+        .query_row(
+            "SELECT COUNT(DISTINCT aa.artist_id) FROM album_artists aa
+             JOIN tracks t ON t.album_id = aa.album_id AND t.available = 1",
+            [],
+            |row| row.get(0),
+        )
         .map_err(database_error("home-artist-total"))?;
     let total_albums = connection
         .query_row("SELECT COUNT(*) FROM albums", [], |row| row.get(0))
@@ -2775,94 +5465,6 @@ fn fail_integration_job(
     Ok(())
 }
 
-fn save_acquisition_job(
-    connection: &Connection,
-    record: &AcquisitionRecord,
-) -> Result<(), AppError> {
-    let now = Utc::now().to_rfc3339();
-    connection
-        .execute(
-            "INSERT INTO acquisition_jobs
-             (id, status, progress, source_user, target_path, provider_job_id, error_json,
-              created_at, updated_at, remote_filename, file_size, search_id)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?8, ?9, ?10, ?11)
-             ON CONFLICT(id) DO UPDATE SET status = excluded.status,
-               progress = excluded.progress, source_user = excluded.source_user,
-               target_path = excluded.target_path, provider_job_id = excluded.provider_job_id,
-               error_json = excluded.error_json, remote_filename = excluded.remote_filename,
-               file_size = excluded.file_size, search_id = excluded.search_id,
-               updated_at = excluded.updated_at",
-            params![
-                record.id,
-                record.status,
-                record.progress,
-                record.source_user,
-                record.target_path,
-                record.provider_job_id,
-                record
-                    .error
-                    .as_ref()
-                    .and_then(|error| serde_json::to_string(error).ok()),
-                now,
-                record.remote_filename,
-                record.file_size,
-                record.search_id,
-            ],
-        )
-        .map_err(database_error("save-acquisition-job"))?;
-    Ok(())
-}
-
-fn acquisition_record_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<AcquisitionRecord> {
-    let error_json: Option<String> = row.get(6)?;
-    Ok(AcquisitionRecord {
-        id: row.get(0)?,
-        status: row.get(1)?,
-        progress: row.get(2)?,
-        source_user: row.get(3)?,
-        target_path: row.get(4)?,
-        provider_job_id: row.get(5)?,
-        error: error_json.and_then(|json| serde_json::from_str(&json).ok()),
-        remote_filename: row.get(7)?,
-        file_size: row.get(8)?,
-        search_id: row.get(9)?,
-    })
-}
-
-fn get_acquisition_job(connection: &Connection, id: &str) -> Result<AcquisitionRecord, AppError> {
-    connection
-        .query_row(
-            "SELECT id, status, progress, source_user, target_path, provider_job_id,
-             error_json, remote_filename, file_size, search_id
-             FROM acquisition_jobs WHERE id = ?1",
-            [id],
-            acquisition_record_from_row,
-        )
-        .optional()
-        .map_err(database_error("read-acquisition-job"))?
-        .ok_or_else(|| {
-            AppError::new(
-                "acquisition-job-not-found",
-                "The acquisition job no longer exists.",
-            )
-        })
-}
-
-fn list_acquisition_jobs(connection: &Connection) -> Result<Vec<AcquisitionRecord>, AppError> {
-    let mut statement = connection
-        .prepare(
-            "SELECT id, status, progress, source_user, target_path, provider_job_id,
-             error_json, remote_filename, file_size, search_id
-             FROM acquisition_jobs ORDER BY updated_at DESC",
-        )
-        .map_err(database_error("prepare-acquisition-jobs"))?;
-    statement
-        .query_map([], acquisition_record_from_row)
-        .map_err(database_error("query-acquisition-jobs"))?
-        .collect::<rusqlite::Result<Vec<_>>>()
-        .map_err(database_error("read-acquisition-jobs"))
-}
-
 fn resolve_track(
     connection: &Connection,
     canonical_path: &str,
@@ -2900,6 +5502,133 @@ mod tests {
         let worker = DatabaseWorker::in_memory().expect("database starts");
         let roots = worker.list_roots().expect("roots query");
         assert!(roots.is_empty());
+    }
+
+    #[test]
+    fn song_dna_and_playlist_snapshots_round_trip() {
+        let mut connection =
+            open_connection(Connection::open_in_memory()).expect("open song dna database");
+        connection
+            .execute(
+                "INSERT INTO library_roots (id, canonical_path, label, created_at, updated_at)
+                 VALUES ('root', '/music', 'Music', 'now', 'now')",
+                [],
+            )
+            .expect("insert root");
+        connection
+            .execute(
+                "INSERT INTO tracks
+                 (id, root_id, canonical_path, relative_path, title, extension, file_size, available, added_at, updated_at)
+                 VALUES ('track', 'root', '/music/track.wav', 'track.wav', 'Track', 'wav', 1, 1, 'now', 'now')",
+                [],
+            )
+            .expect("insert track");
+        let features = AudioFeatures {
+            track_id: "track".into(),
+            analysis_version: AUDIO_FEATURE_VERSION,
+            bpm: Some(120.0),
+            musical_key: Some("C major".into()),
+            loudness_db: -12.0,
+            energy: 0.6,
+            spectral_centroid_hz: 2_000.0,
+            spectral_rolloff_hz: 5_000.0,
+            dynamic_range_db: 9.0,
+            analyzed_at: "now".into(),
+        };
+        save_audio_features(&connection, &features).expect("save features");
+        assert_eq!(
+            get_audio_features(&connection, "track")
+                .expect("load features")
+                .expect("features exist")
+                .analysis_version,
+            AUDIO_FEATURE_VERSION
+        );
+
+        let playlist = create_playlist(&connection, "Snapshot").expect("create playlist");
+        set_playlist_tracks(&mut connection, &playlist.id, &["track".into()])
+            .expect("add playlist track");
+        let duplicate = duplicate_playlist(&mut connection, &playlist.id, "Snapshot copy")
+            .expect("duplicate playlist");
+        assert_eq!(duplicate.track_count, 1);
+        assert_eq!(
+            get_playlist(&connection, &duplicate.id)
+                .expect("playlist detail")
+                .tracks
+                .len(),
+            1
+        );
+        let renamed =
+            rename_playlist(&connection, &duplicate.id, "Renamed").expect("rename playlist");
+        assert_eq!(renamed.name, "Renamed");
+        delete_playlist(&connection, &duplicate.id).expect("delete playlist");
+        assert!(get_playlist(&connection, &duplicate.id).is_err());
+    }
+
+    #[test]
+    fn artist_pages_use_album_artists_and_keyset_cursors() {
+        let mut connection = Connection::open_in_memory().expect("open catalog");
+        migrate(&mut connection).expect("migrate");
+        connection.execute(
+            "INSERT INTO library_roots (id, canonical_path, label, created_at, updated_at) VALUES ('root', '/music', 'Music', 'now', 'now')",
+            [],
+        ).expect("root");
+        for (id, name) in [
+            ("album-artist", "Album Artist"),
+            ("featured", "Featured Guest"),
+            ("z", "Zebra"),
+        ] {
+            connection.execute(
+                "INSERT INTO artists (id, name, created_at, updated_at) VALUES (?1, ?2, 'now', 'now')",
+                params![id, name],
+            ).expect("artist");
+        }
+        for (id, title, artist) in [
+            ("album-a", "Alpha", "album-artist"),
+            ("album-z", "Zulu", "z"),
+        ] {
+            connection.execute(
+                "INSERT INTO albums (id, title, created_at, updated_at) VALUES (?1, ?2, 'now', 'now')",
+                params![id, title],
+            ).expect("album");
+            connection
+                .execute(
+                    "INSERT INTO album_artists (album_id, artist_id, position) VALUES (?1, ?2, 0)",
+                    params![id, artist],
+                )
+                .expect("album artist");
+        }
+        connection.execute(
+            "INSERT INTO tracks (id, root_id, canonical_path, relative_path, title, extension, file_size, available, added_at, updated_at) VALUES ('track-a', 'root', '/music/a.flac', 'a.flac', 'A', 'flac', 1, 1, 'now', 'now')",
+            [],
+        ).expect("track");
+        connection.execute(
+            "INSERT INTO track_artists (track_id, artist_id, role, position) VALUES ('track-a', 'featured', 'artist', 0)",
+            [],
+        ).expect("featured track artist");
+
+        let first = query_artists_page(
+            &connection,
+            ArtistCatalogQuery {
+                search: None,
+                cursor: None,
+                page_size: 1,
+                available: Some(true),
+            },
+        )
+        .expect("first page");
+        assert_eq!(first.items[0].name, "Album Artist");
+        assert_ne!(first.items[0].name, "Featured Guest");
+        let second = query_artists_page(
+            &connection,
+            ArtistCatalogQuery {
+                search: None,
+                cursor: first.next_cursor,
+                page_size: 1,
+                available: Some(true),
+            },
+        )
+        .expect("second page");
+        assert_eq!(second.items[0].name, "Zebra");
     }
 
     #[test]
@@ -2945,33 +5674,6 @@ mod tests {
     }
 
     #[test]
-    fn acquisition_jobs_round_trip_without_exposing_credentials() {
-        let worker = DatabaseWorker::in_memory().expect("database starts");
-        let record = AcquisitionRecord {
-            id: "job-1".into(),
-            status: "downloading".into(),
-            progress: 0.25,
-            source_user: Some("source-user".into()),
-            target_path: None,
-            provider_job_id: Some("batch-1".into()),
-            error: None,
-            remote_filename: Some("Artist\\Album\\Track.flac".into()),
-            file_size: 1234,
-            search_id: Some("search-1".into()),
-        };
-        worker
-            .save_acquisition_job(record)
-            .expect("persist acquisition job");
-        let restored = worker
-            .get_acquisition_job("job-1".into())
-            .expect("restore acquisition job");
-        assert_eq!(restored.status, "downloading");
-        assert_eq!(restored.progress, 0.25);
-        assert_eq!(restored.provider_job_id.as_deref(), Some("batch-1"));
-        assert_eq!(worker.list_acquisition_jobs().expect("list jobs").len(), 1);
-    }
-
-    #[test]
     fn every_historical_schema_version_upgrades_to_the_complete_current_schema() {
         for starting_version in 0..=SCHEMA_VERSION {
             let mut connection = Connection::open_in_memory().expect("open historical database");
@@ -3001,7 +5703,11 @@ mod tests {
                 "metadata_overrides",
                 "listening_sessions",
                 "integration_jobs",
-                "acquisition_jobs",
+                "remote_artists",
+                "remote_releases",
+                "remote_release_artists",
+                "entity_merges",
+                "remote_tracks",
             ] {
                 let exists: bool = connection
                     .query_row(
@@ -3013,6 +5719,19 @@ mod tests {
                 assert!(
                     exists,
                     "{table} missing after upgrade from v{starting_version}"
+                );
+            }
+            for obsolete_table in ["acquisition_jobs", "acquisition_settings"] {
+                let exists: bool = connection
+                    .query_row(
+                        "SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?1)",
+                        [obsolete_table],
+                        |row| row.get(0),
+                    )
+                    .expect("inspect obsolete schema table");
+                assert!(
+                    !exists,
+                    "{obsolete_table} should be dropped after upgrade to v{SCHEMA_VERSION}"
                 );
             }
             let violations: i64 = connection
@@ -3028,6 +5747,471 @@ mod tests {
     }
 
     #[test]
+    fn provenance_cleanup_drops_non_musicbrainz_rows_and_keeps_local_data() {
+        let mut connection = Connection::open_in_memory().expect("open catalog");
+        // Migrate to the schema just before the cleanup so the bad rows can be seeded.
+        connection
+            .execute_batch("PRAGMA journal_mode = WAL;")
+            .expect("pragma");
+        for (version, sql) in MIGRATIONS.iter().filter(|(version, _)| *version < 13) {
+            connection.execute_batch(sql).expect("migrate");
+            let _ = version;
+        }
+
+        connection.execute(
+            "INSERT INTO library_roots (id, canonical_path, label, created_at, updated_at) VALUES ('root-1', '/music', 'Music', 'now', 'now')",
+            [],
+        ).expect("root");
+        connection.execute(
+            "INSERT INTO artists (id, name, created_at, updated_at, discography_checked_at) VALUES ('artist-1', 'The Seatbelts', 'now', 'now', 'now')",
+            [],
+        ).expect("artist");
+        connection.execute(
+            "INSERT INTO albums (id, title, created_at, updated_at) VALUES ('album-1', 'Cowboy Bebop', 'now', 'now')",
+            [],
+        ).expect("album");
+        connection.execute(
+            "INSERT INTO tracks (id, root_id, canonical_path, relative_path, title, album_id, extension, file_size, available, added_at, updated_at) VALUES ('track-1', 'root-1', '/music/tank.flac', 'tank.flac', 'Tank!', 'album-1', 'flac', 1000, 1, 'now', 'now')",
+            [],
+        ).expect("track");
+
+        // One fabricated artist id and one Deezer-sourced release, plus clean rows.
+        for (id, mbid) in [
+            ("remote-artist-fake", "artist-The Neighbourhood"),
+            ("remote-artist-real", "mb-artist-real"),
+        ] {
+            connection.execute(
+                "INSERT INTO remote_artists (id, musicbrainz_artist_id, name, last_refreshed_at, created_at, updated_at) VALUES (?1, ?2, 'Name', 'now', 'now', 'now')",
+                params![id, mbid],
+            ).expect("remote artist");
+        }
+        for (id, rgid) in [("remote:deezer-1", "deezer-1"), ("remote:rg-1", "rg-1")] {
+            connection.execute(
+                "INSERT INTO remote_releases (id, musicbrainz_release_group_id, title, last_refreshed_at, created_at, updated_at) VALUES (?1, ?2, 'Title', 'now', 'now', 'now')",
+                params![id, rgid],
+            ).expect("remote release");
+            connection.execute(
+                "INSERT INTO remote_tracks (id, release_id, track_number, disc_number, title, last_updated_at) VALUES (?1, ?2, 1, 1, 'Track', 'now')",
+                params![format!("rtrack-{id}"), id],
+            ).expect("remote track");
+            connection.execute(
+                "INSERT INTO remote_release_artists (remote_release_id, artist_name, position) VALUES (?1, 'Name', 0)",
+                params![id],
+            ).expect("remote release artist");
+            connection.execute(
+                "INSERT INTO entity_merges (id, local_entity_type, local_id, remote_id, created_at, updated_at) VALUES (?1, 'album', 'album-1', ?2, 'now', 'now')",
+                params![format!("merge-{id}"), id],
+            ).expect("merge");
+        }
+
+        connection
+            .execute_batch(MIGRATIONS[12].1)
+            .expect("cleanup migration");
+
+        let count = |sql: &str| -> i64 {
+            connection
+                .query_row(sql, [], |row| row.get(0))
+                .expect("count")
+        };
+
+        // Fabricated and Deezer-sourced rows are gone, MusicBrainz rows survive.
+        assert_eq!(
+            count(
+                "SELECT COUNT(*) FROM remote_artists WHERE musicbrainz_artist_id LIKE 'artist-%'"
+            ),
+            0,
+            "fabricated artist ids are removed"
+        );
+        assert_eq!(count("SELECT COUNT(*) FROM remote_artists"), 1);
+        assert_eq!(count("SELECT COUNT(*) FROM remote_releases"), 1);
+        assert_eq!(count("SELECT COUNT(*) FROM remote_tracks"), 1);
+        assert_eq!(count("SELECT COUNT(*) FROM remote_release_artists"), 1);
+        assert_eq!(count("SELECT COUNT(*) FROM entity_merges"), 1);
+
+        // Local catalog is untouched and every artist is re-queued for a sync.
+        assert_eq!(count("SELECT COUNT(*) FROM tracks"), 1);
+        assert_eq!(count("SELECT COUNT(*) FROM albums"), 1);
+        assert_eq!(count("SELECT COUNT(*) FROM artists"), 1);
+        assert_eq!(
+            count("SELECT COUNT(*) FROM artists WHERE discography_checked_at IS NULL"),
+            1,
+            "artists are re-queued so the cleared cache is rebuilt"
+        );
+    }
+
+    #[test]
+    fn discography_sync_covers_every_artist_and_skips_recently_checked_ones() {
+        let mut connection = Connection::open_in_memory().expect("open catalog");
+        migrate(&mut connection).expect("migrate");
+
+        for (id, name) in [
+            ("artist-1", "The Seatbelts"),
+            ("artist-2", "Yoko Kanno"),
+            ("artist-3", "Mai Yamane"),
+        ] {
+            connection
+                .execute(
+                    "INSERT INTO artists (id, name, created_at, updated_at) VALUES (?1, ?2, 'now', 'now')",
+                    params![id, name],
+                )
+                .expect("artist");
+        }
+
+        // Every artist is pending before any sync has run.
+        let pending = list_artists_for_discography_sync(&connection, 30).expect("list pending");
+        assert_eq!(pending.len(), 3, "all artists start unchecked");
+
+        // A checked artist drops out of the pending set until it goes stale.
+        mark_artist_discography_checked(&connection, "artist-2").expect("mark checked");
+        let pending = list_artists_for_discography_sync(&connection, 30).expect("list pending");
+        assert_eq!(pending.len(), 2);
+        assert!(
+            pending.iter().all(|artist| artist.id != "artist-2"),
+            "recently checked artists are skipped"
+        );
+
+        // Backdating past the staleness window brings it back for a refresh.
+        connection
+            .execute(
+                "UPDATE artists SET discography_checked_at = ?1 WHERE id = 'artist-2'",
+                params![(Utc::now() - chrono::Duration::days(60)).to_rfc3339()],
+            )
+            .expect("backdate");
+        let pending = list_artists_for_discography_sync(&connection, 30).expect("list pending");
+        assert_eq!(pending.len(), 3, "stale artists are re-queued");
+    }
+
+    #[test]
+    fn album_release_groups_resolve_directly_and_through_reviewed_merges() {
+        let mut connection = Connection::open_in_memory().expect("open catalog");
+        migrate(&mut connection).expect("migrate");
+
+        connection.execute(
+            "INSERT INTO artists (id, name, musicbrainz_artist_id, created_at, updated_at) VALUES ('artist-1', 'The Seatbelts', 'mb-artist-1', 'now', 'now')",
+            [],
+        ).expect("artist");
+        connection.execute(
+            "INSERT INTO albums (id, title, created_at, updated_at) VALUES ('album-local-1', 'Cowboy Bebop', 'now', 'now')",
+            [],
+        ).expect("album");
+
+        save_remote_discography(
+            &mut connection,
+            "mb-artist-1",
+            "The Seatbelts",
+            &[RemoteReleasePayload {
+                id: "remote:rg-1".into(),
+                musicbrainz_release_group_id: "rg-1".into(),
+                title: "Cowboy Bebop".into(),
+                year: Some(1998),
+                date: None,
+                primary_type: Some("Album".into()),
+                secondary_types: Vec::new(),
+                disambiguation: None,
+                catalog_number: None,
+                label: None,
+                artwork_url: None,
+                artwork_attribution: None,
+                artwork_source: None,
+                artists: vec![crate::ArtistReference {
+                    id: "mb-artist-1".into(),
+                    name: "The Seatbelts".into(),
+                }],
+                raw_json: String::new(),
+            }],
+        )
+        .expect("save discography");
+
+        // A remote album resolves to its own release group.
+        let direct = resolve_album_release_group(&connection, "remote:rg-1")
+            .expect("resolve")
+            .expect("release group");
+        assert_eq!(direct.musicbrainz_release_group_id, "rg-1");
+
+        // A local album only resolves once it has a reviewed merge recorded.
+        assert!(
+            resolve_album_release_group(&connection, "album-local-1")
+                .expect("resolve")
+                .is_none(),
+            "unmerged local albums have no release group"
+        );
+        record_entity_merge(&connection, "album", "album-local-1", "remote:rg-1", true)
+            .expect("merge");
+        let merged = resolve_album_release_group(&connection, "album-local-1")
+            .expect("resolve")
+            .expect("release group");
+        assert_eq!(merged.musicbrainz_release_group_id, "rg-1");
+    }
+
+    #[test]
+    fn remote_discography_persists_and_merges_with_local_albums_by_mbid() {
+        let mut connection = Connection::open_in_memory().expect("open catalog");
+        migrate(&mut connection).expect("migrate");
+
+        connection.execute(
+            "INSERT INTO library_roots (id, canonical_path, label, created_at, updated_at) VALUES ('root-1', '/music', 'Music', 'now', 'now')",
+            [],
+        ).expect("root");
+        connection.execute(
+            "INSERT INTO artists (id, name, musicbrainz_artist_id, created_at, updated_at) VALUES ('artist-1', 'The Seatbelts', 'mb-artist-1', 'now', 'now')",
+            [],
+        ).expect("artist");
+        connection.execute(
+            "INSERT INTO albums (id, title, musicbrainz_release_id, created_at, updated_at) VALUES ('album-local-1', 'Cowboy Bebop', 'rg-1', 'now', 'now')",
+            [],
+        ).expect("album");
+        connection.execute(
+            "INSERT INTO album_artists (album_id, artist_id, position) VALUES ('album-local-1', 'artist-1', 0)",
+            [],
+        ).expect("album artist");
+        connection.execute(
+            "INSERT INTO tracks (id, root_id, canonical_path, relative_path, title, album_id, extension, file_size, available, added_at, updated_at) VALUES ('track-1', 'root-1', '/music/tank.flac', 'tank.flac', 'Tank!', 'album-local-1', 'flac', 1000, 1, 'now', 'now')",
+            [],
+        ).expect("track");
+
+        let remote_releases = vec![
+            RemoteReleasePayload {
+                id: "remote:rg-1".into(),
+                musicbrainz_release_group_id: "rg-1".into(),
+                title: "Cowboy Bebop".into(),
+                year: Some(1998),
+                date: Some("1998-05-21".into()),
+                primary_type: Some("Album".into()),
+                secondary_types: vec!["Soundtrack".into()],
+                disambiguation: None,
+                catalog_number: None,
+                label: Some("Victor".into()),
+                artwork_url: Some(
+                    "https://coverartarchive.org/release-group/rg-1/front-250".into(),
+                ),
+                artwork_attribution: Some("Cover Art Archive".into()),
+                artwork_source: Some("coverartarchive.org".into()),
+                artists: vec![crate::ArtistReference {
+                    id: "mb-artist-1".into(),
+                    name: "The Seatbelts".into(),
+                }],
+                raw_json: "{}".into(),
+            },
+            RemoteReleasePayload {
+                id: "remote:rg-2".into(),
+                musicbrainz_release_group_id: "rg-2".into(),
+                title: "No Disc".into(),
+                year: Some(1998),
+                date: Some("1998-10-21".into()),
+                primary_type: Some("Album".into()),
+                secondary_types: vec!["Soundtrack".into()],
+                disambiguation: None,
+                catalog_number: None,
+                label: Some("Victor".into()),
+                artwork_url: Some(
+                    "https://coverartarchive.org/release-group/rg-2/front-250".into(),
+                ),
+                artwork_attribution: Some("Cover Art Archive".into()),
+                artwork_source: Some("coverartarchive.org".into()),
+                artists: vec![crate::ArtistReference {
+                    id: "mb-artist-1".into(),
+                    name: "The Seatbelts".into(),
+                }],
+                raw_json: "{}".into(),
+            },
+        ];
+
+        save_remote_discography(
+            &mut connection,
+            "mb-artist-1",
+            "The Seatbelts",
+            &remote_releases,
+        )
+        .expect("save discography");
+
+        let detail = get_artist_detail(&connection, "artist-1").expect("artist detail");
+        assert_eq!(detail.artist.provenance, EntityProvenance::Both);
+        assert_eq!(detail.artist.availability, EntityAvailability::InLibrary);
+        assert_eq!(detail.albums.len(), 2);
+
+        let local_merged = detail
+            .albums
+            .iter()
+            .find(|a| a.id == "album-local-1")
+            .expect("local album");
+        assert_eq!(local_merged.provenance, EntityProvenance::Both);
+        assert_eq!(local_merged.availability, EntityAvailability::InLibrary);
+        assert_eq!(local_merged.provider_ids, vec!["rg-1"]);
+        assert_eq!(
+            local_merged.artwork_path.as_deref(),
+            Some("https://coverartarchive.org/release-group/rg-1/front-250")
+        );
+
+        let remote_only = detail
+            .albums
+            .iter()
+            .find(|a| a.id == "remote:rg-2")
+            .expect("remote album");
+        assert_eq!(remote_only.provenance, EntityProvenance::Remote);
+        assert_eq!(remote_only.availability, EntityAvailability::NotLocal);
+        assert_eq!(remote_only.provider_ids, vec!["rg-2"]);
+    }
+
+    #[test]
+    fn reviewed_fallback_merges_without_mbid_and_never_merges_silently_on_text() {
+        let mut connection = Connection::open_in_memory().expect("open catalog");
+        migrate(&mut connection).expect("migrate");
+
+        connection.execute(
+            "INSERT INTO library_roots (id, canonical_path, label, created_at, updated_at) VALUES ('root-1', '/music', 'Music', 'now', 'now')",
+            [],
+        ).expect("root");
+        connection.execute(
+            "INSERT INTO artists (id, name, musicbrainz_artist_id, created_at, updated_at) VALUES ('artist-beatles', 'The Beatles', 'mb-beatles', 'now', 'now')",
+            [],
+        ).expect("artist");
+        connection.execute(
+            "INSERT INTO albums (id, title, created_at, updated_at) VALUES ('album-abbey-local', 'Abbey Road', 'now', 'now')",
+            [],
+        ).expect("album without MBID");
+        connection.execute(
+            "INSERT INTO album_artists (album_id, artist_id, position) VALUES ('album-abbey-local', 'artist-beatles', 0)",
+            [],
+        ).expect("album artist");
+        connection.execute(
+            "INSERT INTO tracks (id, root_id, canonical_path, relative_path, title, album_id, extension, file_size, available, added_at, updated_at) VALUES ('track-come-together', 'root-1', '/music/ct.flac', 'ct.flac', 'Come Together', 'album-abbey-local', 'flac', 1000, 1, 'now', 'now')",
+            [],
+        ).expect("track");
+
+        let remote_releases = vec![RemoteReleasePayload {
+            id: "remote:rg-abbey".into(),
+            musicbrainz_release_group_id: "rg-abbey".into(),
+            title: "Abbey Road".into(),
+            year: Some(1969),
+            date: Some("1969-09-26".into()),
+            primary_type: Some("Album".into()),
+            secondary_types: vec![],
+            disambiguation: None,
+            catalog_number: None,
+            label: Some("Apple Records".into()),
+            artwork_url: Some(
+                "https://coverartarchive.org/release-group/rg-abbey/front-250".into(),
+            ),
+            artwork_attribution: Some("Cover Art Archive".into()),
+            artwork_source: Some("coverartarchive.org".into()),
+            artists: vec![crate::ArtistReference {
+                id: "mb-beatles".into(),
+                name: "The Beatles".into(),
+            }],
+            raw_json: "{}".into(),
+        }];
+
+        save_remote_discography(
+            &mut connection,
+            "mb-beatles",
+            "The Beatles",
+            &remote_releases,
+        )
+        .expect("save remote discography");
+
+        // Before reviewed merge: no silent merge despite identical title "Abbey Road"
+        let unmerged_detail = get_artist_detail(&connection, "artist-beatles").expect("detail");
+        assert_eq!(
+            unmerged_detail.albums.len(),
+            2,
+            "must not silently merge on text similarity alone"
+        );
+        let local_item = unmerged_detail
+            .albums
+            .iter()
+            .find(|a| a.id == "album-abbey-local")
+            .unwrap();
+        assert_eq!(local_item.provenance, EntityProvenance::Local);
+        let remote_item = unmerged_detail
+            .albums
+            .iter()
+            .find(|a| a.id == "remote:rg-abbey")
+            .unwrap();
+        assert_eq!(remote_item.provenance, EntityProvenance::Remote);
+
+        // Record a reviewed entity merge
+        record_entity_merge(
+            &connection,
+            "album",
+            "album-abbey-local",
+            "remote:rg-abbey",
+            true,
+        )
+        .expect("record reviewed merge");
+
+        let merged_detail = get_artist_detail(&connection, "artist-beatles").expect("detail");
+        assert_eq!(
+            merged_detail.albums.len(),
+            1,
+            "reviewed merge unifies the album entry"
+        );
+        let merged_item = &merged_detail.albums[0];
+        assert_eq!(merged_item.id, "album-abbey-local");
+        assert_eq!(merged_item.provenance, EntityProvenance::Both);
+        assert_eq!(merged_item.availability, EntityAvailability::InLibrary);
+    }
+
+    #[test]
+    fn repeated_discography_refreshes_are_idempotent_and_do_not_duplicate_rows() {
+        let mut connection = Connection::open_in_memory().expect("open catalog");
+        migrate(&mut connection).expect("migrate");
+
+        let remote_releases = vec![RemoteReleasePayload {
+            id: "remote:rg-100".into(),
+            musicbrainz_release_group_id: "rg-100".into(),
+            title: "Live in Tokyo".into(),
+            year: Some(2001),
+            date: Some("2001-01-01".into()),
+            primary_type: Some("Album".into()),
+            secondary_types: vec!["Live".into()],
+            disambiguation: None,
+            catalog_number: None,
+            label: None,
+            artwork_url: None,
+            artwork_attribution: None,
+            artwork_source: None,
+            artists: vec![crate::ArtistReference {
+                id: "mb-artist-dup".into(),
+                name: "Dup Artist".into(),
+            }],
+            raw_json: "{}".into(),
+        }];
+
+        save_remote_discography(
+            &mut connection,
+            "mb-artist-dup",
+            "Dup Artist",
+            &remote_releases,
+        )
+        .expect("first save");
+        save_remote_discography(
+            &mut connection,
+            "mb-artist-dup",
+            "Dup Artist",
+            &remote_releases,
+        )
+        .expect("second save");
+
+        let release_count: i64 = connection
+            .query_row("SELECT COUNT(*) FROM remote_releases", [], |row| row.get(0))
+            .expect("count releases");
+        assert_eq!(
+            release_count, 1,
+            "repeated refresh must not duplicate release rows"
+        );
+
+        let artist_rel_count: i64 = connection
+            .query_row("SELECT COUNT(*) FROM remote_release_artists", [], |row| {
+                row.get(0)
+            })
+            .expect("count release artists");
+        assert_eq!(
+            artist_rel_count, 1,
+            "repeated refresh must not duplicate artist credit rows"
+        );
+    }
+
+    #[test]
     fn roots_are_persistent_entities_and_removal_cascades_catalog_rows() {
         let worker = DatabaseWorker::in_memory().expect("database starts");
         let root = worker
@@ -3040,6 +6224,121 @@ mod tests {
         assert!(!disabled.enabled);
         worker.remove_root(root.id).expect("root removed");
         assert!(worker.list_roots().expect("list roots").is_empty());
+    }
+
+    #[test]
+    fn every_metadata_job_scope_resolves_its_tracks() {
+        let mut connection =
+            open_connection(Connection::open_in_memory()).expect("open metadata job database");
+        connection
+            .execute_batch(
+                "INSERT INTO library_roots (id, canonical_path, label, created_at, updated_at)
+                 VALUES ('root', '/music', 'Music', 'now', 'now');
+                 INSERT INTO artists (id, name, sort_name, created_at, updated_at)
+                 VALUES ('artist', 'Artist', 'Artist', 'now', 'now');
+                 INSERT INTO albums (id, title, created_at, updated_at)
+                 VALUES ('album', 'Album', 'now', 'now');
+                 INSERT INTO album_artists (album_id, artist_id, position)
+                 VALUES ('album', 'artist', 0);
+                 INSERT INTO tracks
+                   (id, root_id, canonical_path, relative_path, title, album_id, extension,
+                    file_size, available, added_at, updated_at)
+                 VALUES
+                   ('track-1', 'root', '/music/1.flac', '1.flac', 'One', 'album', 'flac', 1, 1, 'now', 'now'),
+                   ('track-2', 'root', '/music/2.flac', '2.flac', 'Two', 'album', 'flac', 1, 1, 'now', 'now');",
+            )
+            .expect("seed catalog");
+
+        // Library scope binds no parameter; the others bind exactly one. Passing a
+        // parameter to the library query previously failed every enrich run.
+        let library = create_metadata_job(&mut connection, MetadataJobScope::Library, None)
+            .expect("library scope job");
+        assert_eq!(library.total_tracks, 2);
+
+        let album = create_metadata_job(&mut connection, MetadataJobScope::Album, Some("album"))
+            .expect("album scope job");
+        assert_eq!(album.total_tracks, 2);
+
+        let artist = create_metadata_job(&mut connection, MetadataJobScope::Artist, Some("artist"))
+            .expect("artist scope job");
+        assert_eq!(artist.total_tracks, 2);
+
+        let track = create_metadata_job(&mut connection, MetadataJobScope::Track, Some("track-1"))
+            .expect("track scope job");
+        assert_eq!(track.total_tracks, 1);
+    }
+
+    #[test]
+    fn metadata_jobs_checkpoint_scopes_and_retry_only_unfinished_tracks() {
+        let mut connection =
+            open_connection(Connection::open_in_memory()).expect("open metadata job database");
+        connection
+            .execute_batch(
+                "INSERT INTO library_roots (id, canonical_path, label, created_at, updated_at)
+                 VALUES ('root', '/music', 'Music', 'now', 'now');
+                 INSERT INTO artists (id, name, sort_name, created_at, updated_at)
+                 VALUES ('artist', 'Artist', 'Artist', 'now', 'now');
+                 INSERT INTO albums (id, title, created_at, updated_at)
+                 VALUES ('album', 'Album', 'now', 'now');
+                 INSERT INTO album_artists (album_id, artist_id, position)
+                 VALUES ('album', 'artist', 0);
+                 INSERT INTO tracks
+                   (id, root_id, canonical_path, relative_path, title, album_id, extension,
+                    file_size, available, added_at, updated_at)
+                 VALUES
+                   ('track-1', 'root', '/music/1.flac', '1.flac', 'One', 'album', 'flac', 1, 1, 'now', 'now'),
+                   ('track-2', 'root', '/music/2.flac', '2.flac', 'Two', 'album', 'flac', 1, 1, 'now', 'now');",
+            )
+            .expect("seed catalog");
+
+        let job = create_metadata_job(&mut connection, MetadataJobScope::Artist, Some("artist"))
+            .expect("create artist job");
+        assert_eq!(job.total_tracks, 2);
+        assert_eq!(
+            pending_metadata_job_tracks(&connection, &job.id, false)
+                .unwrap()
+                .len(),
+            2
+        );
+
+        record_metadata_job_track(
+            &mut connection,
+            &job.id,
+            "track-1",
+            "complete",
+            None,
+            None,
+            None,
+            None,
+        )
+        .expect("checkpoint completed track");
+        record_metadata_job_track(
+            &mut connection,
+            &job.id,
+            "track-2",
+            "error",
+            None,
+            None,
+            Some("fixture failure"),
+            None,
+        )
+        .expect("checkpoint failed track");
+
+        assert!(
+            pending_metadata_job_tracks(&connection, &job.id, false)
+                .unwrap()
+                .is_empty()
+        );
+        assert_eq!(
+            pending_metadata_job_tracks(&connection, &job.id, true).unwrap(),
+            ["track-2"]
+        );
+        let paused =
+            set_metadata_job_status(&connection, &job.id, MetadataJobStatus::Paused, None, None)
+                .expect("pause job");
+        assert!(matches!(paused.status, MetadataJobStatus::Paused));
+        assert_eq!(paused.processed_tracks, 2);
+        assert_eq!(paused.failed_tracks, 1);
     }
 
     #[test]
@@ -3105,5 +6404,270 @@ mod tests {
         assert!(database_path.is_file());
         drop(worker);
         fs::remove_dir_all(directory).expect("remove fixture");
+    }
+
+    #[test]
+    fn remote_tracks_persist_and_match_with_local_tracks_by_mbid_isrc_and_metadata() {
+        let mut connection = Connection::open_in_memory().expect("open catalog");
+        migrate(&mut connection).expect("migrate");
+
+        connection.execute(
+            "INSERT INTO library_roots (id, canonical_path, label, created_at, updated_at) VALUES ('root-1', '/music', 'Music', 'now', 'now')",
+            [],
+        ).expect("root");
+        connection.execute(
+            "INSERT INTO artists (id, name, musicbrainz_artist_id, created_at, updated_at) VALUES ('artist-1', 'The Seatbelts', 'mb-artist-1', 'now', 'now')",
+            [],
+        ).expect("artist");
+        connection.execute(
+            "INSERT INTO albums (id, title, musicbrainz_release_id, created_at, updated_at) VALUES ('album-local-1', 'Cowboy Bebop', 'rg-1', 'now', 'now')",
+            [],
+        ).expect("album");
+        connection.execute(
+            "INSERT INTO album_artists (album_id, artist_id, position) VALUES ('album-local-1', 'artist-1', 0)",
+            [],
+        ).expect("album artist");
+
+        // Local tracks:
+        // 1: matched by MBID
+        connection.execute(
+            "INSERT INTO tracks (id, root_id, canonical_path, relative_path, title, album_id, musicbrainz_recording_id, track_number, disc_number, extension, file_size, available, added_at, updated_at)
+             VALUES ('track-1', 'root-1', '/music/tank.flac', 'tank.flac', 'Tank!', 'album-local-1', 'rec-1', 1, 1, 'flac', 1000, 1, 'now', 'now')",
+            [],
+        ).expect("track 1");
+        // 2: matched by ISRC
+        connection.execute(
+            "INSERT INTO tracks (id, root_id, canonical_path, relative_path, title, album_id, isrc, track_number, disc_number, extension, file_size, available, added_at, updated_at)
+             VALUES ('track-2', 'root-1', '/music/rush.flac', 'rush.flac', 'Rush', 'album-local-1', 'US1234567890', 2, 1, 'flac', 1000, 1, 'now', 'now')",
+            [],
+        ).expect("track 2");
+        // 3: matched by (disc_number, track_number, title)
+        connection.execute(
+            "INSERT INTO tracks (id, root_id, canonical_path, relative_path, title, album_id, track_number, disc_number, extension, file_size, available, added_at, updated_at)
+             VALUES ('track-3', 'root-1', '/music/spokey.flac', 'spokey.flac', 'Spokey Dokey', 'album-local-1', 3, 1, 'flac', 1000, 1, 'now', 'now')",
+            [],
+        ).expect("track 3");
+        // 4: local bonus track not in remote list
+        connection.execute(
+            "INSERT INTO tracks (id, root_id, canonical_path, relative_path, title, album_id, track_number, disc_number, extension, file_size, available, added_at, updated_at)
+             VALUES ('track-4', 'root-1', '/music/bonus.flac', 'bonus.flac', 'Bonus Jam', 'album-local-1', 4, 1, 'flac', 1000, 1, 'now', 'now')",
+            [],
+        ).expect("track 4");
+
+        let remote_releases = vec![RemoteReleasePayload {
+            id: "remote:rg-1".into(),
+            musicbrainz_release_group_id: "rg-1".into(),
+            title: "Cowboy Bebop".into(),
+            year: Some(1998),
+            date: Some("1998-05-21".into()),
+            primary_type: Some("Album".into()),
+            secondary_types: vec!["Soundtrack".into()],
+            disambiguation: None,
+            catalog_number: None,
+            label: Some("Victor".into()),
+            artwork_url: Some("https://coverartarchive.org/release-group/rg-1/front-250".into()),
+            artwork_attribution: Some("Cover Art Archive".into()),
+            artwork_source: Some("coverartarchive.org".into()),
+            artists: vec![crate::ArtistReference {
+                id: "mb-artist-1".into(),
+                name: "The Seatbelts".into(),
+            }],
+            raw_json: "{}".into(),
+        }];
+
+        save_remote_discography(
+            &mut connection,
+            "mb-artist-1",
+            "The Seatbelts",
+            &remote_releases,
+        )
+        .expect("save discography");
+
+        let remote_tracks = vec![
+            RemoteTrackPayload {
+                id: "rtrack-1".into(),
+                release_id: "remote:rg-1".into(),
+                track_number: 1,
+                disc_number: 1,
+                title: "Tank! (Full Version)".into(),
+                duration_ms: Some(210000),
+                isrc: None,
+                musicbrainz_recording_id: Some("rec-1".into()),
+                spotify_track_id: Some("spotify-1".into()),
+            },
+            RemoteTrackPayload {
+                id: "rtrack-2".into(),
+                release_id: "remote:rg-1".into(),
+                track_number: 2,
+                disc_number: 1,
+                title: "Rush".into(),
+                duration_ms: Some(220000),
+                isrc: Some("US1234567890".into()),
+                musicbrainz_recording_id: None,
+                spotify_track_id: Some("spotify-2".into()),
+            },
+            RemoteTrackPayload {
+                id: "rtrack-3".into(),
+                release_id: "remote:rg-1".into(),
+                track_number: 3,
+                disc_number: 1,
+                title: "Spokey Dokey".into(),
+                duration_ms: Some(240000),
+                isrc: None,
+                musicbrainz_recording_id: None,
+                spotify_track_id: None,
+            },
+            RemoteTrackPayload {
+                id: "rtrack-5".into(),
+                release_id: "remote:rg-1".into(),
+                track_number: 5,
+                disc_number: 1,
+                title: "Bad Dog No Biscuits".into(),
+                duration_ms: Some(250000),
+                isrc: None,
+                musicbrainz_recording_id: Some("rec-5".into()),
+                spotify_track_id: Some("spotify-5".into()),
+            },
+        ];
+
+        save_remote_tracks(&mut connection, "remote:rg-1", &remote_tracks)
+            .expect("save remote tracks");
+
+        // Verify AlbumDetail
+        let detail = get_album_detail(&connection, "album-local-1").expect("local album detail");
+        assert_eq!(detail.album.provenance, EntityProvenance::Both);
+        assert_eq!(detail.album.availability, EntityAvailability::InLibrary);
+        assert_eq!(detail.tracks.len(), 5);
+
+        let t1 = detail
+            .tracks
+            .iter()
+            .find(|t| t.title.starts_with("Tank"))
+            .unwrap();
+        assert!(t1.available);
+        assert_eq!(t1.id, "track-1");
+
+        let t2 = detail.tracks.iter().find(|t| t.title == "Rush").unwrap();
+        assert!(t2.available);
+        assert_eq!(t2.id, "track-2");
+
+        let t3 = detail
+            .tracks
+            .iter()
+            .find(|t| t.title == "Spokey Dokey")
+            .unwrap();
+        assert!(t3.available);
+        assert_eq!(t3.id, "track-3");
+
+        let t5 = detail
+            .tracks
+            .iter()
+            .find(|t| t.title == "Bad Dog No Biscuits")
+            .unwrap();
+        assert!(!t5.available);
+        assert_eq!(t5.id, "rtrack-5");
+
+        let t4 = detail
+            .tracks
+            .iter()
+            .find(|t| t.title == "Bonus Jam")
+            .unwrap();
+        assert!(t4.available);
+        assert_eq!(t4.id, "track-4");
+
+        // Verify UnifiedAlbumDetail
+        let unified =
+            get_unified_album_detail(&connection, "album-local-1").expect("unified detail");
+        assert_eq!(unified.album.provenance, EntityProvenance::Both);
+        assert_eq!(unified.tracks.len(), 5);
+
+        let u1 = unified
+            .tracks
+            .iter()
+            .find(|t| t.title.starts_with("Tank"))
+            .unwrap();
+        assert!(u1.is_local);
+        assert_eq!(u1.id, Some("track-1".into()));
+        assert_eq!(u1.remote_id, "rtrack-1");
+        assert!(u1.audio_specs.is_some());
+
+        let u5 = unified
+            .tracks
+            .iter()
+            .find(|t| t.title == "Bad Dog No Biscuits")
+            .unwrap();
+        assert!(!u5.is_local);
+        assert_eq!(u5.id, None);
+        assert_eq!(u5.remote_id, "rtrack-5");
+        assert!(u5.audio_specs.is_none());
+
+        // Query by remote ID
+        let unified_remote =
+            get_unified_album_detail(&connection, "remote:rg-1").expect("query by remote id");
+        assert_eq!(unified_remote.album.provenance, EntityProvenance::Both);
+        assert_eq!(unified_remote.tracks.len(), 5);
+
+        // Verify cascade on delete of remote release
+        connection
+            .execute("DELETE FROM remote_releases WHERE id = 'remote:rg-1'", [])
+            .expect("delete release");
+        let remaining_remote_tracks =
+            get_remote_tracks_for_release(&connection, "remote:rg-1").expect("get tracks");
+        assert!(
+            remaining_remote_tracks.is_empty(),
+            "remote_tracks should cascade delete"
+        );
+    }
+
+    #[test]
+    fn worker_saves_remote_tracks_and_fetches_unified_album_detail() {
+        let worker = DatabaseWorker::in_memory().expect("worker");
+        let remote_releases = vec![RemoteReleasePayload {
+            id: "remote:rg-worker".into(),
+            musicbrainz_release_group_id: "rg-worker".into(),
+            title: "Worker Album".into(),
+            year: Some(2020),
+            date: Some("2020-01-01".into()),
+            primary_type: Some("Album".into()),
+            secondary_types: vec![],
+            disambiguation: None,
+            catalog_number: None,
+            label: None,
+            artwork_url: None,
+            artwork_attribution: None,
+            artwork_source: None,
+            artists: vec![crate::ArtistReference {
+                id: "mb-w".into(),
+                name: "Worker Artist".into(),
+            }],
+            raw_json: "{}".into(),
+        }];
+
+        worker
+            .save_remote_discography("mb-w".into(), "Worker Artist".into(), remote_releases)
+            .expect("save disco");
+
+        let remote_tracks = vec![RemoteTrackPayload {
+            id: "rtrack-w1".into(),
+            release_id: "remote:rg-worker".into(),
+            track_number: 1,
+            disc_number: 1,
+            title: "Worker Track 1".into(),
+            duration_ms: Some(180000),
+            isrc: None,
+            musicbrainz_recording_id: None,
+            spotify_track_id: None,
+        }];
+
+        worker
+            .save_remote_tracks("remote:rg-worker".into(), remote_tracks)
+            .expect("save tracks");
+
+        let detail = worker
+            .get_unified_album_detail("remote:rg-worker".into())
+            .expect("unified detail");
+        assert_eq!(detail.album.id, "remote:rg-worker");
+        assert_eq!(detail.tracks.len(), 1);
+        assert!(!detail.tracks[0].is_local);
     }
 }

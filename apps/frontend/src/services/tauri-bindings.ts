@@ -4,21 +4,27 @@ import { invoke as __TAURI_INVOKE } from "@tauri-apps/api/core";
 
 /** Commands */
 export const commands = {
+	acquireTrack: (request: AcquisitionTrackRequest) => typedError<AcquisitionJobDto, AppError_Serialize>(__TAURI_INVOKE("acquire_track", { request })),
+	acquireAlbum: (request: AcquisitionAlbumRequest) => typedError<AcquisitionJobDto[], AppError_Serialize>(__TAURI_INVOKE("acquire_album", { request })),
 	addLibraryRoot: (path: string, label: string | null) => typedError<LibraryScan, AppError_Serialize>(__TAURI_INVOKE("add_library_root", { path, label })),
+	analyzeAudioFeatures: (trackIds: string[], force: boolean) => typedError<AudioFeatures[], AppError_Serialize>(__TAURI_INVOKE("analyze_audio_features", { trackIds, force })),
 	applyMusicbrainzCandidate: (trackId: string, candidate: EnrichmentCandidate) => typedError<MetadataPatch, AppError_Serialize>(__TAURI_INVOKE("apply_musicbrainz_candidate", { trackId, candidate })),
-	cancelAcquisition: (jobId: string) => typedError<AcquisitionJob_Serialize, AppError_Serialize>(__TAURI_INVOKE("cancel_acquisition", { jobId })),
+	cancelAcquisition: (jobId: string) => typedError<null, AppError_Serialize>(__TAURI_INVOKE("cancel_acquisition", { jobId })),
+	cancelMetadataJob: (jobId: string) => typedError<MetadataJob, AppError_Serialize>(__TAURI_INVOKE("cancel_metadata_job", { jobId })),
 	checkForUpdates: () => typedError<UpdateStatus_Serialize, AppError_Serialize>(__TAURI_INVOKE("check_for_updates")),
 	cleanupMissingTracks: (rootId: string | null, confirmed: boolean) => typedError<number, AppError_Serialize>(__TAURI_INVOKE("cleanup_missing_tracks", { rootId, confirmed })),
-	configureSlskdApiKey: (apiKey: string) => typedError<AcquisitionStatus_Serialize, AppError_Serialize>(__TAURI_INVOKE("configure_slskd_api_key", { apiKey })),
 	configureLastfmSession: (sessionKey: string) => typedError<IntegrationStatus_Serialize[], AppError_Serialize>(__TAURI_INVOKE("configure_lastfm_session", { sessionKey })),
+	configureAcoustidClientKey: (clientKey: string) => typedError<boolean, AppError_Serialize>(__TAURI_INVOKE("configure_acoustid_client_key", { clientKey })),
 	createPlaylist: (name: string) => typedError<PlaylistSummary, AppError_Serialize>(__TAURI_INVOKE("create_playlist", { name })),
-	disconnectSlskd: () => typedError<AcquisitionStatus_Serialize, AppError_Serialize>(__TAURI_INVOKE("disconnect_slskd")),
+	createGeneratedPlaylist: (name: string, request: PlaylistGenerationRequest) => typedError<Playlist, AppError_Serialize>(__TAURI_INVOKE("create_generated_playlist", { name, request })),
+	deletePlaylist: (playlistId: string) => typedError<null, AppError_Serialize>(__TAURI_INVOKE("delete_playlist", { playlistId })),
 	disconnectLastfm: () => typedError<IntegrationStatus_Serialize[], AppError_Serialize>(__TAURI_INVOKE("disconnect_lastfm")),
-	enqueueAcquisition: (searchId: string, sourceUser: string, file: AcquisitionSearchFile) => typedError<AcquisitionJob_Serialize, AppError_Serialize>(__TAURI_INVOKE("enqueue_acquisition", { searchId, sourceUser, file })),
-	getAcquisitionSearch: (searchId: string) => typedError<AcquisitionSearch, AppError_Serialize>(__TAURI_INVOKE("get_acquisition_search", { searchId })),
+	getAcquisitionQueue: () => typedError<AcquisitionJobDto[], AppError_Serialize>(__TAURI_INVOKE("get_acquisition_queue")),
 	getAcquisitionSettings: () => typedError<AcquisitionSettings, AppError_Serialize>(__TAURI_INVOKE("get_acquisition_settings")),
 	getAlbumDetail: (albumId: string) => typedError<AlbumDetail, AppError_Serialize>(__TAURI_INVOKE("get_album_detail", { albumId })),
+	getUnifiedAlbumDetail: (albumId: string) => typedError<UnifiedAlbumDetail, AppError_Serialize>(__TAURI_INVOKE("get_unified_album_detail", { albumId })),
 	getArtistDetail: (artistId: string) => typedError<ArtistDetail, AppError_Serialize>(__TAURI_INVOKE("get_artist_detail", { artistId })),
+	getArtistInformation: (artistId: string) => typedError<ArtistInformation, AppError_Serialize>(__TAURI_INVOKE("get_artist_information", { artistId })),
 	getDesktopState: () => typedError<DesktopState, AppError_Serialize>(__TAURI_INVOKE("get_desktop_state")),
 	getMetadataDraft: (trackId: string) => typedError<{
 	title: string | null,
@@ -36,45 +42,70 @@ export const commands = {
 	label: string | null,
 	catalogNumber: string | null,
 	isrc: string | null,
+	musicbrainzRecordingId: string | null,
+	musicbrainzReleaseId: string | null,
+	musicbrainzArtistIds: string[] | null,
+	musicbrainzAlbumArtistIds: string[] | null,
 	artworkId: string | null,
+	lyrics: string | null,
 } | null, AppError_Serialize>(__TAURI_INVOKE("get_metadata_draft", { trackId })),
+	getMetadataPatch: (trackId: string) => typedError<MetadataPatch, AppError_Serialize>(__TAURI_INVOKE("get_metadata_patch", { trackId })),
+	getMetadataJob: (jobId: string) => typedError<MetadataJob, AppError_Serialize>(__TAURI_INVOKE("get_metadata_job", { jobId })),
 	getHomeSnapshot: () => typedError<HomeSnapshot, AppError_Serialize>(__TAURI_INVOKE("get_home_snapshot")),
 	getIntegrationSettings: () => typedError<IntegrationSettings, AppError_Serialize>(__TAURI_INVOKE("get_integration_settings")),
 	getIntegrationStatuses: () => typedError<IntegrationStatus_Serialize[], AppError_Serialize>(__TAURI_INVOKE("get_integration_statuses")),
 	getPersistentPlayerState: () => typedError<PersistentPlayerState, AppError_Serialize>(__TAURI_INVOKE("get_persistent_player_state")),
+	getPlaylist: (playlistId: string) => typedError<Playlist, AppError_Serialize>(__TAURI_INVOKE("get_playlist", { playlistId })),
 	getPlaylistTracks: (playlistId: string) => typedError<TrackSummary[], AppError_Serialize>(__TAURI_INVOKE("get_playlist_tracks", { playlistId })),
 	getMusicbrainzEnabled: () => __TAURI_INVOKE<boolean>("get_musicbrainz_enabled"),
+	getAcoustidConfigured: () => __TAURI_INVOKE<boolean>("get_acoustid_configured"),
 	getPlaybackState: () => typedError<PlaybackState, AppError_Serialize>(__TAURI_INVOKE("get_playback_state")),
 	getTrackMetadata: (trackId: string) => typedError<TrackSummary, AppError_Serialize>(__TAURI_INVOKE("get_track_metadata", { trackId })),
+	getTrackLyrics: (trackId: string) => typedError<LyricsDocument, AppError_Serialize>(__TAURI_INVOKE("get_track_lyrics", { trackId })),
 	getUiPreference: (key: string) => typedError<string | null, AppError_Serialize>(__TAURI_INVOKE("get_ui_preference", { key })),
-	importAcquisition: (jobId: string, rootId: string) => typedError<AcquisitionJob_Serialize, AppError_Serialize>(__TAURI_INVOKE("import_acquisition", { jobId, rootId })),
 	installUpdate: (confirmed: boolean) => typedError<null, AppError_Serialize>(__TAURI_INVOKE("install_update", { confirmed })),
-	listAcquisitionJobs: () => typedError<AcquisitionJob_Serialize[], AppError_Serialize>(__TAURI_INVOKE("list_acquisition_jobs")),
+	listMetadataJobs: () => typedError<MetadataJob[], AppError_Serialize>(__TAURI_INVOKE("list_metadata_jobs")),
 	listLibraryRoots: () => typedError<LibraryRoot[], AppError_Serialize>(__TAURI_INVOKE("list_library_roots")),
 	listFavorites: () => typedError<FavoriteReference[], AppError_Serialize>(__TAURI_INVOKE("list_favorites")),
 	listPlaylists: () => typedError<PlaylistSummary[], AppError_Serialize>(__TAURI_INVOKE("list_playlists")),
 	listAudioOutputDevices: () => typedError<AudioOutputDevice[], AppError_Serialize>(__TAURI_INVOKE("list_audio_output_devices")),
-	pauseAcquisition: (jobId: string) => typedError<AcquisitionJob_Serialize, AppError_Serialize>(__TAURI_INVOKE("pause_acquisition", { jobId })),
+	generatePlaylist: (request: PlaylistGenerationRequest) => typedError<GeneratedPlaylist, AppError_Serialize>(__TAURI_INVOKE("generate_playlist", { request })),
+	pauseMetadataJob: (jobId: string) => typedError<MetadataJob, AppError_Serialize>(__TAURI_INVOKE("pause_metadata_job", { jobId })),
 	pausePlayback: () => typedError<PlaybackState, AppError_Serialize>(__TAURI_INVOKE("pause_playback")),
 	playTrack: (path: string) => typedError<PlaybackState, AppError_Serialize>(__TAURI_INVOKE("play_track", { path })),
 	queryCatalogTracks: (query: CatalogQuery) => typedError<TrackPage, AppError_Serialize>(__TAURI_INVOKE("query_catalog_tracks", { query })),
 	queryDiscovery: (query: DiscoveryQuery) => typedError<DiscoveryCatalog, AppError_Serialize>(__TAURI_INVOKE("query_discovery", { query })),
+	queryArtistsPage: (query: ArtistCatalogQuery) => typedError<CatalogPage<ArtistSummary>, AppError_Serialize>(__TAURI_INVOKE("query_artists_page", { query })),
+	previewMetadataChanges: (trackIds: string[], patch: MetadataPatch, source: string, confidence: number | null) => typedError<MetadataReview, AppError_Serialize>(__TAURI_INVOKE("preview_metadata_changes", { trackIds, patch, source, confidence })),
+	renamePlaylist: (playlistId: string, name: string) => typedError<PlaylistSummary, AppError_Serialize>(__TAURI_INVOKE("rename_playlist", { playlistId, name })),
 	removeLibraryRoot: (rootId: string, confirmed: boolean) => typedError<null, AppError_Serialize>(__TAURI_INVOKE("remove_library_root", { rootId, confirmed })),
 	rescanLibraryRoot: (rootId: string) => typedError<LibraryScan, AppError_Serialize>(__TAURI_INVOKE("rescan_library_root", { rootId })),
-	resumeAcquisition: (jobId: string) => typedError<AcquisitionJob_Serialize, AppError_Serialize>(__TAURI_INVOKE("resume_acquisition", { jobId })),
+	resumeMetadataJob: (jobId: string, retryFailed: boolean) => typedError<MetadataJob, AppError_Serialize>(__TAURI_INVOKE("resume_metadata_job", { jobId, retryFailed })),
 	resumePlayback: () => typedError<PlaybackState, AppError_Serialize>(__TAURI_INVOKE("resume_playback")),
 	restoreLibraryRoot: (rootId: string) => typedError<LibraryScan, AppError_Serialize>(__TAURI_INVOKE("restore_library_root", { rootId })),
+	refreshArtistDiscography: (artistId: string) => typedError<ArtistDetail, AppError_Serialize>(__TAURI_INVOKE("refresh_artist_discography", { artistId })),
+	/**
+	 *  Cache the MusicBrainz discography for every artist in the library.
+	 * 
+	 *  Runs on a background thread and reports progress over `DISCOGRAPHY_SYNC_EVENT`.
+	 *  Artists refreshed within `stale_after_days` are skipped, so this is safe to
+	 *  call after every scan. MusicBrainz rate limiting means a large library takes a
+	 *  while, but results are cached locally and the sync resumes where it left off.
+	 */
+	syncLibraryDiscographies: (staleAfterDays: number | null) => typedError<null, AppError_Serialize>(__TAURI_INVOKE("sync_library_discographies", { staleAfterDays })),
+	retryAcquisition: (jobId: string) => typedError<null, AppError_Serialize>(__TAURI_INVOKE("retry_acquisition", { jobId })),
+	mergeCatalogEntities: (localType: string, localId: string, remoteId: string) => typedError<null, AppError_Serialize>(__TAURI_INVOKE("merge_catalog_entities", { localType, localId, remoteId })),
+	unmergeCatalogEntities: (localType: string, localId: string, remoteId: string) => typedError<null, AppError_Serialize>(__TAURI_INVOKE("unmerge_catalog_entities", { localType, localId, remoteId })),
 	rollbackMetadataFile: (trackId: string) => typedError<MetadataWriteResult, AppError_Serialize>(__TAURI_INVOKE("rollback_metadata_file", { trackId })),
 	runMusicbrainzEnrichment: (trackId: string) => typedError<EnrichmentJob, AppError_Serialize>(__TAURI_INVOKE("run_musicbrainz_enrichment", { trackId })),
+	saveAcquisitionSettings: (settings: AcquisitionSettings) => typedError<AcquisitionSettings, AppError_Serialize>(__TAURI_INVOKE("save_acquisition_settings", { settings })),
 	saveMetadataDraft: (trackId: string, patch: MetadataPatch) => typedError<MetadataPatch, AppError_Serialize>(__TAURI_INVOKE("save_metadata_draft", { trackId, patch })),
 	saveMetadataDrafts: (trackIds: string[], patch: MetadataPatch) => typedError<number, AppError_Serialize>(__TAURI_INVOKE("save_metadata_drafts", { trackIds, patch })),
 	savePlayerPreferences: (preferences: PlayerPreferences) => typedError<PlayerPreferences, AppError_Serialize>(__TAURI_INVOKE("save_player_preferences", { preferences })),
 	savePlayerQueue: (trackIds: string[]) => typedError<null, AppError_Serialize>(__TAURI_INVOKE("save_player_queue", { trackIds })),
 	scanLibrary: (root: string) => typedError<LibraryScan, AppError_Serialize>(__TAURI_INVOKE("scan_library", { root })),
-	searchAcquisition: (query: string) => typedError<AcquisitionSearch, AppError_Serialize>(__TAURI_INVOKE("search_acquisition", { query })),
 	selectAudioOutputDevice: (deviceId: string | null) => typedError<AudioOutputDevice[], AppError_Serialize>(__TAURI_INVOKE("select_audio_output_device", { deviceId })),
 	seekPlayback: (positionMs: number) => typedError<PlaybackState, AppError_Serialize>(__TAURI_INVOKE("seek_playback", { positionMs })),
-	setAcquisitionSettings: (settings: AcquisitionSettings) => typedError<AcquisitionSettings, AppError_Serialize>(__TAURI_INVOKE("set_acquisition_settings", { settings })),
 	setHifiMode: (enabled: boolean) => typedError<PlaybackState, AppError_Serialize>(__TAURI_INVOKE("set_hifi_mode", { enabled })),
 	setIntegrationSettings: (settings: IntegrationSettings) => typedError<IntegrationSettings, AppError_Serialize>(__TAURI_INVOKE("set_integration_settings", { settings })),
 	setLibraryRootEnabled: (rootId: string, enabled: boolean) => typedError<LibraryRoot, AppError_Serialize>(__TAURI_INVOKE("set_library_root_enabled", { rootId, enabled })),
@@ -87,83 +118,87 @@ export const commands = {
 	setUiPreference: (key: string, value: string) => typedError<null, AppError_Serialize>(__TAURI_INVOKE("set_ui_preference", { key, value })),
 	setVolume: (volume: number | null) => typedError<PlaybackState, AppError_Serialize>(__TAURI_INVOKE("set_volume", { volume })),
 	setVisualizationEnabled: (enabled: boolean) => typedError<PlayerPreferences, AppError_Serialize>(__TAURI_INVOKE("set_visualization_enabled", { enabled })),
+	duplicatePlaylist: (playlistId: string, name: string) => typedError<PlaylistSummary, AppError_Serialize>(__TAURI_INVOKE("duplicate_playlist", { playlistId, name })),
 	stopPlayback: () => typedError<PlaybackState, AppError_Serialize>(__TAURI_INVOKE("stop_playback")),
-	testSlskdConnection: () => typedError<AcquisitionStatus_Serialize, AppError_Serialize>(__TAURI_INVOKE("test_slskd_connection")),
+	startMetadataJob: (scope: MetadataJobScope, scopeId: string | null) => typedError<MetadataJob, AppError_Serialize>(__TAURI_INVOKE("start_metadata_job", { scope, scopeId })),
 	writeMetadataToFile: (trackId: string) => typedError<MetadataWriteResult, AppError_Serialize>(__TAURI_INVOKE("write_metadata_to_file", { trackId })),
 };
 
 /* Types */
-export type AcquisitionJob = AcquisitionJob_Serialize | AcquisitionJob_Deserialize;
+export type AcquisitionAlbumRequest = {
+	url: string | null,
+	title: string | null,
+	artist: string | null,
+	releaseId: string | null,
+	artworkUrl: string | null,
+	preferredProvider: string | null,
+};
 
-export type AcquisitionJobStatus = "queued" | "downloading" | "paused" | "verifying" | "importing" | "complete" | "error";
-
-export type AcquisitionJob_Deserialize = {
+export type AcquisitionJobDto = {
 	id: string,
 	status: AcquisitionJobStatus,
+	title: string,
+	artist: string,
+	album: string,
+	trackNumber: number | null,
+	discNumber: number | null,
+	year: number | null,
+	isrc: string | null,
+	artworkUrl: string | null,
 	progress: number | null,
-	sourceUser: string | null,
-	targetPath: string | null,
-	error: AppError_Deserialize | null,
+	bytesDownloaded: number,
+	totalBytes: number,
+	speedBytesPerSec: number | null,
+	provider: string | null,
+	quality: string | null,
+	destinationPath: string | null,
+	currentStep: string | null,
+	error: string | null,
+	createdAt: string,
+	updatedAt: string,
 };
 
-export type AcquisitionJob_Serialize = {
-	id: string,
+export type AcquisitionJobStatus = "queued" | "resolving" | "downloading" | "tagging" | "reconciling" | "completed" | "failed" | "cancelled" | "paused";
+
+export type AcquisitionProgressPayload = {
+	jobId: string,
 	status: AcquisitionJobStatus,
 	progress: number | null,
-	sourceUser: string | null,
-	targetPath: string | null,
-	error: AppError_Serialize | null,
-};
-
-export type AcquisitionSearch = {
-	id: string,
-	query: string,
-	complete: boolean,
-	groups: AcquisitionSearchGroup[],
-};
-
-export type AcquisitionSearchFile = {
-	filename: string,
-	size: number,
-	bitRate: number | null,
-	bitDepth: number | null,
-	sampleRate: number | null,
-	length: number | null,
-	isLocked: boolean,
-};
-
-export type AcquisitionSearchGroup = {
-	searchId: string,
-	sourceUser: string,
-	uploadSpeed: number,
-	queueLength: number,
-	freeUploadSlot: boolean,
-	files: AcquisitionSearchFile[],
+	bytesDownloaded: number,
+	totalBytes: number,
+	speedBytesPerSec: number,
+	currentStep: string,
+	error: string | null,
 };
 
 export type AcquisitionSettings = {
-	serverUrl?: string,
-	inboxPath?: string | null,
-	confirmedRemote?: boolean,
-	importMode?: string,
+	providerPriority: string[],
+	maxParallelDownloads: number,
+	targetRootId: string | null,
+	pathTemplate: string,
+	deezerArl: string | null,
+	qobuzUserAuthToken: string | null,
+	qobuzAppId: string | null,
+	qobuzAppSecret: string | null,
+	tidalAccessToken: string | null,
+	tidalQuality: string | null,
+	embedArtwork: boolean,
+	fetchLyrics: boolean,
+	computeReplaygain: boolean,
 };
 
-export type AcquisitionStatus = AcquisitionStatus_Serialize | AcquisitionStatus_Deserialize;
-
-export type AcquisitionStatus_Deserialize = {
-	configured: boolean,
-	connected: boolean,
-	serverUrl: string,
-	version: string | null,
-	error: AppError_Deserialize | null,
-};
-
-export type AcquisitionStatus_Serialize = {
-	configured: boolean,
-	connected: boolean,
-	serverUrl: string,
-	version: string | null,
-	error: AppError_Serialize | null,
+export type AcquisitionTrackRequest = {
+	url: string | null,
+	title: string | null,
+	artist: string | null,
+	album: string | null,
+	isrc: string | null,
+	trackNumber: number | null,
+	discNumber: number | null,
+	year: number | null,
+	artworkUrl: string | null,
+	musicbrainzRecordingId: string | null,
+	preferredProvider: string | null,
 };
 
 export type AlbumDetail = {
@@ -183,6 +218,10 @@ export type AlbumSummary = {
 	totalDurationMs: number,
 	totalFileSize: number,
 	artworkPath: string | null,
+	provenance: EntityProvenance,
+	availability: EntityAvailability,
+	providerIds: string[],
+	lastRefreshedAt: string | null,
 };
 
 export type AppError = AppError_Serialize | AppError_Deserialize;
@@ -199,10 +238,31 @@ export type AppError_Serialize = {
 	context?: { [key in string]: string } | null,
 };
 
+export type ArtistCatalogQuery = {
+	search: string | null,
+	cursor: string | null,
+	pageSize: number,
+	available: boolean | null,
+};
+
 export type ArtistDetail = {
 	artist: ArtistSummary,
 	albums: AlbumSummary[],
 	tracks: TrackSummary[],
+};
+
+export type ArtistInformation = {
+	musicbrainzArtistId: string | null,
+	aliases: string[],
+	country: string | null,
+	activeFrom: string | null,
+	activeTo: string | null,
+	genres: string[],
+	biography: string | null,
+	canonicalSourceUrl: string | null,
+	imageUrl: string | null,
+	imageAttribution: string | null,
+	refreshedAt: string,
 };
 
 export type ArtistReference = {
@@ -213,6 +273,11 @@ export type ArtistReference = {
 export type ArtistSummary = {
 	id: string,
 	name: string,
+	musicbrainzArtistId: string | null,
+	provenance: EntityProvenance,
+	availability: EntityAvailability,
+	providerIds: string[],
+	lastRefreshedAt: string | null,
 	genres: string[],
 	albumCount: number,
 	trackCount: number,
@@ -222,7 +287,27 @@ export type ArtistSummary = {
 	artworkPath: string | null,
 };
 
+export type AudioAnalysisProgress = {
+	completed: number,
+	total: number,
+	currentTrackId: string | null,
+	failedTrackIds: string[],
+};
+
 export type AudioExtension = "flac" | "wav" | "mp3" | "ogg" | "aac" | "aiff" | "m4a";
+
+export type AudioFeatures = {
+	trackId: string,
+	analysisVersion: number,
+	bpm: number | null,
+	musicalKey: string | null,
+	loudnessDb: number | null,
+	energy: number | null,
+	spectralCentroidHz: number | null,
+	spectralRolloffHz: number | null,
+	dynamicRangeDb: number | null,
+	analyzedAt: string,
+};
 
 export type AudioOutputDevice = {
 	id: string,
@@ -248,6 +333,24 @@ export type AudioOutputState = {
 	disclosure: string,
 };
 
+export type AudioSpecs = {
+	extension: AudioExtension,
+	sampleRate: number | null,
+	bitDepth: number | null,
+	channels: number | null,
+};
+
+/**
+ *  A bounded, keyset-paginated catalog response. `next_cursor` is opaque to
+ *  callers; passing it back avoids the increasingly expensive OFFSET scans
+ *  used by the prototype discovery endpoint.
+ */
+export type CatalogPage<T> = {
+	items: T[],
+	nextCursor: string | null,
+	pageSize: number,
+};
+
 export type CatalogQuery = {
 	rootId: string | null,
 	search: string | null,
@@ -262,6 +365,16 @@ export type DesktopState = {
 	libraryRoot: string | null,
 	libraryRoots: LibraryRoot[],
 	playback: PlaybackState,
+};
+
+export type DiscographySyncProgress = {
+	total: number,
+	processed: number,
+	refreshed: number,
+	skipped: number,
+	failed: number,
+	currentArtist: string | null,
+	complete: boolean,
 };
 
 export type DiscoveryCatalog = {
@@ -285,8 +398,15 @@ export type EnrichmentCandidate = {
 	albumArtists: string[],
 	trackNumber: number | null,
 	trackTotal: number | null,
+	discNumber: number | null,
+	discTotal: number | null,
+	isrcs: string[],
 	durationMs: number | null,
 	score: number,
+	source: string,
+	confidence: number | null,
+	confidenceReasons: string[],
+	diffs: MetadataDiff[],
 	requiresReview: boolean,
 };
 
@@ -298,9 +418,19 @@ export type EnrichmentJob = {
 	fromCache: boolean,
 };
 
+export type EntityAvailability = "in-library" | "not-local";
+
+export type EntityProvenance = "local" | "remote" | "both";
+
 export type FavoriteReference = {
 	entityType: string,
 	entityId: string,
+};
+
+export type GeneratedPlaylist = {
+	selections: PlaylistSelection[],
+	totalDurationMs: number,
+	analyzedTrackCount: number,
 };
 
 export type GenreSummary = {
@@ -376,6 +506,51 @@ export type LibraryScan = {
 	warnings: string[],
 };
 
+export type LyricLine = {
+	timeMs: number | null,
+	text: string,
+};
+
+export type LyricsDocument = {
+	lines: LyricLine[],
+	source: LyricsSource,
+	sourceUrl: string | null,
+	synchronized: boolean,
+};
+
+export type LyricsSource = "embedded-synced" | "sidecar-lrc" | "embedded-plain" | "lrclib" | "unavailable";
+
+export type MetadataDiff = {
+	trackId: string,
+	field: string,
+	before: string | null,
+	after: string | null,
+	source: string,
+	confidence: number | null,
+};
+
+export type MetadataJob = {
+	id: string,
+	scope: MetadataJobScope,
+	scopeId: string | null,
+	status: MetadataJobStatus,
+	totalTracks: number,
+	processedTracks: number,
+	matchedTracks: number,
+	autoWrittenTracks: number,
+	reviewTracks: number,
+	failedTracks: number,
+	deferredTracks: number,
+	currentTrackId: string | null,
+	lastError: string | null,
+	createdAt: string,
+	updatedAt: string,
+};
+
+export type MetadataJobScope = "track" | "album" | "artist" | "library";
+
+export type MetadataJobStatus = "queued" | "running" | "paused" | "review" | "complete" | "cancelled" | "error";
+
 export type MetadataPatch = {
 	title: string | null,
 	artists: string[] | null,
@@ -392,7 +567,17 @@ export type MetadataPatch = {
 	label: string | null,
 	catalogNumber: string | null,
 	isrc: string | null,
+	musicbrainzRecordingId: string | null,
+	musicbrainzReleaseId: string | null,
+	musicbrainzArtistIds: string[] | null,
+	musicbrainzAlbumArtistIds: string[] | null,
 	artworkId: string | null,
+	lyrics: string | null,
+};
+
+export type MetadataReview = {
+	affectedFiles: string[],
+	diffs: MetadataDiff[],
 };
 
 export type MetadataWriteResult = {
@@ -431,10 +616,62 @@ export type PlayerPreferences = {
 	libraryView?: string,
 };
 
+export type Playlist = {
+	id: string,
+	name: string,
+	description: string | null,
+	tracks: TrackSummary[],
+	totalDurationMs: number,
+	generated: boolean,
+	generationRequest: PlaylistGenerationRequest | null,
+	createdAt: string,
+	updatedAt: string,
+};
+
+export type PlaylistGenerationRequest = {
+	seedTrackIds?: string[],
+	targetDurationMs?: number | null,
+	targetTrackCount?: number | null,
+	mood?: PlaylistMood | null,
+	minimumEnergy?: number | null,
+	maximumEnergy?: number | null,
+	familiarity?: number | null,
+	startYear?: number | null,
+	endYear?: number | null,
+	genres?: string[],
+	excludedTrackIds?: string[],
+	excludeExplicit?: boolean,
+	maxTracksPerArtist?: number,
+	maxTracksPerAlbum?: number,
+};
+
+export type PlaylistMood = "calm" | "bright" | "dark" | "intense";
+
+export type PlaylistSelection = {
+	track: TrackSummary,
+	score: number | null,
+	explanation: string,
+};
+
 export type PlaylistSummary = {
 	id: string,
 	name: string,
 	trackCount: number,
+	totalDurationMs: number,
+	generated: boolean,
+	coverArtworkPaths: string[],
+};
+
+export type RemoteTrackPayload = {
+	id: string,
+	releaseId: string,
+	trackNumber: number,
+	discNumber: number,
+	title: string,
+	durationMs: number | null,
+	isrc: string | null,
+	musicbrainzRecordingId: string | null,
+	spotifyTrackId: string | null,
 };
 
 export type RootAvailability = "online" | "offline" | "permission-error";
@@ -496,6 +733,27 @@ export type TrackSummary = {
 	bitDepth: number | null,
 	playCount: number,
 	available: boolean,
+};
+
+export type UnifiedAlbumDetail = {
+	album: AlbumSummary,
+	tracks: UnifiedTrackSummary[],
+};
+
+export type UnifiedTrackSummary = {
+	id: string | null,
+	remoteId: string,
+	trackNumber: number,
+	discNumber: number,
+	title: string,
+	artists: ArtistReference[],
+	durationMs: number | null,
+	isLocal: boolean,
+	audioSpecs: AudioSpecs | null,
+	isrc: string | null,
+	musicbrainzRecordingId: string | null,
+	spotifyTrackId: string | null,
+	acquisitionStatus: string | null,
 };
 
 export type UpdateProgress = {

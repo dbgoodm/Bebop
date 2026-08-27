@@ -36,7 +36,12 @@ pub struct MetadataPatch {
     pub label: Option<String>,
     pub catalog_number: Option<String>,
     pub isrc: Option<String>,
+    pub musicbrainz_recording_id: Option<String>,
+    pub musicbrainz_release_id: Option<String>,
+    pub musicbrainz_artist_ids: Option<Vec<String>>,
+    pub musicbrainz_album_artist_ids: Option<Vec<String>>,
     pub artwork_id: Option<String>,
+    pub lyrics: Option<String>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, Type)]
@@ -99,6 +104,40 @@ pub(crate) fn read_embedded_metadata(
     metadata.artwork =
         cache_artwork(path, tag, artwork_cache).map_err(|error| error.to_string())?;
     Ok(metadata)
+}
+
+pub(crate) fn read_metadata_patch(path: &Path) -> Result<MetadataPatch, String> {
+    let probe = Probe::open(path).map_err(|error| error.to_string())?;
+    let probe = probe.guess_file_type().map_err(|error| error.to_string())?;
+    let tagged = probe.read().map_err(|error| error.to_string())?;
+    let metadata = tagged
+        .primary_tag()
+        .or_else(|| tagged.first_tag())
+        .map(metadata_from_tag)
+        .unwrap_or_default();
+    Ok(MetadataPatch {
+        title: metadata.title,
+        artists: Some(metadata.artists),
+        album: metadata.album,
+        album_artists: Some(metadata.album_artists),
+        genres: Some(metadata.genres),
+        track_number: metadata.track_number,
+        track_total: metadata.track_total,
+        disc_number: metadata.disc_number,
+        disc_total: metadata.disc_total,
+        year: metadata.year,
+        date: metadata.date,
+        composer: metadata.composer,
+        label: metadata.label,
+        catalog_number: metadata.catalog_number,
+        isrc: metadata.isrc,
+        musicbrainz_recording_id: metadata.musicbrainz_recording_id,
+        musicbrainz_release_id: metadata.musicbrainz_release_id,
+        musicbrainz_artist_ids: Some(metadata.musicbrainz_artist_ids),
+        musicbrainz_album_artist_ids: Some(metadata.musicbrainz_album_artist_ids),
+        artwork_id: None,
+        lyrics: metadata.lyrics,
+    })
 }
 
 fn metadata_from_tag(tag: &Tag) -> EmbeddedMetadata {
@@ -354,6 +393,27 @@ fn apply_patch_to_path(path: &Path, patch: &MetadataPatch) -> Result<(), String>
     set_text(tag, ItemKey::Label, patch.label.as_deref());
     set_text(tag, ItemKey::CatalogNumber, patch.catalog_number.as_deref());
     set_text(tag, ItemKey::Isrc, patch.isrc.as_deref());
+    set_text(
+        tag,
+        ItemKey::MusicBrainzRecordingId,
+        patch.musicbrainz_recording_id.as_deref(),
+    );
+    set_text(
+        tag,
+        ItemKey::MusicBrainzReleaseId,
+        patch.musicbrainz_release_id.as_deref(),
+    );
+    set_multi_item(
+        tag,
+        ItemKey::MusicBrainzArtistId,
+        patch.musicbrainz_artist_ids.as_ref(),
+    );
+    set_multi_item(
+        tag,
+        ItemKey::MusicBrainzReleaseArtistId,
+        patch.musicbrainz_album_artist_ids.as_ref(),
+    );
+    set_text(tag, ItemKey::Lyrics, patch.lyrics.as_deref());
     tagged
         .save_to_path(path, WriteOptions::default())
         .map_err(|error| error.to_string())
@@ -426,7 +486,22 @@ fn validate_patch(tag: &Tag, patch: &MetadataPatch) -> Result<(), String> {
         && actual.composer == clean(patch.composer.clone())
         && actual.label == clean(patch.label.clone())
         && actual.catalog_number == clean(patch.catalog_number.clone())
-        && actual.isrc == clean(patch.isrc.clone());
+        && actual.isrc == clean(patch.isrc.clone())
+        && actual.musicbrainz_recording_id == clean(patch.musicbrainz_recording_id.clone())
+        && actual.musicbrainz_release_id == clean(patch.musicbrainz_release_id.clone())
+        && actual.musicbrainz_artist_ids
+            == patch
+                .musicbrainz_artist_ids
+                .as_deref()
+                .map(clean_values)
+                .unwrap_or_default()
+        && actual.musicbrainz_album_artist_ids
+            == patch
+                .musicbrainz_album_artist_ids
+                .as_deref()
+                .map(clean_values)
+                .unwrap_or_default()
+        && actual.lyrics == clean(patch.lyrics.clone());
     if valid {
         Ok(())
     } else {
@@ -520,6 +595,11 @@ mod tests {
             &MetadataPatch {
                 title: Some("Edited fixture".into()),
                 artists: Some(vec!["Edited Artist".into()]),
+                musicbrainz_recording_id: Some("recording-mbid".into()),
+                musicbrainz_release_id: Some("release-mbid".into()),
+                musicbrainz_artist_ids: Some(vec!["artist-mbid".into()]),
+                musicbrainz_album_artist_ids: Some(vec!["album-artist-mbid".into()]),
+                lyrics: Some("Honest local lyrics".into()),
                 ..MetadataPatch::default()
             },
         )
@@ -532,6 +612,15 @@ mod tests {
         let edited = read_embedded_metadata(&path, &directory.join("cache")).expect("read edit");
         assert_eq!(edited.title.as_deref(), Some("Edited fixture"));
         assert_eq!(edited.artists, ["Edited Artist"]);
+        assert_eq!(
+            edited.musicbrainz_recording_id.as_deref(),
+            Some("recording-mbid")
+        );
+        assert_eq!(
+            edited.musicbrainz_release_id.as_deref(),
+            Some("release-mbid")
+        );
+        assert_eq!(edited.lyrics.as_deref(), Some("Honest local lyrics"));
         restore_backup(&path).expect("restore backup");
         let restored =
             read_embedded_metadata(&path, &directory.join("cache")).expect("read restore");

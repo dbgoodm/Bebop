@@ -49,6 +49,9 @@ pub struct PlaylistSummary {
     pub id: String,
     pub name: String,
     pub track_count: u64,
+    pub total_duration_ms: u64,
+    pub generated: bool,
+    pub cover_artwork_paths: Vec<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Type)]

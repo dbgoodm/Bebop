@@ -26,6 +26,8 @@ import {
 type PlaybackEventName =
   'playback://state' | 'playback://position' | 'playback://ended' | 'playback://error';
 
+const EMPTY_BINS: readonly number[] = [];
+
 function asAppError(cause: unknown): AppError {
   if (typeof cause === 'object' && cause !== null && 'code' in cause && 'message' in cause) {
     return cause as AppError;
@@ -41,13 +43,19 @@ export function useNativePlayback() {
   const [playback, setPlayback] = useState<PlaybackState>(initialPlaybackState);
   const [error, setError] = useState<AppError | null>(null);
   const [endedCount, setEndedCount] = useState(0);
-  const [spectrum, setSpectrum] = useState<SpectrumFrame | null>(null);
+  // Spectrum frames arrive ~60x a second. Keeping them in React state re-renders
+  // every consumer of this hook — including the whole library page — on each frame,
+  // which is far more expensive than the visualiser itself. Hold the latest frame in
+  // a ref and let canvases pull it inside their own animation loop instead.
+  const spectrumRef = useRef<readonly number[]>(EMPTY_BINS);
   const [outputDevices, setOutputDevices] = useState<AudioOutputDevice[]>([]);
   const lastAudibleVolume = useRef(1);
 
+  const getSpectrumBins = useCallback(() => spectrumRef.current, []);
+
   const applyPlayback = useCallback((next: PlaybackState) => {
     setPlayback(next);
-    if (next.status !== 'playing') setSpectrum(null);
+    if (next.status !== 'playing') spectrumRef.current = EMPTY_BINS;
     if (!next.muted && (next.volume ?? 0) > 0) lastAudibleVolume.current = next.volume ?? 1;
   }, []);
 
@@ -84,7 +92,9 @@ export function useNativePlayback() {
         setEndedCount((count) => count + 1);
       }),
       subscribe<AppError>('playback://error', setError),
-      listen<SpectrumFrame>('playback://spectrum', ({ payload }) => setSpectrum(payload)).then(
+      listen<SpectrumFrame>('playback://spectrum', ({ payload }) => {
+        spectrumRef.current = payload.bins;
+      }).then(
         (unlisten) => {
           if (disposed) unlisten();
           else unlisteners.push(unlisten);
@@ -163,7 +173,7 @@ export function useNativePlayback() {
     playback,
     error,
     endedCount,
-    spectrum,
+    getSpectrumBins,
     outputDevices,
     playTrack,
     togglePlayback,

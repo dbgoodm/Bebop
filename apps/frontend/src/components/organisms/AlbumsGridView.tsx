@@ -41,7 +41,7 @@ export const AlbumsGridView: React.FC<AlbumsGridViewProps> = ({
               )}
 
               {/* Format Badge */}
-              <div className="absolute bottom-2 right-2 px-1.5 py-0.5 rounded bg-black/80 backdrop-blur-xs text-[10px] font-mono text-amber-400 border border-amber-500/30">
+              <div className="absolute bottom-2 right-2 px-1.5 py-0.5 rounded bg-black/80 text-[10px] font-mono text-amber-400 border border-amber-500/30">
                 {album.format}
               </div>
 
@@ -52,7 +52,7 @@ export const AlbumsGridView: React.FC<AlbumsGridViewProps> = ({
                   e.stopPropagation();
                   onPlayAlbum?.(album);
                 }}
-                className="absolute inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-pointer"
+                className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-pointer"
                 aria-label={`Play ${album.title}`}
               >
                 <div className="w-11 h-11 rounded-full bg-amber-500 text-black flex items-center justify-center shadow-lg hover:scale-105 transition-transform">

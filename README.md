@@ -62,16 +62,14 @@ future platform-specific verification path can prove it.
 
 ## Optional online features
 
-MusicBrainz enrichment, Last.fm, Discord Rich Presence, and the user-managed slskd connector are
-disabled by default. Update checks run at most once daily, but downloads and installation always
-require confirmation. Bebop remains fully usable offline.
+MusicBrainz enrichment, Last.fm, and Discord Rich Presence are disabled by default. Update checks run at most once daily, but downloads and installation always require confirmation. Bebop remains fully usable offline.
 
 ## Documentation
 
 - [Architecture and IPC](docs/ARCHITECTURE.md)
 - [Privacy](docs/PRIVACY.md) and [data locations](docs/DATA_LOCATIONS.md)
 - [Backup and recovery](docs/BACKUP_AND_RECOVERY.md)
-- [Online integrations](docs/INTEGRATIONS.md) and [slskd acquisition](docs/ACQUISITION.md)
-- [Signed releases and updates](docs/RELEASES.md)
+- [Online integrations](docs/INTEGRATIONS.md) and [Acquisition policy](docs/ACQUISITION.md)
 - [Troubleshooting](docs/TROUBLESHOOTING.md)
-- [V2 implementation plan](docs/IMPLEMENTATION_PLAN_V2.md)
+- [V3 implementation plan](docs/IMPLEMENTATION_PLAN_V3.md)
+- [V4 implementation plan](docs/IMPLEMENTATION_PLAN_V4.md)

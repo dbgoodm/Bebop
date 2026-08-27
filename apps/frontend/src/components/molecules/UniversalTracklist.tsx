@@ -8,6 +8,9 @@ import {
   ArrowUpDown,
   Plus,
   X,
+  ArrowDownToLine,
+  DownloadCloud,
+  Loader2,
 } from 'lucide-react';
 import { TrackItem } from '@/types';
 import { isDemoMode } from '@/demo/mode';
@@ -93,7 +96,7 @@ export const ALL_AVAILABLE_COLUMNS: ColumnDefinition[] = [
     defaultVisible: false,
   },
   { id: 'playCount', label: 'Play Count', align: 'right', minWidth: 'w-20', defaultVisible: false },
-  { id: 'actions', label: 'Fav', align: 'center', minWidth: 'w-10', defaultVisible: true },
+  { id: 'actions', label: 'Actions', align: 'center', minWidth: 'w-16', defaultVisible: true },
 ];
 
 export interface UniversalTracklistProps {
@@ -105,6 +108,7 @@ export interface UniversalTracklistProps {
   onSelectArtist?: (artistName: string) => void;
   onSelectAlbum?: (albumName: string) => void;
   onEditTrack?: (track: TrackItem) => void;
+  onAcquireTrack?: (track: TrackItem) => void;
   favoriteTrackIds?: ReadonlySet<string>;
   onFavoriteChange?: (trackId: string, favorite: boolean) => void;
   defaultVisibleColumns?: ColumnKey[];
@@ -122,6 +126,7 @@ export const UniversalTracklist: React.FC<UniversalTracklistProps> = ({
   onSelectArtist,
   onSelectAlbum,
   onEditTrack,
+  onAcquireTrack,
   favoriteTrackIds,
   onFavoriteChange,
   defaultVisibleColumns,
@@ -306,11 +311,36 @@ export const UniversalTracklist: React.FC<UniversalTracklistProps> = ({
     index: number,
     isCurrent: boolean,
   ) => {
+    const isMissing = track.isLocal === false;
+    const isDownloading =
+      track.acquisitionStatus === 'downloading' ||
+      track.acquisitionStatus === 'queued' ||
+      track.acquisitionStatus === 'tagging';
+
     switch (col.id) {
       case 'trackNumber':
         return (
           <div className="flex items-center justify-center font-mono text-neutral-400">
-            {isCurrent && isPlaying ? (
+            {isDownloading ? (
+              <Loader2 className="w-3.5 h-3.5 text-amber-400 animate-spin mx-auto" />
+            ) : isMissing ? (
+              <>
+                <span className="group-hover:hidden text-xs text-neutral-500">
+                  {track.trackNumber || index + 1}
+                </span>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onAcquireTrack?.(track);
+                  }}
+                  title="Get Track"
+                  className="hidden group-hover:inline-flex text-amber-400 hover:text-amber-300 mx-auto cursor-pointer"
+                >
+                  <ArrowDownToLine className="w-3.5 h-3.5" />
+                </button>
+              </>
+            ) : isCurrent && isPlaying ? (
               <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse" />
             ) : (
               <>
@@ -326,23 +356,49 @@ export const UniversalTracklist: React.FC<UniversalTracklistProps> = ({
           <div className="flex flex-col">
             <span
               className={`font-semibold line-clamp-1 group-hover:text-amber-400 transition-colors ${
-                isCurrent ? 'text-amber-400 font-bold' : 'text-white'
+                isMissing
+                  ? 'text-neutral-400 group-hover:text-neutral-200'
+                  : isCurrent
+                    ? 'text-amber-400 font-bold'
+                    : 'text-white'
               }`}
             >
               {track.title}
             </span>
-            {track.artist && compact && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onSelectArtist?.(track.artist);
-                }}
-                className="text-[11px] text-neutral-400 hover:text-amber-400 hover:underline font-sans line-clamp-1 text-left cursor-pointer transition-colors"
-                title={`View artist: ${track.artist}`}
-              >
-                {track.artist}
-              </button>
+            {isDownloading ? (
+              <div className="flex items-center gap-2 mt-1">
+                <div className="w-20 bg-neutral-800 rounded-full h-1.5 overflow-hidden">
+                  <div
+                    className="bg-amber-400 h-full transition-all duration-300 rounded-full"
+                    style={{ width: `${Math.max(5, track.acquisitionProgress || 0)}%` }}
+                  />
+                </div>
+                <span className="text-[10px] font-mono text-amber-400">
+                  {track.acquisitionStatus === 'tagging'
+                    ? 'Tagging…'
+                    : `${track.acquisitionProgress || 0}%`}
+                </span>
+                {track.acquisitionSpeed && (
+                  <span className="text-[10px] font-mono text-neutral-500">
+                    {track.acquisitionSpeed}
+                  </span>
+                )}
+              </div>
+            ) : (
+              track.artist &&
+              compact && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onSelectArtist?.(track.artist);
+                  }}
+                  className="text-[11px] text-neutral-400 hover:text-amber-400 hover:underline font-sans line-clamp-1 text-left cursor-pointer transition-colors"
+                  title={`View artist: ${track.artist}`}
+                >
+                  {track.artist}
+                </button>
+              )
             )}
           </div>
         );
@@ -429,6 +485,31 @@ export const UniversalTracklist: React.FC<UniversalTracklistProps> = ({
         return <span className="font-mono text-neutral-300 text-[11px]">{track.duration}</span>;
 
       case 'actions': {
+        if (isMissing) {
+          if (isDownloading) {
+            return (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 text-[10px] font-mono border border-amber-500/20">
+                <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                <span>{track.acquisitionStatus === 'tagging' ? 'Tagging' : 'Getting'}</span>
+              </span>
+            );
+          }
+          return (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onAcquireTrack?.(track);
+              }}
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-500/15 hover:bg-amber-500/30 text-amber-400 hover:text-amber-300 border border-amber-500/40 text-[10px] font-mono transition-colors cursor-pointer"
+              title="Get Track"
+            >
+              <ArrowDownToLine className="w-3 h-3" />
+              <span>Get</span>
+            </button>
+          );
+        }
+
         const isFav = favoriteTrackIds?.has(track.id) ?? favorites[track.id];
         return (
           <span className="flex items-center gap-1">
@@ -598,14 +679,25 @@ export const UniversalTracklist: React.FC<UniversalTracklistProps> = ({
           <tbody className="divide-y divide-neutral-900/60 font-sans">
             {tracks.map((track, idx) => {
               const isCurrent = currentTrackId === track.id;
+              const isMissing = track.isLocal === false;
 
               return (
                 <tr
-                  key={track.id}
+                  key={track.id || `track-${idx}`}
                   id={`${idPrefix}-row-${track.id}`}
-                  onClick={() => onPlayTrack?.(track)}
-                  className={`group transition-colors cursor-pointer ${
-                    isCurrent ? 'bg-amber-950/20 text-white' : 'hover:bg-[#121824] text-neutral-200'
+                  onClick={() => {
+                    if (isMissing) {
+                      onAcquireTrack?.(track);
+                    } else {
+                      onPlayTrack?.(track);
+                    }
+                  }}
+                  className={`group transition-all duration-300 cursor-pointer ${
+                    isMissing
+                      ? 'opacity-50 hover:opacity-80 text-neutral-400 hover:bg-[#121824]/60'
+                      : isCurrent
+                        ? 'bg-amber-950/20 text-white'
+                        : 'hover:bg-[#121824] text-neutral-200 opacity-100'
                   }`}
                 >
                   {activeColumns.map((col) => (

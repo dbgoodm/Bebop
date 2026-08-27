@@ -16,7 +16,6 @@ React pages/hooks
   ├─ opt-in enrichment → rate-limited MusicBrainz worker → persistent result cache
   ├─ queue/collections/Home ← settings + listening sessions ← Rust playback monitor
   ├─ opt-in integrations → credential store + persistent outbox → Last.fm / Discord
-  ├─ explicit acquisition → typed slskd client → verified inbox import → selected root
   ├─ signed update check → GitHub latest.json → verified artifact → confirmed install
   └─ generated IPC → playback commands → Rust PlaybackEngine → Rodio / CPAL → output device
                          ↑                                      │
@@ -126,7 +125,6 @@ are a consumer of those contracts.
 | `HomeSnapshot`          | SQLite-derived collections and aggregate listening/catalog statistics for Home.                        |
 | `PlaylistSummary`       | Stable manual playlist identity, name, and current track count.                                        |
 | `IntegrationStatus`     | Opt-in Last.fm/Discord configuration, connection, outbox, and error state without secrets.             |
-| `AcquisitionJob`        | Persisted slskd transfer/import state without its credential or unrestricted destination paths.        |
 | `UpdateStatus`          | Daily/manual signed-update availability and non-sensitive release metadata.                            |
 
 The playback commands are `play_track`, `pause_playback`, `resume_playback`, `stop_playback`,
@@ -177,19 +175,6 @@ Discord presence is created and cleared by Rust, not React. Full sharing include
 album, and a playback timestamp; private sharing reports only that local listening is active.
 Presence is cleared on pause, stop, disable, exit, and track end. Last.fm, Discord, credential-store,
 and IPC errors update `integration://status` but never propagate into the audio engine.
-
-## Acquisition boundary
-
-The production connector is a typed Rust client for a separately installed slskd instance and is
-disabled until configured. Loopback HTTP is allowed at the default `127.0.0.1:5030`; non-loopback
-servers require HTTPS and explicit confirmation. The API key remains in the OS credential store.
-Only user-initiated searches, enqueues, and transfer controls call slskd.
-
-slskd owns temporary files. Bebop imports only from a canonical configured completed-download
-inbox after finding one exact filename-and-size match. A destination must be a single safe filename
-inside an enabled, online root. Rust validates the extension and real decoder before and after an
-atomic no-clobber copy, then reconciles the root. No acquisition command accepts an arbitrary
-frontend destination path. Production never mounts the simulated demo queue.
 
 ## Releases and updates
 

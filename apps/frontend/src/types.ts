@@ -127,7 +127,89 @@ export interface RediscoverRailProps {
   onSelectAlbum?: (albumName: string) => void;
 }
 
-export type LibrarySubTab = 'artists' | 'albums' | 'genres' | 'tracks';
+export type LibrarySubTab = 'artists' | 'albums' | 'genres' | 'tracks' | 'playlists';
+
+export type AcquisitionStatus =
+  | 'idle'
+  | 'queued'
+  | 'resolving'
+  | 'downloading'
+  | 'tagging'
+  | 'completed'
+  | 'failed'
+  | 'cancelled';
+
+export interface AcquisitionTrackRequest {
+  trackTitle: string;
+  artistName: string;
+  albumTitle?: string;
+  isrc?: string;
+  durationMs?: number;
+  trackNumber?: number;
+  discNumber?: number;
+  remoteTrackId?: string;
+  remoteReleaseId?: string;
+  musicbrainzRecordingId?: string;
+  spotifyTrackId?: string;
+}
+
+export interface AcquisitionAlbumRequest {
+  albumTitle: string;
+  artistName: string;
+  remoteReleaseId?: string;
+  tracks?: AcquisitionTrackRequest[];
+}
+
+export interface AcquisitionJobDto {
+  id: string;
+  trackTitle: string;
+  artistName: string;
+  albumTitle: string;
+  status: AcquisitionStatus;
+  percent: number;
+  speedBytesPerSec: number;
+  stage?: string;
+  targetPath?: string | null;
+  errorMessage?: string | null;
+  createdAt: string;
+  completedAt?: string | null;
+  trackId?: string | null;
+  remoteTrackId?: string | null;
+}
+
+export interface AcquisitionProgressPayload {
+  jobId: string;
+  trackId?: string | null;
+  remoteTrackId?: string | null;
+  percent: number;
+  speedBytesPerSec: number;
+  stage?: string;
+}
+
+export interface AcquisitionCompletedPayload {
+  jobId: string;
+  trackId?: string | null;
+  remoteTrackId?: string | null;
+  localTrackId?: string | null;
+  filePath?: string | null;
+}
+
+export interface AcquisitionFailedPayload {
+  jobId: string;
+  trackId?: string | null;
+  remoteTrackId?: string | null;
+  error: string;
+}
+
+export interface AcquisitionSettings {
+  preferredQuality: 'hi-res-24' | 'lossless-16';
+  destinationFolder: string | null;
+  namingPattern: string;
+  concurrencyLimit: number;
+  deezerArl?: string;
+  qobuzUserAuthToken?: string;
+  qobuzAppId?: string;
+}
 
 export interface TrackItem {
   id: string;
@@ -135,7 +217,7 @@ export interface TrackItem {
   title: string;
   artist: string;
   album: string;
-  codec: 'FLAC' | 'DSD64' | 'DSD256' | 'WAV' | 'ALAC' | 'MP3' | 'OGG' | 'AAC' | 'AIFF' | 'M4A';
+  codec: 'FLAC' | 'DSD64' | 'DSD256' | 'WAV' | 'ALAC' | 'MP3' | 'OGG' | 'AAC' | 'AIFF' | 'M4A' | 'UNKNOWN' | '—' | string;
   sampleRate: string; // e.g. "24-bit/192kHz", "24/96", "DSD256"
   dynamicRange: string; // e.g. "DR15", "DR13", "DR14"
   bitrate: string; // e.g. "4608 kbps", "2906 kbps"
@@ -150,6 +232,14 @@ export interface TrackItem {
   albumId?: string;
   genres?: string[];
   playCount?: number;
+  isLocal?: boolean;
+  remoteId?: string;
+  isrc?: string;
+  acquisitionStatus?: AcquisitionStatus | string | null;
+  acquisitionProgress?: number;
+  acquisitionSpeed?: string;
+  musicbrainzRecordingId?: string;
+  spotifyTrackId?: string;
 }
 
 export interface ArtistTopTrack {
@@ -174,33 +264,15 @@ export interface ArtistDiscographyAlbum {
   coverUrl?: string;
   trackCount?: number;
   isNoDisc?: boolean;
-  isLocal?: boolean; // True if downloaded/present in local library, false if available in Antra Engine
-  fileSize?: string; // e.g. "1.45 GB", "980 MB"
+  isLocal?: boolean;
+  fileSize?: string;
   releaseType?: 'Studio Album' | 'Soundtrack' | 'Live' | 'EP' | 'Compilation' | 'Remixes';
   catalogNumber?: string;
   losslessTier?: string;
-}
-
-export type AntraIngestStatus =
-  'idle' | 'queued' | 'downloading' | 'verifying' | 'completed' | 'paused' | 'error';
-
-export interface AntraQueueItem {
-  id: string;
-  albumId: string;
-  albumTitle: string;
-  artistName: string;
-  coverUrl?: string;
-  formatBadge: string;
-  fileSize: string;
-  trackCount: number;
-  year: number;
-  status: AntraIngestStatus;
-  progress: number; // 0 to 100
-  downloadSpeed: string; // e.g. "84.5 MB/s"
-  bytesDownloaded: string; // e.g. "980 MB / 1.45 GB"
-  estimatedTime: string; // e.g. "14s"
-  addedAt: number;
-  completedAt?: number;
+  availability?: 'in-library' | 'not-local';
+  provenance?: 'local' | 'remote' | 'both';
+  providerIds?: string[];
+  lastRefreshedAt?: string;
 }
 
 export interface ArtistItem {
@@ -215,12 +287,23 @@ export interface ArtistItem {
   bannerUrl?: string;
   featuredCoverUrl?: string;
   bioSummary?: string;
+  bioSourceUrl?: string;
+  bioAttribution?: string;
+  musicbrainzArtistId?: string;
+  aliases?: string[];
+  country?: string;
+  activeFrom?: string;
+  activeTo?: string;
   losslessPlaytime: string;
   losslessPercentage?: string; // e.g. "100% Lossless"
   localStorageSize?: string; // e.g. "8.4 GB"
   discography?: ArtistDiscographyAlbum[];
   topTracks?: ArtistTopTrack[];
   tracks?: TrackItem[];
+  availability?: 'in-library' | 'not-local';
+  provenance?: 'local' | 'remote' | 'both';
+  providerIds?: string[];
+  lastRefreshedAt?: string;
 }
 
 export interface GenreItem {
@@ -252,6 +335,10 @@ export interface AlbumItem {
   replayGain?: string;
   losslessPercentage?: string;
   description?: string;
+  availability?: 'in-library' | 'not-local';
+  provenance?: 'local' | 'remote' | 'both';
+  providerIds?: string[];
+  lastRefreshedAt?: string;
   tracks: TrackItem[];
 }
 
@@ -269,3 +356,4 @@ export interface ColumnVisibility {
   catalogNumber: boolean;
   duration: boolean;
 }
+

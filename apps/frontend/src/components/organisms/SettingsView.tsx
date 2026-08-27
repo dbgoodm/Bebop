@@ -1,553 +1,364 @@
-import React, { useState } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import {
+  FolderPlus,
   Palette,
-  Check,
-  Volume2,
-  Sliders,
-  Sparkles,
-  HardDrive,
-  Copy,
-  Upload,
   RefreshCw,
-  Zap,
+  RotateCcw,
+  Trash2,
+  DownloadCloud,
+  HardDrive,
+  KeyRound,
+  Sliders,
+  Check,
   Music,
-  ShieldCheck,
-  Disc3,
-  SlidersHorizontal,
 } from 'lucide-react';
-import { useTheme, ThemeConfig } from '@/services/themeService';
+import type { LibraryRoot } from '@/services/tauri-bindings';
+import { useTheme } from '@/services/themeService';
+import { MetadataJobsPanel } from './MetadataJobsPanel';
+import type { AcquisitionSettings } from '@/types';
+import {
+  getAcquisitionSettings,
+  saveAcquisitionSettings,
+} from '@/services/acquisitionService';
 
-export const SettingsView: React.FC = () => {
-  const { currentTheme, allThemes, setThemeById, saveCustomTheme } = useTheme();
+type SettingsCategory = 'audio' | 'appearance' | 'library' | 'metadata' | 'online' | 'updates';
 
-  // Settings State
-  const [audioDriver, setAudioDriver] = useState<'wasapi' | 'asio' | 'webaudio'>('wasapi');
-  const [sampleRate, setSampleRate] = useState('192khz-32bit');
-  const [replayGain, setReplayGain] = useState(true);
-  const [bufferSize, setBufferSize] = useState('128');
-  const [exclusiveMode, setExclusiveMode] = useState(true);
-  const [visualizerDensity, setVisualizerDensity] = useState<'dense' | 'standard' | 'minimal'>(
-    'standard',
-  );
-  const [copiedNotification, setCopiedNotification] = useState(false);
-  const [isScanning, setIsScanning] = useState(false);
-  const [scanSuccess, setScanSuccess] = useState(false);
-  const [showImportJson, setShowImportJson] = useState(false);
-  const [importJsonText, setImportJsonText] = useState('');
+const CATEGORIES: { id: SettingsCategory; label: string; icon: typeof Sliders }[] = [
+  { id: 'audio', label: 'Audio', icon: Sliders },
+  { id: 'appearance', label: 'Appearance', icon: Palette },
+  { id: 'library', label: 'Library', icon: HardDrive },
+  { id: 'metadata', label: 'Metadata & Tags', icon: Music },
+  { id: 'online', label: 'Online Presence', icon: KeyRound },
+  { id: 'updates', label: 'Updates', icon: DownloadCloud },
+];
 
-  const handleCopyJson = () => {
-    const json = JSON.stringify(currentTheme, null, 2);
-    navigator.clipboard.writeText(json);
-    setCopiedNotification(true);
-    setTimeout(() => setCopiedNotification(false), 2500);
-  };
+interface SettingsViewProps {
+  roots: LibraryRoot[];
+  isScanning: boolean;
+  onAddRoot: () => void;
+  onRescanRoot: (rootId: string) => void;
+  onSetRootEnabled: (rootId: string, enabled: boolean) => void;
+  onRemoveRoot: (root: LibraryRoot) => void;
+  /** Output-device controls supplied by the page that owns playback state. */
+  audioSlot?: ReactNode;
+  /** Last.fm and Discord integration controls. */
+  onlineSlot?: ReactNode;
+  /** Update checker panel. */
+  updatesSlot?: ReactNode;
+  children?: ReactNode;
+}
 
-  const handleImportTheme = () => {
-    try {
-      const parsed = JSON.parse(importJsonText);
-      if (parsed.name && parsed.primary) {
-        parsed.id = parsed.id || `custom-${Date.now()}`;
-        saveCustomTheme(parsed);
-        setShowImportJson(false);
-        setImportJsonText('');
-      } else {
-        alert('Invalid theme format. Missing required properties.');
-      }
-    } catch {
-      alert('Could not parse JSON. Please check syntax.');
-    }
-  };
+export function SettingsView({
+  roots,
+  isScanning,
+  onAddRoot,
+  onRescanRoot,
+  onSetRootEnabled,
+  onRemoveRoot,
+  audioSlot,
+  onlineSlot,
+  updatesSlot,
+  children,
+}: SettingsViewProps) {
+  const { allThemes, currentTheme, setThemeById } = useTheme();
+  const [category, setCategory] = useState<SettingsCategory>('audio');
 
-  const handleRescanLibrary = () => {
-    setIsScanning(true);
-    setScanSuccess(false);
-    setTimeout(() => {
-      setIsScanning(false);
-      setScanSuccess(true);
-      setTimeout(() => setScanSuccess(false), 3000);
-    }, 1200);
+  const [acquisitionSettings, setAcquisitionSettings] = useState<AcquisitionSettings>({
+    preferredQuality: 'hi-res-24',
+    destinationFolder: null,
+    namingPattern: '{Artist}/{Album}/{TrackNumber} - {Title}',
+    concurrencyLimit: 2,
+    deezerArl: '',
+    qobuzUserAuthToken: '',
+    qobuzAppId: '',
+  });
+  const [savedSuccess, setSavedSuccess] = useState(false);
+
+  useEffect(() => {
+    void getAcquisitionSettings().then((s) => {
+      setAcquisitionSettings(s);
+    });
+  }, []);
+
+  const handleUpdateSetting = async <K extends keyof AcquisitionSettings>(
+    key: K,
+    value: AcquisitionSettings[K],
+  ) => {
+    const updated = { ...acquisitionSettings, [key]: value };
+    setAcquisitionSettings(updated);
+    await saveAcquisitionSettings(updated);
+    setSavedSuccess(true);
+    setTimeout(() => setSavedSuccess(false), 2000);
   };
 
   return (
-    <div
-      id="settings-view-container"
-      className="w-full max-w-6xl mx-auto flex flex-col gap-8 pb-12 font-sans animate-fadeIn"
-    >
-      {/* Top Header */}
-      <div
-        className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b"
-        style={{ borderColor: currentTheme.borderColor }}
-      >
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight flex items-center gap-3">
-            <span>Settings & Preferences</span>
-            <span
-              className="text-xs font-mono px-2.5 py-1 rounded-full border font-bold uppercase"
-              style={{
-                backgroundColor: `${currentTheme.primary}20`,
-                color: currentTheme.primary,
-                borderColor: `${currentTheme.primary}50`,
-              }}
-            >
-              {currentTheme.name}
-            </span>
-          </h1>
-          <p className="text-sm text-neutral-400 mt-1">
-            Configure visual themes, bit-perfect audio drivers, DSP engine, and lossless library
-            scanning
-          </p>
-        </div>
+    <div id="settings-view-container" className="flex w-full flex-col gap-6 py-8 animate-fadeIn font-sans text-neutral-200">
+      <header className="border-b border-neutral-800 pb-4">
+        <p className="font-mono text-xs uppercase tracking-[0.24em] text-amber-400">Configuration</p>
+        <h1 className="mt-2 text-3xl font-bold text-white">Settings</h1>
+      </header>
 
-        <div className="flex items-center gap-2 shrink-0">
-          <button
-            type="button"
-            onClick={handleCopyJson}
-            style={{
-              backgroundColor: currentTheme.bgCard,
-              borderColor: currentTheme.borderColor,
-            }}
-            className="px-3 py-1.5 rounded-lg border text-xs font-mono text-neutral-300 hover:text-white flex items-center gap-1.5 transition-colors cursor-pointer hover:brightness-110"
-          >
-            {copiedNotification ? (
-              <>
-                <Check className="w-3.5 h-3.5 text-emerald-400" />
-                <span className="text-emerald-300">Copied!</span>
-              </>
-            ) : (
-              <>
-                <Copy className="w-3.5 h-3.5" />
-                <span>Export Theme JSON</span>
-              </>
-            )}
-          </button>
-          <button
-            type="button"
-            onClick={() => setShowImportJson(!showImportJson)}
-            style={{
-              backgroundColor: currentTheme.bgCard,
-              borderColor: currentTheme.borderColor,
-            }}
-            className="px-3 py-1.5 rounded-lg border text-xs font-mono text-neutral-300 hover:text-white flex items-center gap-1.5 transition-colors cursor-pointer hover:brightness-110"
-          >
-            <Upload className="w-3.5 h-3.5" />
-            <span>Import JSON</span>
-          </button>
-        </div>
-      </div>
+      <div className="grid grid-cols-1 gap-7 lg:grid-cols-[232px_minmax(0,1fr)]">
+        {/* Category rail */}
+        <nav aria-label="Settings categories" className="flex flex-col gap-1">
+          {CATEGORIES.map(({ id, label, icon: Icon }) => {
+            const active = category === id;
+            return (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setCategory(id)}
+                aria-current={active ? 'page' : undefined}
+                style={
+                  active
+                    ? {
+                        borderColor: currentTheme.primary,
+                        background: currentTheme.cardGradient || currentTheme.bgCard,
+                      }
+                    : undefined
+                }
+                className={`flex items-center gap-3 rounded-md border px-3 py-2.5 text-left text-sm transition-colors cursor-pointer ${
+                  active
+                    ? 'font-semibold text-white'
+                    : 'border-transparent text-neutral-400 hover:text-neutral-200'
+                }`}
+              >
+                <Icon
+                  className="h-4 w-4 shrink-0"
+                  style={active ? { color: currentTheme.primary } : undefined}
+                />
+                <span>{label}</span>
+              </button>
+            );
+          })}
+        </nav>
 
-      {/* JSON Import Section (if opened) */}
-      {showImportJson && (
-        <div
-          style={{
-            backgroundColor: currentTheme.bgCard,
-            borderColor: currentTheme.borderColor,
-          }}
-          className="p-5 border rounded-xl flex flex-col gap-3"
-        >
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold text-white">Import Custom Theme JSON</h3>
-            <button
-              type="button"
-              onClick={() => setShowImportJson(false)}
-              className="text-xs text-neutral-400 hover:text-white"
-            >
-              Cancel
-            </button>
+        {/* Active category */}
+        <div className="flex min-w-0 flex-col gap-5">
+
+      {category === 'library' && (
+      <>
+      {/* Library Roots Section */}
+      <section aria-labelledby="library-roots-heading" className="rounded-lg border border-neutral-800 bg-neutral-950/50 p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 id="library-roots-heading" className="text-sm font-semibold text-white">Library folders</h2>
+            <p className="mt-1 text-xs text-neutral-500">Adding, rescanning, disabling, restoring, and removing folders never changes your music files.</p>
           </div>
-          <textarea
-            value={importJsonText}
-            onChange={(e) => setImportJsonText(e.target.value)}
-            placeholder="Paste your theme JSON here..."
-            className="w-full h-32 p-3 text-xs font-mono rounded-lg bg-black/60 border border-neutral-800 text-neutral-200 focus:outline-none"
-          />
           <button
+            id="settings-add-library-root"
             type="button"
-            onClick={handleImportTheme}
-            style={{ backgroundColor: currentTheme.primary }}
-            className="self-end px-4 py-1.5 rounded-lg text-xs font-bold text-black cursor-pointer hover:brightness-110"
+            onClick={onAddRoot}
+            disabled={isScanning}
+            className="flex items-center gap-2 rounded border border-amber-500/60 bg-amber-500/15 px-3 py-2 text-xs font-semibold text-amber-300 disabled:opacity-50 hover:bg-amber-500/25 transition-colors cursor-pointer"
           >
-            Apply Imported Theme
+            {isScanning ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <FolderPlus className="h-3.5 w-3.5" />}
+            Add folder
           </button>
         </div>
+        {roots.length ? (
+          <div className="mt-4 space-y-3">
+            {roots.map((root) => (
+              <article key={root.id} className="rounded border border-neutral-800 bg-black/20 p-3">
+                <div className="flex min-w-0 items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-white">{root.label}</p>
+                    <p className="mt-1 truncate font-mono text-xs text-neutral-500">{root.path}</p>
+                    <p className="mt-2 text-xs text-neutral-400">{root.trackCount.toLocaleString()} tracks · {root.availability}</p>
+                  </div>
+                  <span className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${root.availability === 'online' ? 'bg-emerald-400' : 'bg-amber-400'}`} aria-label={root.availability} />
+                </div>
+                <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-xs font-semibold">
+                  <button type="button" onClick={() => onRescanRoot(root.id)} className="text-amber-300 underline cursor-pointer">Rescan</button>
+                  <button type="button" onClick={() => onSetRootEnabled(root.id, !root.enabled)} className="flex items-center gap-1 text-neutral-300 underline cursor-pointer">
+                    <RotateCcw className="h-3 w-3" /> {root.enabled ? 'Disable' : 'Restore'}
+                  </button>
+                  <button type="button" onClick={() => onRemoveRoot(root)} className="flex items-center gap-1 text-red-300 underline cursor-pointer">
+                    <Trash2 className="h-3 w-3" /> Remove from catalog
+                  </button>
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <p className="mt-4 text-sm text-neutral-400">No folders are indexed yet.</p>
+        )}
+      </section>
+
+      {/* Acquisition Engine Settings Section */}
+      </>
       )}
 
-      {/* 1. THEMES & APPEARANCE SECTION */}
-      <section id="settings-theming-section" className="flex flex-col gap-4">
-        <div className="flex items-center justify-between">
+      {category === 'audio' && (
+      <>
+      {audioSlot}
+      <section aria-labelledby="acquisition-settings-heading" className="rounded-lg border border-neutral-800 bg-neutral-950/50 p-5 space-y-5">
+        <div className="flex items-center justify-between border-b border-neutral-800/80 pb-3">
           <div className="flex items-center gap-2.5">
-            <div
-              className="w-8 h-8 rounded-lg border flex items-center justify-center"
-              style={{
-                backgroundColor: `${currentTheme.primary}18`,
-                borderColor: `${currentTheme.primary}50`,
-                color: currentTheme.primary,
-              }}
-            >
-              <Palette className="w-4 h-4" />
-            </div>
+            <DownloadCloud className="h-5 w-5 text-amber-400" />
             <div>
-              <h2 className="text-lg font-bold text-white tracking-tight">
-                Theming & Visual Appearance
-              </h2>
-              <p className="text-xs text-neutral-400">
-                Select your preferred visual atmosphere. Each theme includes tailored color
-                palettes, waveform dynamics, and ambient lighting.
-              </p>
+              <h2 id="acquisition-settings-heading" className="text-sm font-semibold text-white">Lossless Acquisition Settings</h2>
+              <p className="mt-0.5 text-xs text-neutral-500">Configure lossless audio stream quality, download location, and file naming format.</p>
             </div>
           </div>
-          <span className="text-xs font-mono text-neutral-400">
-            {allThemes.length} Available Themes
-          </span>
+          {savedSuccess && (
+            <span className="flex items-center gap-1 text-xs font-mono text-emerald-400 animate-fadeIn">
+              <Check className="h-3.5 w-3.5" /> Saved
+            </span>
+          )}
         </div>
 
-        {/* Flat Grid of All Themes - NO Grouping, Subtle & Classy */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {allThemes.map((theme) => {
-            const isSelected = currentTheme.id === theme.id;
-            return (
-              <div
-                key={theme.id}
-                id={`theme-card-${theme.id}`}
-                onClick={() => setThemeById(theme.id)}
-                style={{
-                  backgroundColor: theme.bgCard,
-                  background: theme.bgCanvasGradient || theme.cardGradient || theme.bgCard,
-                  borderColor: isSelected ? theme.primary : theme.borderColor,
-                  boxShadow: isSelected ? `0 0 20px ${theme.accentGlow}` : 'none',
-                  borderWidth: isSelected ? '2px' : '1px',
-                }}
-                className={`relative p-4 ${theme.cardRadius || 'rounded-xl'} transition-all duration-200 cursor-pointer flex flex-col justify-between gap-3 hover:-translate-y-1 hover:shadow-xl group overflow-hidden select-none`}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          {/* Preferred Quality */}
+          <div className="space-y-2">
+            <label className="text-xs font-semibold text-neutral-300 block">Preferred Audio Quality</label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => handleUpdateSetting('preferredQuality', 'hi-res-24')}
+                className={`p-3 rounded-lg border text-left transition-all cursor-pointer ${
+                  acquisitionSettings.preferredQuality === 'hi-res-24'
+                    ? 'border-amber-500/80 bg-amber-500/10 text-white'
+                    : 'border-neutral-800 bg-black/20 text-neutral-400 hover:border-neutral-700'
+                }`}
               >
-                {/* Subtle Ambient Orb Preview inside card */}
-                <div
-                  className="absolute -top-10 -right-10 w-28 h-28 rounded-full blur-2xl pointer-events-none opacity-40 transition-opacity group-hover:opacity-70"
-                  style={{ backgroundColor: theme.primary }}
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold font-mono text-amber-300">Hi-Res 24-bit</span>
+                  {acquisitionSettings.preferredQuality === 'hi-res-24' && <Check className="w-3.5 h-3.5 text-amber-400" />}
+                </div>
+                <p className="text-[11px] text-neutral-400 mt-1">Up to 192kHz studio master FLAC when available</p>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleUpdateSetting('preferredQuality', 'lossless-16')}
+                className={`p-3 rounded-lg border text-left transition-all cursor-pointer ${
+                  acquisitionSettings.preferredQuality === 'lossless-16'
+                    ? 'border-amber-500/80 bg-amber-500/10 text-white'
+                    : 'border-neutral-800 bg-black/20 text-neutral-400 hover:border-neutral-700'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold font-mono text-amber-300">CD Quality 16-bit</span>
+                  {acquisitionSettings.preferredQuality === 'lossless-16' && <Check className="w-3.5 h-3.5 text-amber-400" />}
+                </div>
+                <p className="text-[11px] text-neutral-400 mt-1">16-bit / 44.1kHz standard lossless FLAC</p>
+              </button>
+            </div>
+          </div>
+
+          {/* Concurrency Limit */}
+          <div className="space-y-2">
+            <div className="flex justify-between items-center">
+              <label className="text-xs font-semibold text-neutral-300">Download Concurrency Limit</label>
+              <span className="text-xs font-mono text-amber-400 font-bold">{acquisitionSettings.concurrencyLimit} simultaneous</span>
+            </div>
+            <input
+              type="range"
+              min="1"
+              max="4"
+              step="1"
+              value={acquisitionSettings.concurrencyLimit}
+              onChange={(e) => handleUpdateSetting('concurrencyLimit', parseInt(e.target.value, 10))}
+              className="w-full h-2 bg-neutral-800 rounded-lg appearance-none cursor-pointer accent-amber-500"
+            />
+            <p className="text-[11px] text-neutral-500">Limits concurrent network downloads to prevent stream throttling.</p>
+          </div>
+        </div>
+
+        {/* Destination Path and Naming Pattern */}
+        <div className="space-y-4 pt-2 border-t border-neutral-800/60">
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-neutral-300 block">File Naming Template</label>
+            <input
+              type="text"
+              value={acquisitionSettings.namingPattern}
+              onChange={(e) => handleUpdateSetting('namingPattern', e.target.value)}
+              placeholder="{Artist}/{Album}/{TrackNumber} - {Title}"
+              className="w-full px-3 py-2 rounded border border-neutral-800 bg-black/30 font-mono text-xs text-neutral-200 focus:outline-hidden focus:border-amber-500/80"
+            />
+            <p className="text-[11px] text-neutral-500">
+              Supported placeholders: <code className="text-amber-400 font-mono">{'{Artist}'}</code>, <code className="text-amber-400 font-mono">{'{Album}'}</code>, <code className="text-amber-400 font-mono">{'{TrackNumber}'}</code>, <code className="text-amber-400 font-mono">{'{Title}'}</code>, <code className="text-amber-400 font-mono">{'{Year}'}</code>
+            </p>
+          </div>
+
+          {/* Optional Provider Tokens */}
+          <div className="space-y-3 pt-2 border-t border-neutral-800/60">
+            <div className="flex items-center gap-2">
+              <KeyRound className="w-4 h-4 text-neutral-400" />
+              <h3 className="text-xs font-semibold text-neutral-300">Optional Provider Credentials</h3>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-[11px] text-neutral-400 block font-mono">Deezer ARL Cookie Token</label>
+                <input
+                  type="password"
+                  value={acquisitionSettings.deezerArl || ''}
+                  onChange={(e) => handleUpdateSetting('deezerArl', e.target.value)}
+                  placeholder="Paste ARL token for 16-bit FLAC"
+                  className="w-full px-3 py-1.5 rounded border border-neutral-800 bg-black/30 font-mono text-xs text-neutral-200 focus:outline-hidden focus:border-amber-500/80"
                 />
-
-                <div className="flex flex-col gap-1.5 relative z-10">
-                  <div className="flex items-center justify-between gap-2">
-                    <h3 className="font-bold text-sm text-white flex items-center gap-1.5 truncate">
-                      <span>{theme.name}</span>
-                    </h3>
-                    {isSelected ? (
-                      <span
-                        className="w-5 h-5 rounded-full flex items-center justify-center text-black shrink-0 shadow"
-                        style={{ backgroundColor: theme.primary }}
-                      >
-                        <Check className="w-3 h-3 stroke-[3]" />
-                      </span>
-                    ) : (
-                      <span
-                        className="w-2.5 h-2.5 rounded-full border border-white/20 shrink-0"
-                        style={{ backgroundColor: theme.primary }}
-                      />
-                    )}
-                  </div>
-
-                  <p className="text-xs text-neutral-400 line-clamp-2 leading-relaxed">
-                    {theme.description}
-                  </p>
-                </div>
-
-                {/* Color Swatches & Waveform Preview */}
-                <div
-                  className="flex flex-col gap-2 relative z-10 pt-2 border-t"
-                  style={{ borderColor: `${theme.borderColor}80` }}
-                >
-                  {/* Swatches */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1.5">
-                      <span
-                        className="w-3.5 h-3.5 rounded-full border border-white/20 shadow-sm"
-                        style={{ backgroundColor: theme.primary }}
-                        title={`Primary: ${theme.primary}`}
-                      />
-                      <span
-                        className="w-3.5 h-3.5 rounded-full border border-white/20 shadow-sm"
-                        style={{ backgroundColor: theme.secondary }}
-                        title={`Secondary: ${theme.secondary}`}
-                      />
-                      {theme.accentTertiary && (
-                        <span
-                          className="w-3.5 h-3.5 rounded-full border border-white/20 shadow-sm"
-                          style={{ backgroundColor: theme.accentTertiary }}
-                          title={`Accent: ${theme.accentTertiary}`}
-                        />
-                      )}
-                    </div>
-
-                    <span className="text-[10px] font-mono text-neutral-400 uppercase">
-                      {theme.fontVibe || 'audiophile'}
-                    </span>
-                  </div>
-
-                  {/* Mini Waveform Preview */}
-                  <div className="h-4 flex items-end gap-[2px] opacity-70 group-hover:opacity-100 transition-opacity">
-                    {[
-                      0.3, 0.6, 0.9, 0.4, 0.75, 1.0, 0.5, 0.85, 0.35, 0.7, 0.95, 0.45, 0.8, 0.55,
-                    ].map((h, i) => (
-                      <div
-                        key={i}
-                        className="flex-1 rounded-t-xs"
-                        style={{
-                          height: `${h * 100}%`,
-                          backgroundColor:
-                            i < 8 ? theme.waveformPlayedTop : theme.waveformUnplayedTop,
-                        }}
-                      />
-                    ))}
-                  </div>
-                </div>
               </div>
+
+              <div className="space-y-1">
+                <label className="text-[11px] text-neutral-400 block font-mono">Qobuz User Auth Token</label>
+                <input
+                  type="password"
+                  value={acquisitionSettings.qobuzUserAuthToken || ''}
+                  onChange={(e) => handleUpdateSetting('qobuzUserAuthToken', e.target.value)}
+                  placeholder="Paste Qobuz user token for 24-bit FLAC"
+                  className="w-full px-3 py-1.5 rounded border border-neutral-800 bg-black/30 font-mono text-xs text-neutral-200 focus:outline-hidden focus:border-amber-500/80"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      </>
+      )}
+
+      {category === 'appearance' && (
+      <section aria-labelledby="appearance-heading" className="rounded-lg border border-neutral-800 bg-neutral-950/50 p-5">
+        <div className="flex items-center gap-2">
+          <Palette className="h-4 w-4 text-amber-300" />
+          <div>
+            <h2 id="appearance-heading" className="text-sm font-semibold text-white">Appearance</h2>
+            <p className="mt-1 text-xs text-neutral-500">Choose the theme used throughout Bebop.</p>
+          </div>
+        </div>
+        <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          {allThemes.map((theme) => {
+            const selected = currentTheme.id === theme.id;
+            return (
+              <button
+                key={theme.id}
+                type="button"
+                onClick={() => setThemeById(theme.id)}
+                style={{ borderColor: selected ? theme.primary : theme.borderColor, background: theme.cardGradient || theme.bgCard }}
+                className="rounded border p-3 text-left transition hover:brightness-110 cursor-pointer"
+                aria-pressed={selected}
+              >
+                <span className="block text-sm font-semibold text-white">{theme.name}</span>
+                <span className="mt-1 block text-xs text-neutral-400">{theme.description}</span>
+              </button>
             );
           })}
         </div>
       </section>
 
-      {/* 2. AUDIO ENGINE & BIT-PERFECT SINK */}
-      <section
-        id="settings-audio-engine-section"
-        style={{
-          backgroundColor: currentTheme.bgCard,
-          borderColor: currentTheme.borderColor,
-        }}
-        className="p-6 border rounded-xl flex flex-col gap-6"
-      >
-        <div className="flex items-center gap-2.5">
-          <div
-            className="w-8 h-8 rounded-lg border flex items-center justify-center"
-            style={{
-              backgroundColor: `${currentTheme.primary}18`,
-              borderColor: `${currentTheme.primary}50`,
-              color: currentTheme.primary,
-            }}
-          >
-            <Volume2 className="w-4 h-4" />
-          </div>
-          <div>
-            <h2 className="text-lg font-bold text-white tracking-tight">
-              Audio Output Engine & Hardware Sink
-            </h2>
-            <p className="text-xs text-neutral-400">
-              Configure DAC streaming protocols, sample rate mastering, and bit-perfect playback
-              modes
-            </p>
-          </div>
+      )}
+
+      {category === 'metadata' && <MetadataJobsPanel />}
+
+      {category === 'online' && onlineSlot}
+
+      {category === 'updates' && updatesSlot}
+
+      {children}
         </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Driver Selection */}
-          <div className="flex flex-col gap-2">
-            <label className="text-xs font-mono font-bold text-neutral-300">
-              OUTPUT DRIVER / PROTOCOL
-            </label>
-            <div className="grid grid-cols-3 gap-2">
-              {[
-                { id: 'wasapi', label: 'WASAPI Exclusive', sub: 'Bit-Perfect' },
-                { id: 'asio', label: 'ASIO Direct', sub: 'Low-Latency' },
-                { id: 'webaudio', label: 'Web Audio Float', sub: '32-Bit DSP' },
-              ].map((driver) => (
-                <button
-                  key={driver.id}
-                  type="button"
-                  onClick={() => setAudioDriver(driver.id as any)}
-                  style={{
-                    backgroundColor:
-                      audioDriver === driver.id
-                        ? `${currentTheme.primary}20`
-                        : currentTheme.bgSurface,
-                    borderColor:
-                      audioDriver === driver.id ? currentTheme.primary : currentTheme.borderColor,
-                    color: audioDriver === driver.id ? currentTheme.primary : undefined,
-                  }}
-                  className="p-3 border rounded-lg flex flex-col items-center justify-center text-center cursor-pointer transition-colors"
-                >
-                  <span className="text-xs font-bold text-white">{driver.label}</span>
-                  <span className="text-[10px] font-mono text-neutral-400">{driver.sub}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Sample Rate Resolution */}
-          <div className="flex flex-col gap-2">
-            <label className="text-xs font-mono font-bold text-neutral-300">
-              STUDIO MASTER RESOLUTION
-            </label>
-            <div className="grid grid-cols-3 gap-2">
-              {[
-                { id: '192khz-32bit', label: '192 kHz / 32-Bit', sub: 'FLAC Master' },
-                { id: '96khz-24bit', label: '96 kHz / 24-Bit', sub: 'Studio HD' },
-                { id: '44khz-16bit', label: '44.1 kHz / 16-Bit', sub: 'Redbook CD' },
-              ].map((rate) => (
-                <button
-                  key={rate.id}
-                  type="button"
-                  onClick={() => setSampleRate(rate.id)}
-                  style={{
-                    backgroundColor:
-                      sampleRate === rate.id ? `${currentTheme.primary}20` : currentTheme.bgSurface,
-                    borderColor:
-                      sampleRate === rate.id ? currentTheme.primary : currentTheme.borderColor,
-                    color: sampleRate === rate.id ? currentTheme.primary : undefined,
-                  }}
-                  className="p-3 border rounded-lg flex flex-col items-center justify-center text-center cursor-pointer transition-colors"
-                >
-                  <span className="text-xs font-bold text-white">{rate.label}</span>
-                  <span className="text-[10px] font-mono text-neutral-400">{rate.sub}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Audio Toggles */}
-        <div
-          className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 pt-4 border-t"
-          style={{ borderColor: currentTheme.borderColor }}
-        >
-          <div
-            onClick={() => setExclusiveMode(!exclusiveMode)}
-            className="flex items-center justify-between p-3 rounded-lg bg-black/30 border border-neutral-800 cursor-pointer hover:border-neutral-700"
-          >
-            <div>
-              <div className="text-xs font-bold text-white">Hardware Exclusive Mode</div>
-              <div className="text-[10px] text-neutral-400">
-                Bypasses OS mixer for bit-perfect stream
-              </div>
-            </div>
-            <div
-              className={`w-9 h-5 rounded-full p-0.5 transition-colors ${
-                exclusiveMode ? 'bg-emerald-500' : 'bg-neutral-700'
-              }`}
-            >
-              <div
-                className={`w-4 h-4 rounded-full bg-white transition-transform ${
-                  exclusiveMode ? 'translate-x-4' : 'translate-x-0'
-                }`}
-              />
-            </div>
-          </div>
-
-          <div
-            onClick={() => setReplayGain(!replayGain)}
-            className="flex items-center justify-between p-3 rounded-lg bg-black/30 border border-neutral-800 cursor-pointer hover:border-neutral-700"
-          >
-            <div>
-              <div className="text-xs font-bold text-white">ReplayGain Dynamic Normalization</div>
-              <div className="text-[10px] text-neutral-400">
-                Maintains target -18 LUFS dynamic range
-              </div>
-            </div>
-            <div
-              className={`w-9 h-5 rounded-full p-0.5 transition-colors ${
-                replayGain ? 'bg-emerald-500' : 'bg-neutral-700'
-              }`}
-            >
-              <div
-                className={`w-4 h-4 rounded-full bg-white transition-transform ${
-                  replayGain ? 'translate-x-4' : 'translate-x-0'
-                }`}
-              />
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between p-3 rounded-lg bg-black/30 border border-neutral-800">
-            <div>
-              <div className="text-xs font-bold text-white">ASIO Buffer Size</div>
-              <div className="text-[10px] text-neutral-400">Latency: 2.9ms @ 192 kHz</div>
-            </div>
-            <select
-              value={bufferSize}
-              onChange={(e) => setBufferSize(e.target.value)}
-              className="bg-neutral-900 border border-neutral-700 text-xs font-mono text-neutral-200 rounded px-2 py-1 focus:outline-none"
-            >
-              <option value="64">64 samples</option>
-              <option value="128">128 samples</option>
-              <option value="256">256 samples</option>
-              <option value="512">512 samples</option>
-            </select>
-          </div>
-        </div>
-      </section>
-
-      {/* 3. LOCAL STORAGE & DIRECTORY MANAGEMENT */}
-      <section
-        id="settings-library-paths-section"
-        style={{
-          backgroundColor: currentTheme.bgCard,
-          borderColor: currentTheme.borderColor,
-        }}
-        className="p-6 border rounded-xl flex flex-col gap-4"
-      >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div
-              className="w-8 h-8 rounded-lg border flex items-center justify-center"
-              style={{
-                backgroundColor: `${currentTheme.primary}18`,
-                borderColor: `${currentTheme.primary}50`,
-                color: currentTheme.primary,
-              }}
-            >
-              <HardDrive className="w-4 h-4" />
-            </div>
-            <div>
-              <h2 className="text-lg font-bold text-white tracking-tight">
-                Local Storage & Lossless Library
-              </h2>
-              <p className="text-xs text-neutral-400">
-                1.42 TB local music database with 4,812 FLAC, DSD & ALAC lossless tracks
-              </p>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={handleRescanLibrary}
-            disabled={isScanning}
-            style={{
-              backgroundColor: currentTheme.primary,
-            }}
-            className="px-4 py-2 rounded-lg text-xs font-bold text-black flex items-center gap-2 cursor-pointer hover:brightness-110 disabled:opacity-50"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${isScanning ? 'animate-spin' : ''}`} />
-            <span>{isScanning ? 'Scanning Directory...' : 'Rescan Library'}</span>
-          </button>
-        </div>
-
-        {scanSuccess && (
-          <div className="p-3 rounded-lg bg-emerald-950/50 border border-emerald-500/50 text-emerald-300 text-xs font-mono flex items-center gap-2">
-            <ShieldCheck className="w-4 h-4 text-emerald-400" />
-            <span>
-              Scan Complete: All 4,812 tracks verified bit-perfect. No corrupted checksums found.
-            </span>
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
-          <div className="p-3 rounded-lg bg-black/30 border border-neutral-800 flex flex-col gap-1">
-            <span className="text-[10px] font-mono text-neutral-400">WATCHED FOLDER PATH</span>
-            <span className="text-xs font-mono font-bold text-neutral-200 truncate">
-              /Volumes/Audio/Lossless-Master/
-            </span>
-          </div>
-
-          <div className="p-3 rounded-lg bg-black/30 border border-neutral-800 flex flex-col gap-1">
-            <span className="text-[10px] font-mono text-neutral-400">METADATA CACHE</span>
-            <span className="text-xs font-mono font-bold text-neutral-200">
-              100% Embedded Cover & Bios Cached
-            </span>
-          </div>
-
-          <div className="p-3 rounded-lg bg-black/30 border border-neutral-800 flex flex-col gap-1">
-            <span className="text-[10px] font-mono text-neutral-400">CHECKSUM VERIFICATION</span>
-            <span className="text-xs font-mono font-bold text-emerald-400">
-              MD5 Lossless Verified
-            </span>
-          </div>
-        </div>
-      </section>
+      </div>
     </div>
   );
-};
+}

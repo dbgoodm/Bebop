@@ -139,7 +139,9 @@ function formatBitrate(track: TrackSummary): string {
 }
 
 export function toArtworkUrl(path: string | null): string | undefined {
-  return path ? convertFileSrc(path) : undefined;
+  if (!path) return undefined;
+  if (path.startsWith('http://') || path.startsWith('https://')) return path;
+  return convertFileSrc(path);
 }
 
 /** Adapts the existing presentation model without manufacturing music metadata. */
@@ -184,6 +186,26 @@ export function toLibrarySnapshot(
     progress,
     error: null,
   };
+}
+
+/**
+ * Render a backend error for display.
+ *
+ * Backend errors carry a human-readable `message` plus a `context` map holding the
+ * detail that actually identifies the failure (the failing action, the underlying
+ * SQLite reason, and so on). Showing only `message` turns every persistence failure
+ * into the same unactionable sentence, so append the context when it exists.
+ */
+export function describeError(error: AppError | undefined | null): string {
+  if (!error) return 'Unknown error.';
+  const base = error.message || error.code || 'Unknown error.';
+  const context = error.context;
+  if (!context) return base;
+  const detail = Object.entries(context)
+    .filter(([, value]) => value !== '')
+    .map(([key, value]) => `${key}: ${value}`)
+    .join(' · ');
+  return detail ? `${base} (${detail})` : base;
 }
 
 export function errorSnapshot(error: AppError): LibraryScanSnapshot {

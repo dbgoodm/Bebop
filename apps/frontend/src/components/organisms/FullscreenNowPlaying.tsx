@@ -14,9 +14,9 @@ import {
   ChevronDown,
 } from 'lucide-react';
 import { TrackItem } from '@/types';
-import { MonstercatVisualizer } from '@/components/organisms/MonstercatVisualizer';
-import { WaveformScrubber } from '@/components/organisms/WaveformScrubber';
-import { getLyricsForTrack } from '@/services/lyricsData';
+import { PeakHoldVisualizer } from '@/components/organisms/PeakHoldVisualizer';
+import { loadTrackLyrics } from '@/services/lyricsService';
+import type { LyricsDocument } from '@/services/tauri-bindings';
 import { useTheme } from '@/services/themeService';
 
 interface FullscreenNowPlayingProps {
@@ -41,7 +41,7 @@ interface FullscreenNowPlayingProps {
   onUnlockVolume?: () => void | Promise<unknown>;
   spectrumAvailable?: boolean;
   frequencyDataProvider?: (outputArray: Uint8Array) => Uint8Array;
-  spectrumBins?: readonly number[];
+  getSpectrumBins?: () => readonly number[];
 }
 
 export const FullscreenNowPlaying: React.FC<FullscreenNowPlayingProps> = ({
@@ -66,13 +66,21 @@ export const FullscreenNowPlaying: React.FC<FullscreenNowPlayingProps> = ({
   onUnlockVolume,
   spectrumAvailable = true,
   frequencyDataProvider,
-  spectrumBins,
+  getSpectrumBins,
 }) => {
   const { currentTheme } = useTheme();
   const [localVolume, setLocalVolume] = useState(85);
   const [localMuted, setLocalMuted] = useState(false);
   const [isShuffle, setIsShuffle] = useState(false);
   const [repeatMode, setRepeatMode] = useState<'off' | 'all' | 'one'>('off');
+  const [lyricsDocument, setLyricsDocument] = useState<LyricsDocument | null>(null);
+  const seekRef = useRef<HTMLDivElement | null>(null);
+  const [isHoveringSeek, setIsHoveringSeek] = useState(false);
+  const [seekHoverRatio, setSeekHoverRatio] = useState<number | null>(null);
+  const [isDraggingSeek, setIsDraggingSeek] = useState(false);
+  // Bars are sized to the bed so they reach the top of it rather than sitting in a
+  // short strip; the bed itself is a viewport-relative height.
+  const [visualizerHeight, setVisualizerHeight] = useState(420);
   const lyricsContainerRef = useRef<HTMLDivElement | null>(null);
 
   // Handle ESC key to exit fullscreen
@@ -86,13 +94,37 @@ export const FullscreenNowPlaying: React.FC<FullscreenNowPlayingProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
-  const lyrics = currentTrack ? getLyricsForTrack(currentTrack.title) : [];
+  useEffect(() => {
+    if (!isOpen || !currentTrack) return;
+    let active = true;
+    setLyricsDocument(null);
+    void loadTrackLyrics(currentTrack.id)
+      .then((document) => {
+        if (active) setLyricsDocument(document);
+      })
+      .catch(() => {
+        if (active) {
+          setLyricsDocument({
+            lines: [],
+            source: 'unavailable',
+            sourceUrl: null,
+            synchronized: false,
+          });
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, [currentTrack?.id, isOpen]);
+
+  const lyrics = lyricsDocument?.lines ?? [];
 
   // Find active lyric line based on currentTimeSeconds
   let activeLyricIndex = 0;
   if (lyrics.length > 0) {
     for (let i = 0; i < lyrics.length; i++) {
-      if (currentTimeSeconds >= lyrics[i].time) {
+      const timeMs = lyrics[i].timeMs;
+      if (timeMs !== null && currentTimeSeconds >= timeMs / 1_000) {
         activeLyricIndex = i;
       }
     }
@@ -109,6 +141,16 @@ export const FullscreenNowPlaying: React.FC<FullscreenNowPlayingProps> = ({
     }
   }, [isOpen, activeLyricIndex]);
 
+  // Sizes the spectrum bed to the viewport. Must stay above the early return below —
+  // hooks cannot be called conditionally.
+  useEffect(() => {
+    if (!isOpen) return;
+    const measure = () => setVisualizerHeight(Math.round(Math.min(window.innerHeight * 0.52, 560)));
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, [isOpen]);
+
   if (!isOpen || !currentTrack) return null;
 
   const volume = controlledVolume === undefined ? localVolume : Math.round(controlledVolume * 100);
@@ -124,6 +166,39 @@ export const FullscreenNowPlaying: React.FC<FullscreenNowPlayingProps> = ({
     if (volumeLocked && !isMuted) await onUnlockVolume?.();
     if (onToggleMute) await onToggleMute();
     else setLocalMuted((muted) => !muted);
+  };
+
+  const seekRatio = Math.max(
+    0,
+    Math.min(1, currentTimeSeconds / (currentTrack?.durationSeconds || 240)),
+  );
+
+  const seekRatioFrom = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (!seekRef.current) return 0;
+    const rect = seekRef.current.getBoundingClientRect();
+    return Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
+  };
+
+  const handleSeekPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    const ratio = seekRatioFrom(event);
+    setIsDraggingSeek(true);
+    onSeek?.(ratio * (currentTrack?.durationSeconds || 240));
+    (event.target as HTMLElement).setPointerCapture(event.pointerId);
+  };
+
+  const handleSeekPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    const ratio = seekRatioFrom(event);
+    setSeekHoverRatio(ratio);
+    if (isDraggingSeek) onSeek?.(ratio * (currentTrack?.durationSeconds || 240));
+  };
+
+  const handleSeekPointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
+    setIsDraggingSeek(false);
+    try {
+      (event.target as HTMLElement).releasePointerCapture(event.pointerId);
+    } catch {
+      // The pointer may already have been released.
+    }
   };
 
   const formatTime = (secs: number) => {
@@ -332,7 +407,13 @@ export const FullscreenNowPlaying: React.FC<FullscreenNowPlayingProps> = ({
           <div className="flex items-center justify-between pb-3.5 border-b border-neutral-800/80">
             <h3 className="text-base font-medium text-white tracking-wide">Lyrics</h3>
             <span className="text-[11px] font-mono text-neutral-500 uppercase tracking-wider">
-              Synchronized
+              {lyricsDocument
+                ? lyricsDocument.synchronized
+                  ? 'Synchronized'
+                  : lyricsDocument.source === 'unavailable'
+                    ? 'Unavailable'
+                    : 'Plain text'
+                : 'Loading'}
             </span>
           </div>
 
@@ -341,30 +422,55 @@ export const FullscreenNowPlaying: React.FC<FullscreenNowPlayingProps> = ({
             ref={lyricsContainerRef}
             className="flex-1 overflow-y-auto pr-2 space-y-3.5 text-left scroll-smooth pt-3"
           >
-            {lyrics.map((line, idx) => {
-              const isActive = idx === activeLyricIndex;
-              const isPast = idx < activeLyricIndex;
-              return (
-                <p
-                  key={idx}
-                  data-lyric-index={idx}
-                  onClick={() => onSeek(line.time)}
-                  className={`text-sm sm:text-base leading-relaxed transition-all duration-300 cursor-pointer select-none ${
-                    isActive
-                      ? 'text-[#f59e0b] font-semibold text-base sm:text-lg'
-                      : isPast
-                        ? 'text-neutral-400 font-normal opacity-70 hover:opacity-100'
-                        : 'text-neutral-400 font-normal opacity-70 hover:opacity-100'
-                  }`}
-                  style={{
-                    textShadow: isActive ? '0 0 12px rgba(245, 158, 11, 0.45)' : 'none',
-                  }}
-                >
-                  {line.text}
-                </p>
-              );
-            })}
+            {lyricsDocument?.source === 'unavailable' ? (
+              <p className="pt-6 text-sm leading-relaxed text-neutral-400">
+                Lyrics unavailable for this track.
+              </p>
+            ) : (
+              lyrics.map((line, idx) => {
+                const isActive = idx === activeLyricIndex;
+                const isPast = idx < activeLyricIndex;
+                return (
+                  <p
+                    key={idx}
+                    data-lyric-index={idx}
+                    onClick={() => line.timeMs !== null && onSeek(line.timeMs / 1_000)}
+                    className={`text-sm sm:text-base leading-relaxed transition-all duration-300 select-none ${
+                      isActive
+                        ? 'text-[#f59e0b] font-semibold text-base sm:text-lg'
+                        : isPast
+                          ? 'text-neutral-400 font-normal opacity-70 hover:opacity-100'
+                          : 'text-neutral-400 font-normal opacity-70 hover:opacity-100'
+                    }`}
+                    style={{
+                      textShadow: isActive ? '0 0 12px rgba(245, 158, 11, 0.45)' : 'none',
+                    }}
+                  >
+                    {line.text}
+                  </p>
+                );
+              })
+            )}
           </div>
+
+          {lyricsDocument && lyricsDocument.source !== 'unavailable' && (
+            <p className="pt-3 text-[11px] text-neutral-500">
+              Source:{' '}
+              {lyricsDocument.source === 'lrclib'
+                ? 'LRCLIB'
+                : lyricsDocument.source.replace('-', ' ')}
+              {lyricsDocument.sourceUrl && (
+                <a
+                  className="ml-1 text-neutral-400 underline hover:text-white"
+                  href={lyricsDocument.sourceUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Attribution
+                </a>
+              )}
+            </p>
+          )}
 
           {/* Bottom Down Chevron Scroll Hint */}
           <div className="pt-2 flex justify-center text-neutral-500">
@@ -427,37 +533,102 @@ export const FullscreenNowPlaying: React.FC<FullscreenNowPlayingProps> = ({
         </div>
       </main>
 
-      {/* Bottom Section: Monstercat Visualizer & Full Waveform Controls - Full Window Width */}
-      <footer className="relative z-10 w-full px-6 sm:px-10 lg:px-14 xl:px-18 2xl:px-24 pb-8 flex flex-col gap-4">
-        {/* Monstercat Audio Visualizer Canvas below record, lyrics, and queue */}
-        <div
-          id="monstercat-visualizer-container"
-          className="w-full flex flex-col gap-1 items-center"
-        >
-          <MonstercatVisualizer
-            isPlaying={spectrumAvailable && isPlaying}
-            height={56}
-            barWidth={4}
-            barGap={3}
-            color={currentTheme.visualizerPrimary}
-            secondaryColor={currentTheme.visualizerSecondary}
-            glowEffect={currentTheme.waveformGlow}
-            autoFillWidth={true}
-            frequencyDataProvider={frequencyDataProvider}
-            spectrumBins={spectrumBins}
-          />
-        </div>
+      {/* Peak-hold spectrum spans the full window as a floor-to-high bed, with the
+          transport sitting on top of it. */}
+      <div
+        id="fullscreen-visualizer-bed"
+        className="pointer-events-none absolute inset-x-0 bottom-0 z-0 flex items-end"
+        style={{ height: 'min(52vh, 560px)' }}
+      >
+        <PeakHoldVisualizer
+          isPlaying={spectrumAvailable && isPlaying}
+          height={visualizerHeight}
+          barWidth={6}
+          barGap={3}
+          color={currentTheme.visualizerPrimary}
+          glowEffect={currentTheme.waveformGlow}
+          autoFillWidth={true}
+          particles={true}
+          frequencyDataProvider={frequencyDataProvider}
+          getSpectrumBins={getSpectrumBins}
+        />
+      </div>
+      {/* Fades the top of the bars into the page so they do not cut off hard. */}
+      <div
+        className="pointer-events-none absolute inset-x-0 bottom-0 z-0"
+        style={{
+          height: 'min(52vh, 560px)',
+          background:
+            'linear-gradient(180deg, #06080d 0%, rgba(6,8,13,0.72) 20%, rgba(6,8,13,0.1) 55%, rgba(6,8,13,0.5) 100%)',
+        }}
+      />
 
-        {/* Full Waveform Scrubber Status Bar */}
-        <div className="w-full">
-          <WaveformScrubber
-            currentTrack={currentTrack}
-            currentTimeSeconds={currentTimeSeconds}
-            durationSeconds={currentTrack.durationSeconds || 240}
-            onSeek={onSeek}
-            isPlaying={isPlaying}
-            height={54}
-          />
+      <footer className="relative z-10 w-full px-6 sm:px-10 lg:px-14 xl:px-18 2xl:px-24 pb-8 flex flex-col gap-4">
+        {/* Plain seek bar — the waveform was dropped here. */}
+        <div className="flex w-full items-center gap-3 font-mono text-xs">
+          <span className="w-11 text-right font-bold" style={{ color: currentTheme.primary }}>
+            {formatTime(currentTimeSeconds)}
+          </span>
+          <div
+            ref={seekRef}
+            onPointerDown={handleSeekPointerDown}
+            onPointerMove={handleSeekPointerMove}
+            onPointerUp={handleSeekPointerUp}
+            onMouseEnter={() => setIsHoveringSeek(true)}
+            onMouseLeave={() => {
+              setIsHoveringSeek(false);
+              setSeekHoverRatio(null);
+            }}
+            className="group relative flex h-5 flex-1 cursor-pointer items-center"
+          >
+            <div
+              className="relative w-full rounded-full transition-all"
+              style={{
+                height: isHoveringSeek ? '7px' : '5px',
+                backgroundColor: currentTheme.waveformUnplayedBot,
+              }}
+            >
+              <div
+                className="absolute inset-y-0 left-0 rounded-full"
+                style={{
+                  width: `${seekRatio * 100}%`,
+                  background: `linear-gradient(90deg, ${currentTheme.waveformPlayedBot} 0%, ${currentTheme.primary} 100%)`,
+                }}
+              />
+              <div
+                className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full transition-all"
+                style={{
+                  left: `${seekRatio * 100}%`,
+                  width: isHoveringSeek ? '15px' : '11px',
+                  height: isHoveringSeek ? '15px' : '11px',
+                  backgroundColor: currentTheme.primary,
+                  boxShadow: currentTheme.waveformGlow
+                    ? `0 0 14px ${currentTheme.accentGlow}`
+                    : undefined,
+                }}
+              />
+            </div>
+            {isHoveringSeek && seekHoverRatio !== null && (
+              <div
+                className="pointer-events-none absolute -top-8 z-30 -translate-x-1/2"
+                style={{ left: `${seekHoverRatio * 100}%` }}
+              >
+                <div
+                  className="whitespace-nowrap rounded border px-1.5 py-0.5 text-[10px] font-bold shadow-xl"
+                  style={{
+                    backgroundColor: currentTheme.bgCanvas,
+                    borderColor: currentTheme.primary,
+                    color: currentTheme.primary,
+                  }}
+                >
+                  {formatTime(seekHoverRatio * (currentTrack.durationSeconds || 240))}
+                </div>
+              </div>
+            )}
+          </div>
+          <span className="w-11 text-neutral-400">
+            {formatTime(currentTrack.durationSeconds || 240)}
+          </span>
         </div>
 
         {/* Bottom Transport Controls Bar */}
