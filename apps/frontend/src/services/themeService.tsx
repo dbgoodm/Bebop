@@ -99,7 +99,7 @@ export interface ThemeConfig {
   vars?: Record<string, string>;
 }
 
-export const THEME_PRESETS: ThemeConfig[] = [
+const THEME_PRESETS_ALL: ThemeConfig[] = [
   // 1. SPACE COWBOY - Deep Galactic Space Navy, Plasma Cyan & Saxophone Brass Gold
   {
     id: 'space-cowboy',
@@ -960,6 +960,18 @@ export const THEME_PRESETS: ThemeConfig[] = [
   },
 ];
 
+// Retired V1 themes remain in source history for reference, but are no longer
+// offered to users. The generated V2 crew themes are the maintained versions.
+const RETIRED_THEME_IDS = new Set([
+  'space-cowboy',
+  'queen-of-hearts',
+  'radical-prodigy',
+  'black-dog',
+  'space-cowboy-poster',
+]);
+
+export const THEME_PRESETS = THEME_PRESETS_ALL.filter((theme) => !RETIRED_THEME_IDS.has(theme.id));
+
 const THEME_STORAGE_KEY = 'audiophile_active_theme_id_v3';
 const CUSTOM_THEMES_STORAGE_KEY = 'audiophile_custom_themes_v3';
 
@@ -985,7 +997,7 @@ function withOverrides(theme: ThemeConfig): ThemeConfig {
 
 export const ALL_THEMES: ThemeConfig[] = [
   ...CREW_THEMES.map(withOverrides),
-  ...POSTER_THEMES.map(withOverrides),
+  ...POSTER_THEMES.filter((theme) => !RETIRED_THEME_IDS.has(theme.id)).map(withOverrides),
   ...THEME_PRESETS.map(withOverrides),
 ];
 
