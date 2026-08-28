@@ -68,9 +68,11 @@ export const AcquisitionQueueDrawer: React.FC<AcquisitionQueueDrawerProps> = ({
 
   useEffect(() => {
     let active = true;
-    void getAcquisitionQueue().then((currentJobs) => {
-      if (active) setJobs(currentJobs);
-    }).catch(() => undefined);
+    void getAcquisitionQueue()
+      .then((currentJobs) => {
+        if (active) setJobs(currentJobs);
+      })
+      .catch(() => undefined);
     return () => {
       active = false;
     };
@@ -207,7 +209,7 @@ export const AcquisitionQueueDrawer: React.FC<AcquisitionQueueDrawerProps> = ({
             backgroundColor: '#0c1017ee',
             borderColor: activeJobs.length > 0 ? '#f59e0b' : '#334155',
           }}
-          className="fixed bottom-24 right-6 z-40 flex items-center gap-2.5 px-3.5 py-2 rounded-full border shadow-2xl text-xs font-mono text-white hover:brightness-125 cursor-pointer backdrop-blur-md transition-all animate-fadeIn"
+          className="fixed bottom-24 right-6 z-40 flex items-center gap-2.5 px-3.5 py-2 t-control border shadow-2xl text-xs font-mono text-white hover:brightness-125 cursor-pointer backdrop-blur-md transition-all animate-fadeIn"
           title="Open Acquisition Queue"
         >
           {activeJobs.length > 0 ? (
@@ -233,7 +235,7 @@ export const AcquisitionQueueDrawer: React.FC<AcquisitionQueueDrawerProps> = ({
       {isDrawerOpen && (
         <div
           id="acquisition-queue-drawer"
-          className="fixed bottom-24 right-6 z-50 w-96 max-w-[calc(100vw-3rem)] rounded-xl border border-neutral-700/80 bg-[#0c1017]/95 backdrop-blur-xl shadow-2xl flex flex-col max-h-[500px] overflow-hidden font-sans text-neutral-200 animate-fadeIn"
+          className="fixed bottom-24 right-6 z-50 w-96 max-w-[calc(100vw-3rem)] t-panel t-stroke border border-neutral-700/80 bg-[#0c1017]/95 backdrop-blur-xl shadow-2xl flex flex-col max-h-[500px] overflow-hidden font-sans text-neutral-200 animate-fadeIn"
         >
           {/* Header */}
           <div className="flex items-center justify-between p-3.5 border-b border-neutral-800 bg-[#080b10]">
@@ -243,7 +245,7 @@ export const AcquisitionQueueDrawer: React.FC<AcquisitionQueueDrawerProps> = ({
                 Acquisition Queue
               </h3>
               {activeJobs.length > 0 && (
-                <span className="px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 text-[10px] font-mono border border-amber-500/40">
+                <span className="px-1.5 py-0.2 t-sm bg-amber-500/20 text-amber-300 text-[10px] font-mono border border-amber-500/40">
                   {activeJobs.length} active
                 </span>
               )}
@@ -263,7 +265,7 @@ export const AcquisitionQueueDrawer: React.FC<AcquisitionQueueDrawerProps> = ({
               <button
                 type="button"
                 onClick={toggleDrawer}
-                className="p-1 rounded text-neutral-400 hover:text-white hover:bg-neutral-800 cursor-pointer"
+                className="p-1 t-control text-neutral-400 hover:text-white hover:bg-neutral-800 cursor-pointer"
                 title="Close queue"
               >
                 <X className="w-4 h-4" />
@@ -300,11 +302,14 @@ export const AcquisitionQueueDrawer: React.FC<AcquisitionQueueDrawerProps> = ({
                 return (
                   <div
                     key={job.id}
-                    className="p-2.5 rounded-lg bg-[#121620]/60 hover:bg-[#121620] border border-neutral-800/50 flex flex-col gap-1.5 transition-colors"
+                    className="p-2.5 t-card t-stroke bg-[#121620]/60 hover:bg-[#121620] border border-neutral-800/50 flex flex-col gap-1.5 transition-colors"
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex flex-col min-w-0 flex-1">
-                        <span className="text-xs font-semibold text-white truncate" title={job.trackTitle}>
+                        <span
+                          className="text-xs font-semibold text-white truncate"
+                          title={job.trackTitle}
+                        >
                           {job.trackTitle}
                         </span>
                         <span className="text-[11px] text-neutral-400 truncate">
@@ -325,7 +330,7 @@ export const AcquisitionQueueDrawer: React.FC<AcquisitionQueueDrawerProps> = ({
                           <button
                             type="button"
                             onClick={() => handleRetry(job.id)}
-                            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 hover:text-red-300 text-[10px] font-mono border border-red-500/40 cursor-pointer"
+                            className="inline-flex items-center gap-1 px-1.5 py-0.5 t-control bg-red-500/20 text-red-400 hover:text-red-300 text-[10px] font-mono border border-red-500/40 cursor-pointer"
                             title="Retry download"
                           >
                             <RotateCcw className="w-3 h-3" />
@@ -337,7 +342,7 @@ export const AcquisitionQueueDrawer: React.FC<AcquisitionQueueDrawerProps> = ({
                           <button
                             type="button"
                             onClick={() => handleCancel(job.id)}
-                            className="p-1 rounded text-neutral-400 hover:text-red-400 hover:bg-neutral-800 cursor-pointer"
+                            className="p-1 t-control text-neutral-400 hover:text-red-400 hover:bg-neutral-800 cursor-pointer"
                             title="Cancel download"
                           >
                             <X className="w-3 h-3" />
@@ -349,9 +354,9 @@ export const AcquisitionQueueDrawer: React.FC<AcquisitionQueueDrawerProps> = ({
                     {/* Progress Bar and Status */}
                     {(isDownloading || isTagging || isQueued) && (
                       <div className="flex flex-col gap-1">
-                        <div className="w-full bg-neutral-800 rounded-full h-1.5 overflow-hidden">
+                        <div className="w-full bg-neutral-800 t-bar h-1.5 overflow-hidden">
                           <div
-                            className="bg-amber-400 h-full transition-all duration-300 rounded-full"
+                            className="bg-amber-400 h-full transition-all duration-300 t-bar"
                             style={{
                               width: `${Math.max(isQueued ? 5 : isTagging ? 90 : job.percent || 10, 5)}%`,
                             }}
@@ -366,14 +371,19 @@ export const AcquisitionQueueDrawer: React.FC<AcquisitionQueueDrawerProps> = ({
                                 : `Downloading ${job.percent || 0}%`}
                           </span>
                           {isDownloading && job.speedBytesPerSec > 0 && (
-                            <span className="text-amber-400">{formatSpeed(job.speedBytesPerSec)}</span>
+                            <span className="text-amber-400">
+                              {formatSpeed(job.speedBytesPerSec)}
+                            </span>
                           )}
                         </div>
                       </div>
                     )}
 
                     {isFailed && job.errorMessage && (
-                      <span className="text-[10px] font-mono text-red-400 truncate" title={job.errorMessage}>
+                      <span
+                        className="text-[10px] font-mono text-red-400 truncate"
+                        title={job.errorMessage}
+                      >
                         {job.errorMessage}
                       </span>
                     )}

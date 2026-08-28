@@ -65,7 +65,7 @@ export function UpdatePanel() {
   };
 
   return (
-    <section className="rounded border border-neutral-800 bg-neutral-950/50 p-5 text-sm text-neutral-300">
+    <section className="t-sm border border-neutral-800 bg-neutral-950/50 p-5 text-sm text-neutral-300">
       <h2 className="text-sm font-semibold text-white">Signed application updates</h2>
       <p className="mt-1 text-xs text-neutral-500">
         Bebop checks the stable channel at most once daily. Downloads require confirmation and a
@@ -76,7 +76,7 @@ export function UpdatePanel() {
           type="button"
           disabled={busy}
           onClick={() => void check()}
-          className="rounded border border-neutral-700 px-3 py-2 text-xs font-semibold text-neutral-200 disabled:opacity-40"
+          className="t-control border border-neutral-700 px-3 py-2 text-xs font-semibold text-neutral-200 disabled:opacity-40"
         >
           Check for updates
         </button>
@@ -85,7 +85,7 @@ export function UpdatePanel() {
             type="button"
             disabled={busy}
             onClick={() => void install()}
-            className="rounded border border-amber-500/50 px-3 py-2 text-xs font-semibold text-amber-300 disabled:opacity-40"
+            className="t-control border border-amber-500/50 px-3 py-2 text-xs font-semibold text-amber-300 disabled:opacity-40"
           >
             Install {status.version}
           </button>

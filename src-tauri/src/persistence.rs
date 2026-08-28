@@ -4024,7 +4024,38 @@ fn resolve_album_release_group(
         )
         .optional()
         .map_err(database_error("resolve-album-release-group"))?;
-    Ok(merged)
+    if merged.is_some() {
+        return Ok(merged);
+    }
+
+    // Files often lack a MusicBrainz release ID even though their artist's
+    // discography has already been cached. Match the exact release title through
+    // a shared MusicBrainz artist ID so opening that local album can fetch its
+    // remote tracklist. The artist constraint avoids guessing between same-titled
+    // releases from unrelated artists.
+    connection
+        .query_row(
+            "SELECT r.id, r.musicbrainz_release_group_id
+             FROM albums a
+             JOIN album_artists aa ON aa.album_id = a.id
+             JOIN artists la ON la.id = aa.artist_id
+             JOIN remote_release_artists rra
+               ON rra.musicbrainz_artist_id = la.musicbrainz_artist_id
+             JOIN remote_releases r ON r.id = rra.remote_release_id
+             WHERE a.id = ?1
+               AND r.title = a.title COLLATE NOCASE
+             ORDER BY r.last_refreshed_at DESC
+             LIMIT 1",
+            params![album_id],
+            |row| {
+                Ok(ReleaseSyncRow {
+                    id: row.get(0)?,
+                    musicbrainz_release_group_id: row.get(1)?,
+                })
+            },
+        )
+        .optional()
+        .map_err(database_error("resolve-album-release-group"))
 }
 
 fn record_entity_merge(
@@ -5748,7 +5779,7 @@ mod tests {
 
     #[test]
     fn provenance_cleanup_drops_non_musicbrainz_rows_and_keeps_local_data() {
-        let mut connection = Connection::open_in_memory().expect("open catalog");
+        let connection = Connection::open_in_memory().expect("open catalog");
         // Migrate to the schema just before the cleanup so the bad rows can be seeded.
         connection
             .execute_batch("PRAGMA journal_mode = WAL;")
@@ -5882,7 +5913,7 @@ mod tests {
     }
 
     #[test]
-    fn album_release_groups_resolve_directly_and_through_reviewed_merges() {
+    fn album_release_groups_resolve_directly_by_artist_title_and_through_reviewed_merges() {
         let mut connection = Connection::open_in_memory().expect("open catalog");
         migrate(&mut connection).expect("migrate");
 
@@ -5894,6 +5925,10 @@ mod tests {
             "INSERT INTO albums (id, title, created_at, updated_at) VALUES ('album-local-1', 'Cowboy Bebop', 'now', 'now')",
             [],
         ).expect("album");
+        connection.execute(
+            "INSERT INTO album_artists (album_id, artist_id, position) VALUES ('album-local-1', 'artist-1', 0)",
+            [],
+        ).expect("album artist");
 
         save_remote_discography(
             &mut connection,
@@ -5928,13 +5963,14 @@ mod tests {
             .expect("release group");
         assert_eq!(direct.musicbrainz_release_group_id, "rg-1");
 
-        // A local album only resolves once it has a reviewed merge recorded.
-        assert!(
-            resolve_album_release_group(&connection, "album-local-1")
-                .expect("resolve")
-                .is_none(),
-            "unmerged local albums have no release group"
-        );
+        // A local album with no embedded release ID can resolve through the
+        // exact cached release title and shared MusicBrainz artist ID.
+        let title_matched = resolve_album_release_group(&connection, "album-local-1")
+            .expect("resolve")
+            .expect("artist/title release group");
+        assert_eq!(title_matched.musicbrainz_release_group_id, "rg-1");
+
+        // A reviewed merge remains a valid, preferred resolution path.
         record_entity_merge(&connection, "album", "album-local-1", "remote:rg-1", true)
             .expect("merge");
         let merged = resolve_album_release_group(&connection, "album-local-1")

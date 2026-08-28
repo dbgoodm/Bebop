@@ -1,16 +1,16 @@
-# Graph Report - Bebop  (2026-08-25)
+# Graph Report - Bebop  (2026-08-28)
 
 ## Corpus Check
-- 134 files · ~111,559 words
+- 166 files · ~150,659 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1708 nodes · 4971 edges · 93 communities (71 shown, 22 thin omitted)
-- Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 50 edges (avg confidence: 0.85)
+- 2151 nodes · 6144 edges · 106 communities (83 shown, 23 thin omitted)
+- Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 54 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `b75d399e`
+- Built from commit: `e6666dd5`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -19,7 +19,7 @@
 - metadata_jobs.rs
 - devDependencies
 - What You Must Do When Invoked
-- FullscreenNowPlaying.tsx
+- MonstercatVisualizer.tsx
 - SpectrumAnalyzer
 - compilerOptions
 - RealAudioEngine
@@ -27,10 +27,10 @@
 - dependencies
 - .prettierrc.json
 - graphify reference: extra exports and benchmark
-- lib.rs
+- AppState
 - bundle
 - scripts
-- main.json
+- permissions
 - LibraryWatcher
 - main.rs
 - bebop-desktop
@@ -43,7 +43,7 @@
 - AGENTS.md
 - README.md
 - extraction-spec.md
-- persistence.rs
+- Connection
 - catalog.rs
 - libraryService.ts
 - catalogService.ts
@@ -55,85 +55,98 @@
 - vite
 - metadata.rs
 - TrackItem
-- @eslint/js
+- esbuild
 - eslint-plugin-react-hooks
 - Result
 - jsdom
 - useNativePlayback.ts
 - @testing-library/user-event
 - vitest
-- types.ts
+- resolver.rs
 - .in_memory
 - enrichment.rs
 - tauri-bindings.ts
 - DesktopLibraryPage.tsx
 - metadataService.ts
-- AppError
+- Vec
 - user_state.rs
 - Stage 7: Acquisition Removal and Repository Cleanup
 - Online integrations
 - reconcile
 - README.md
 - song_dna.rs
-- Bebop Implementation Plan V3
+- AcquisitionQueue
 - @testing-library/react
 - updates.rs
-- UpdatePanel.tsx
-- MetadataEditor.test.tsx
+- eslint
+- autoprefixer
 - Releases and signed updates
 - install-bebop
 - build-linux-release-docker
 - reset-local-data script
 - test-reset-local-data
 - Troubleshooting
-- Privacy
+- PeakHoldVisualizer.tsx
 - Bebop
 - Backup and recovery
 - Span
-- esbuild
+- String
 - Implementation Stages
-- get_album_detail
+- persistence.rs
 - lyrics.rs
+- lib.rs
 - globals
-- hydrate_track
-- playlistService.ts
-- MusicPlayerPage.tsx
-- LibraryView.tsx
-- eslint
-- SettingsView.tsx
+- DeezerProvider
+- PlaylistsView.tsx
+- types.ts
+- .state_unavailable
+- QobuzProvider
+- acquisitionService.ts
+- TidalProvider
+- Bebop — Design
+- themeService.tsx
+- download_with_fallback
+- Request
+- FullscreenNowPlaying.tsx
+- create_metadata_job
+- Vec
+- resolve_playback_track
+- Bebop Implementation Plan V4
+- Implementation Stages
+- create_generated_playlist
 
 ## God Nodes (most connected - your core abstractions)
-1. `AppState` - 100 edges
-2. `DatabaseWorker` - 97 edges
-3. `AppError` - 94 edges
-4. `database_error()` - 81 edges
-5. `database_loop()` - 69 edges
-6. `TrackItem` - 45 edges
-7. `Request` - 40 edges
-8. `PlaybackEngine` - 33 edges
-9. `useTheme()` - 31 edges
-10. `MusicBrainzClient` - 29 edges
+1. `AppState` - 110 edges
+2. `DatabaseWorker` - 109 edges
+3. `AppError` - 103 edges
+4. `database_error()` - 87 edges
+5. `database_loop()` - 74 edges
+6. `TrackItem` - 47 edges
+7. `Request` - 44 edges
+8. `useTheme()` - 35 edges
+9. `PlaybackEngine` - 33 edges
+10. `MusicBrainzClient` - 32 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `maybe_queue_scrobble()` --calls--> `qualifies_for_scrobble()`  [INFERRED]
   src-tauri/src/lib.rs → src-tauri/src/integrations.rs
-- `DiscoverView()` --calls--> `useTheme()`  [EXTRACTED]
-  apps/frontend/src/components/organisms/DiscoverView.tsx → apps/frontend/src/services/themeService.tsx
 - `FullscreenNowPlayingProps` --references--> `TrackItem`  [EXTRACTED]
   apps/frontend/src/components/organisms/FullscreenNowPlaying.tsx → apps/frontend/src/types.ts
-- `GenresGridViewProps` --references--> `TrackItem`  [EXTRACTED]
-  apps/frontend/src/components/organisms/GenresGridView.tsx → apps/frontend/src/types.ts
-- `NowPlayingBarProps` --references--> `TrackItem`  [EXTRACTED]
-  apps/frontend/src/components/organisms/NowPlayingBar.tsx → apps/frontend/src/types.ts
+- `NowPlayingQueueModalProps` --references--> `TrackItem`  [EXTRACTED]
+  apps/frontend/src/components/organisms/NowPlayingQueueModal.tsx → apps/frontend/src/types.ts
+- `toPlaylistSummary()` --indirect_call--> `toArtworkUrl()`  [INFERRED]
+  apps/frontend/src/services/playlistService.ts → apps/frontend/src/services/libraryService.ts
+- `loadPersistentPlayerState()` --indirect_call--> `toTrackItem()`  [INFERRED]
+  apps/frontend/src/services/playerStateService.ts → apps/frontend/src/services/libraryService.ts
 
 ## Import Cycles
 - None detected.
 
-## Communities (93 total, 22 thin omitted)
+## Communities (106 total, 23 thin omitted)
 
 ### Community 0 - "PlaybackEngine"
 Cohesion: 0.07
-Nodes (41): AudioOutputDevice, AudioOutputState, Device, OutputStream, PlaybackState, SampleFormat, Send, Sink (+33 more)
+Nodes (41): AudioOutputDevice, AudioOutputState, Device, OutputStream, PlaybackState, SampleFormat, Sink, AudioBackend (+33 more)
 
 ### Community 1 - "metadata_jobs.rs"
 Cohesion: 0.16
@@ -141,15 +154,11 @@ Nodes (19): diff_metadata_patches(), diff_only_contains_changed_fields_and_retai
 
 ### Community 2 - "devDependencies"
 Cohesion: 0.10
-Nodes (21): devDependencies, autoprefixer, eslint-plugin-react-refresh, prettier, tailwindcss, @tauri-apps/cli, @testing-library/jest-dom, tsx (+13 more)
+Nodes (21): devDependencies, @eslint/js, eslint-plugin-react-refresh, prettier, tailwindcss, @tauri-apps/cli, @testing-library/jest-dom, tsx (+13 more)
 
 ### Community 3 - "What You Must Do When Invoked"
 Cohesion: 0.08
 Nodes (24): For /graphify add and --watch, For /graphify query, For the commit hook and native CLAUDE.md integration, For --update and --cluster-only, /graphify, Honesty Rules, Interpreter guard for subcommands, Part A - Structural extraction for code files (+16 more)
-
-### Community 4 - "FullscreenNowPlaying.tsx"
-Cohesion: 0.16
-Nodes (14): FullscreenNowPlaying(), FullscreenNowPlayingProps, MonstercatVisualizer(), MonstercatVisualizerProps, generateCompactWaveform(), NowPlayingBar(), NowPlayingBarProps, generateSoundcloudWaveform() (+6 more)
 
 ### Community 5 - "SpectrumAnalyzer"
 Cohesion: 0.06
@@ -175,9 +184,9 @@ Nodes (3): printWidth, singleQuote, trailingComma
 Cohesion: 0.22
 Nodes (8): graphify reference: extra exports and benchmark, Step 6b - Wiki (only if --wiki flag), Step 7 - Neo4j export (only if --neo4j or --neo4j-push flag), Step 7a - FalkorDB export (only if --falkordb or --falkordb-push flag), Step 7b - SVG export (only if --svg flag), Step 7c - GraphML export (only if --graphml flag), Step 7d - MCP server (only if --mcp flag), Step 8 - Token reduction benchmark (only if total_words > 5000)
 
-### Community 17 - "lib.rs"
-Cohesion: 0.05
-Nodes (173): ArtistInformation, Builder, EnrichmentCandidate, EnrichmentJob, GeneratedPlaylist, IntegrationSettings, IntegrationStatus, LibraryScan (+165 more)
+### Community 17 - "AppState"
+Cohesion: 0.09
+Nodes (69): IntegrationSettings, LyricsDocument, acquire_album(), acquire_track(), AppError, AppState, cancel_acquisition(), cancel_metadata_job() (+61 more)
 
 ### Community 18 - "bundle"
 Cohesion: 0.04
@@ -187,9 +196,9 @@ Nodes (46): $APPDATA/artwork/**, https://github.com/dbgoodm/Bebop/releases/lates
 Cohesion: 0.11
 Nodes (17): name, private, scripts, build, dev, format, format:check, lint (+9 more)
 
-### Community 20 - "main.json"
-Cohesion: 0.13
-Nodes (14): core:default, dialog:allow-open, fs:allow-read, fs:allow-read-dir, fs:allow-stat, linux, main, windows (+6 more)
+### Community 20 - "permissions"
+Cohesion: 0.11
+Nodes (18): core:default, core:window:allow-close, core:window:allow-minimize, core:window:allow-start-dragging, core:window:allow-toggle-maximize, dialog:allow-open, fs:allow-read, fs:allow-read-dir (+10 more)
 
 ### Community 21 - "LibraryWatcher"
 Cohesion: 0.14
@@ -211,21 +220,21 @@ Nodes (3): For git commit hook, For native CLAUDE.md integration, graphify refer
 Cohesion: 0.50
 Nodes (3): For --cluster-only, For --update (incremental re-extraction), graphify reference: incremental update and cluster-only
 
-### Community 34 - "persistence.rs"
-Cohesion: 0.10
-Nodes (77): AlbumSummary, ArtistSummary, Connection, GenreSummary, add_root(), album_artists(), artist_pages_use_album_artists_and_keyset_cursors(), artwork_path() (+69 more)
+### Community 34 - "Connection"
+Cohesion: 0.12
+Nodes (52): Connection, RootAvailability, apply_metadata_override(), artist_references(), artwork_path(), cleanup_missing_tracks(), complete_integration_job(), create_playlist() (+44 more)
 
 ### Community 35 - "catalog.rs"
-Cohesion: 0.10
-Nodes (47): DirEntry, F, SortDirection, AlbumDetail, AlbumSummary, ArtistCatalogQuery, ArtistDetail, ArtistReference (+39 more)
+Cohesion: 0.09
+Nodes (51): DirEntry, F, SortDirection, AlbumDetail, AlbumSummary, ArtistCatalogQuery, ArtistDetail, ArtistReference (+43 more)
 
 ### Community 36 - "libraryService.ts"
-Cohesion: 0.20
-Nodes (21): useLibraryScan(), chooseLibraryFolder(), defaultCatalogQuery, errorSnapshot(), formatBitrate(), formatDuration(), formatSampleRate(), initialLibraryScan (+13 more)
+Cohesion: 0.18
+Nodes (23): startDiscographySync(), useLibraryScan(), syncLibraryDiscographies(), chooseLibraryFolder(), defaultCatalogQuery, errorSnapshot(), formatBitrate(), formatDuration() (+15 more)
 
 ### Community 37 - "catalogService.ts"
-Cohesion: 0.18
-Nodes (20): emptyArtistPage, emptyDiscovery, useCatalogDiscovery(), albumItem(), ArtistCatalogPage, artistItem(), CatalogDiscovery, durationLabel() (+12 more)
+Cohesion: 0.16
+Nodes (22): DemoMusicPlayer(), albumItem(), artistItem(), durationLabel(), fileSizeLabel(), formatAudioSpecs(), formatTrackDuration(), loadAlbumDetail() (+14 more)
 
 ### Community 38 - "scripts"
 Cohesion: 0.18
@@ -252,51 +261,51 @@ Cohesion: 0.21
 Nodes (36): ItemKey, apply_patch_to_path(), cache_artwork(), cache_bytes(), cache_external_artwork(), CachedArtwork, clean(), clean_values() (+28 more)
 
 ### Community 45 - "TrackItem"
-Cohesion: 0.09
-Nodes (29): ALL_AVAILABLE_COLUMNS, ColumnDefinition, ColumnKey, UniversalTracklist(), UniversalTracklistProps, AlbumDetailPageProps, AlbumsListViewProps, ArtistDetailPageProps (+21 more)
+Cohesion: 0.08
+Nodes (39): ALL_AVAILABLE_COLUMNS, ColumnDefinition, ColumnKey, UniversalTracklist(), UniversalTracklistProps, AlbumDetailPageProps, AlbumsGridView(), AlbumsGridViewProps (+31 more)
 
 ### Community 48 - "Result"
-Cohesion: 0.07
-Nodes (36): MetadataJobStatus, RootAvailability, Row, audio_features_from_row(), DatabaseWorker, list_generation_candidates(), metadata_job_from_row(), playlist_summary_from_row() (+28 more)
+Cohesion: 0.12
+Nodes (9): DatabaseWorker, decode_artist_cursor(), get_embedded_lyrics(), get_enrichment_cache(), get_lyrics_cache(), AppError, Option, Result (+1 more)
 
 ### Community 50 - "useNativePlayback.ts"
-Cohesion: 0.18
-Nodes (25): asAppError(), PlaybackEventName, mocks, playingState, track, useNativePlayback(), getPlaybackState(), initialPlaybackState (+17 more)
-
-### Community 53 - "types.ts"
 Cohesion: 0.17
-Nodes (15): SAMPLE_CONTINUE_ITEMS, DEMO_RECENTLY_ADDED, DEMO_REDISCOVER_ITEMS, LOCAL_RECENTLY_ADDED, LOCAL_REDISCOVER_ITEMS, AudioFormat, ContinueListeningItem, ContinueListeningRailProps (+7 more)
+Nodes (26): asAppError(), EMPTY_BINS, PlaybackEventName, mocks, playingState, track, useNativePlayback(), getPlaybackState() (+18 more)
+
+### Community 53 - "resolver.rs"
+Cohesion: 0.09
+Nodes (46): extract_deezer_album_id(), extract_deezer_id(), extract_qobuz_album_id(), extract_qobuz_id(), extract_spotify_id(), extract_tidal_id(), is_deezer_url(), is_qobuz_url() (+38 more)
 
 ### Community 54 - ".in_memory"
-Cohesion: 0.14
-Nodes (16): backup_before_upgrade(), corrupt_databases_are_preserved_and_replaced_with_a_clean_catalog(), database_files(), existing_databases_are_backed_up_before_a_schema_upgrade(), is_corruption_error(), list_roots(), migrations_create_the_complete_v2_schema(), recover_corrupt_database() (+8 more)
+Cohesion: 0.12
+Nodes (22): backup_before_upgrade(), corrupt_databases_are_preserved_and_replaced_with_a_clean_catalog(), database_files(), existing_databases_are_backed_up_before_a_schema_upgrade(), is_corruption_error(), open_database(), player_state_restores_without_a_current_track(), recover_corrupt_database() (+14 more)
 
 ### Community 55 - "enrichment.rs"
-Cohesion: 0.08
-Nodes (59): MetadataDiff, AcoustIdRecording, AcoustIdResponse, AcoustIdResult, ArtistRecord, candidates_for_track(), candidates_from_recording(), credential_error() (+51 more)
+Cohesion: 0.07
+Nodes (69): MetadataDiff, AcoustIdRecording, AcoustIdResponse, AcoustIdResult, ArtistRecord, candidates_for_track(), candidates_from_recording(), credential_error() (+61 more)
 
 ### Community 56 - "tauri-bindings.ts"
-Cohesion: 0.05
-Nodes (42): AlbumDetail, AppError_Deserialize, AppError_Serialize, ArtistCatalogQuery, ArtistDetail, ArtistReference, AudioExtension, AudioFeatures (+34 more)
+Cohesion: 0.04
+Nodes (55): errorMessage(), UpdatePanel(), AcquisitionAlbumRequest, AcquisitionJobDto, AcquisitionJobStatus, AcquisitionProgressPayload, AcquisitionSettings, AcquisitionTrackRequest (+47 more)
 
 ### Community 57 - "DesktopLibraryPage.tsx"
-Cohesion: 0.11
-Nodes (34): EmptyState(), EmptyStateProps, AppShell(), AppShellProps, useArtistCatalog(), DesktopLibraryPage(), EMPTY_SPECTRUM_BINS, formatBytes() (+26 more)
+Cohesion: 0.16
+Nodes (22): EmptyState(), EmptyStateProps, emptyArtistPage, emptyDiscovery, useArtistCatalog(), useCatalogDiscovery(), DesktopLibraryPage(), formatBytes() (+14 more)
 
 ### Community 58 - "metadataService.ts"
-Cohesion: 0.20
-Nodes (22): MetadataEditor(), splitValues(), MetadataJobsPanel(), applyMusicBrainzCandidate(), cancelMetadataJob(), configureAcoustIdClientKey(), getAcoustIdConfigured(), getMusicBrainzEnabled() (+14 more)
+Cohesion: 0.13
+Nodes (30): MetadataEditor(), splitValues(), mocks, track, MetadataJobsPanel(), describeError(), applyMusicBrainzCandidate(), cancelMetadataJob() (+22 more)
 
-### Community 59 - "AppError"
-Cohesion: 0.27
-Nodes (12): create_playlist(), duplicate_playlist(), list_playlists(), open_connection(), open_database(), playlist_summary(), rename_playlist(), AppError (+4 more)
+### Community 59 - "Vec"
+Cohesion: 0.14
+Nodes (24): AlbumSummary, ArtistSummary, album_artists(), get_artist_detail(), get_remote_artist_summary(), get_remote_releases_by_artist_name(), get_remote_releases_for_mbid(), get_remote_tracks_for_release() (+16 more)
 
 ### Community 60 - "user_state.rs"
 Cohesion: 0.29
 Nodes (11): FavoriteReference, HomeSnapshot, PersistentPlayerState, PlayerPreferences, PlaylistSummary, Default, Option, Self (+3 more)
 
 ### Community 61 - "Stage 7: Acquisition Removal and Repository Cleanup"
-Cohesion: 0.13
+Cohesion: 0.14
 Nodes (14): Bebop Stage 5 and Stage 7 Continuation Handoff, Current State, Existing Entry Points, Goal, Implement in This Order, Required Migration Behavior, Safe Removal Sequence, Shared-File and Verification Guidance (+6 more)
 
 ### Community 62 - "Online integrations"
@@ -304,32 +313,24 @@ Cohesion: 0.50
 Nodes (4): Discord privacy, Last.fm privacy and reliability, Online integrations, Release configuration
 
 ### Community 63 - "reconcile"
-Cohesion: 0.36
-Nodes (9): CatalogSignatures, catalog_signatures(), reconcile(), reconcile_paths(), relink_moved_track(), upsert_album(), upsert_artists(), upsert_track() (+1 more)
+Cohesion: 0.31
+Nodes (10): CatalogSignatures, catalog_signatures(), reconcile(), reconcile_paths(), Reconciliation, relink_moved_track(), upsert_album(), upsert_artists() (+2 more)
 
 ### Community 64 - "README.md"
-Cohesion: 0.31
-Nodes (3): Acquisition Policy (V3), Future Clean-Room Design Guidelines, Data locations
+Cohesion: 0.22
+Nodes (6): Acquisition Policy (V3), Future Clean-Room Design Guidelines, Data locations, Data that stays local, Optional network activity, Privacy
 
 ### Community 65 - "song_dna.rs"
 Cohesion: 0.12
 Nodes (41): analyze_file(), analyze_spectral_frame(), AudioAnalysisProgress, AudioFeatures, candidate(), clamp_request(), duration_and_energy_constraints_are_enforced(), energy() (+33 more)
 
-### Community 66 - "Bebop Implementation Plan V3"
-Cohesion: 0.33
-Nodes (5): Assumptions, Bebop Implementation Plan V3, Interface and Data Changes, Summary, Verification and Acceptance
+### Community 66 - "AcquisitionQueue"
+Cohesion: 0.10
+Nodes (43): AcquisitionJobStatus, AcquisitionAlbumRequest, AcquisitionJobDto, AcquisitionJobStatus, AcquisitionProgressPayload, AcquisitionSettings, AcquisitionTrackRequest, Default (+35 more)
 
 ### Community 68 - "updates.rs"
 Cohesion: 0.25
 Nodes (14): Display, check(), check_due(), emit_status(), failed(), install(), AppError, AppHandle (+6 more)
-
-### Community 69 - "UpdatePanel.tsx"
-Cohesion: 0.42
-Nodes (9): errorMessage(), UpdatePanel(), UpdateProgress, UpdateStatus, checkForUpdates(), installUpdate(), subscribeUpdateProgress(), subscribeUpdateStatus() (+1 more)
-
-### Community 70 - "MetadataEditor.test.tsx"
-Cohesion: 0.50
-Nodes (3): mocks, track, MetadataPatch
 
 ### Community 71 - "Releases and signed updates"
 Cohesion: 0.40
@@ -339,9 +340,9 @@ Nodes (4): Client behavior, Omarchy and Arch-family install, Protected release c
 Cohesion: 0.25
 Nodes (8): A file plays but its metadata is missing, A library root is offline or empty, An integration is unavailable, An update fails, Development and packaging, Playback reports resampling or a missing output device, The catalog database is damaged, Troubleshooting
 
-### Community 78 - "Privacy"
-Cohesion: 0.67
-Nodes (3): Data that stays local, Optional network activity, Privacy
+### Community 78 - "PeakHoldVisualizer.tsx"
+Cohesion: 0.06
+Nodes (44): flightFor(), RIBBONS, seeded(), SMOKE_STRANDS, smokeStrand(), ThemeAmbience(), chrome, WindowControls() (+36 more)
 
 ### Community 79 - "Bebop"
 Cohesion: 0.33
@@ -355,54 +356,114 @@ Nodes (4): Backup and recovery, Catalog backups, Metadata file backups, Recovera
 Cohesion: 0.33
 Nodes (4): Drop, Instant, Self, Span
 
-### Community 83 - "Implementation Stages"
-Cohesion: 0.25
-Nodes (8): 1. Performance and catalog foundation — `gpt-5.6-sol`, high, 2. Responsive shell and Library cleanup — `gpt-5.6-terra`, medium, 3. Artwork, lyrics, and artist information — `gpt-5.6-terra`, high, 4. Metadata editor and MusicBrainz jobs — `gpt-5.6-sol`, high, 5. Unified local/remote catalog — `gpt-5.6-terra`, high, 6. Playlists and Song DNA — `gpt-5.6-sol` high for analysis, `gpt-5.6-terra` medium for UI, 7. Acquisition removal and repository cleanup — `gpt-5.6-luna`, medium, Implementation Stages
+### Community 82 - "String"
+Cohesion: 0.17
+Nodes (35): EnrichmentCandidate, EnrichmentJob, LibraryScan, MetadataReview, MetadataWriteResult, add_and_scan_root(), add_library_root(), analyze_audio_features() (+27 more)
 
-### Community 84 - "get_album_detail"
-Cohesion: 0.67
-Nodes (3): get_album_detail(), get_remote_album_detail(), AlbumDetail
+### Community 83 - "Implementation Stages"
+Cohesion: 0.14
+Nodes (13): 1. Performance and catalog foundation — `gpt-5.6-sol`, high, 2. Responsive shell and Library cleanup — `gpt-5.6-terra`, medium, 3. Artwork, lyrics, and artist information — `gpt-5.6-terra`, high, 4. Metadata editor and MusicBrainz jobs — `gpt-5.6-sol`, high, 5. Unified local/remote catalog — `gpt-5.6-terra`, high, 6. Playlists and Song DNA — `gpt-5.6-sol` high for analysis, `gpt-5.6-terra` medium for UI, 7. Acquisition removal and repository cleanup — `gpt-5.6-luna`, medium, Assumptions (+5 more)
+
+### Community 84 - "persistence.rs"
+Cohesion: 0.10
+Nodes (39): Row, add_root(), album_release_groups_resolve_directly_by_artist_title_and_through_reviewed_merges(), artist_pages_use_album_artists_and_keyset_cursors(), ArtistSyncRow, audio_features_from_row(), discography_sync_covers_every_artist_and_skips_recently_checked_ones(), encode_artist_cursor() (+31 more)
 
 ### Community 85 - "lyrics.rs"
 Cohesion: 0.19
 Nodes (23): cache_key(), fetch_lrclib(), LrclibResponse, LyricLine, LyricsDocument, LyricsSource, normalized(), parse_lrc() (+15 more)
 
-### Community 88 - "hydrate_track"
-Cohesion: 0.26
-Nodes (10): apply_metadata_override(), artist_references(), get_playlist_tracks(), get_track(), hydrate_track(), hydrate_track_ids(), ArtistReference, TrackSummary (+2 more)
+### Community 86 - "lib.rs"
+Cohesion: 0.14
+Nodes (25): ArtistInformation, Builder, export_typescript_bindings(), exports_typescript_ipc_contracts(), get_artist_detail(), get_artist_information(), get_home_snapshot(), ipc_bindings() (+17 more)
 
-### Community 89 - "playlistService.ts"
+### Community 88 - "DeezerProvider"
+Cohesion: 0.14
+Nodes (13): DeezerProvider, AcquisitionSettings, AppError, Client, Default, Fn, Option, Result (+5 more)
+
+### Community 89 - "PlaylistsView.tsx"
+Cohesion: 0.15
+Nodes (28): DEFAULT_REQUEST, durationLabel(), LENGTH_OPTIONS, MOOD_OPTIONS, PlaylistsView(), mocks, track, analyzeAudioFeatures() (+20 more)
+
+### Community 90 - "types.ts"
+Cohesion: 0.07
+Nodes (45): App(), ContinueListeningRail(), SAMPLE_CONTINUE_ITEMS, DEFAULT_STATS, ListeningStats(), ListeningStatsProps, RecentlyAddedRail(), RediscoverRail() (+37 more)
+
+### Community 91 - ".state_unavailable"
+Cohesion: 0.13
+Nodes (34): ActiveListeningSession, AudioOutputDevice, emit_playback_error(), emit_playback_state(), get_playback_state(), list_audio_output_devices(), maybe_queue_scrobble(), merge_catalog_entities() (+26 more)
+
+### Community 93 - "QobuzProvider"
 Cohesion: 0.17
-Nodes (26): DEFAULT_REQUEST, durationLabel(), PlaylistsView(), mocks, track, analyzeAudioFeatures(), createGeneratedPlaylist(), createPlaylist() (+18 more)
+Nodes (12): QobuzProvider, QobuzStreamInfo, AcquisitionSettings, AppError, Client, Default, Fn, Option (+4 more)
 
-### Community 90 - "MusicPlayerPage.tsx"
-Cohesion: 0.10
-Nodes (30): App(), ContinueListeningRail(), DEFAULT_STATS, ListeningStats(), ListeningStatsProps, RecentlyAddedRail(), RediscoverRail(), MAIN_NAV_ITEMS (+22 more)
+### Community 94 - "acquisitionService.ts"
+Cohesion: 0.08
+Nodes (45): AcquisitionQueueDrawer(), AcquisitionQueueDrawerProps, formatSpeed(), AlbumDetailPage(), mockLocalAlbum, mockPartialAlbum, mockRemoteAlbum, CATEGORIES (+37 more)
 
-### Community 91 - "LibraryView.tsx"
-Cohesion: 0.21
-Nodes (13): AlbumsGridView(), AlbumsGridViewProps, ArtistsGridView(), ArtistsGridViewProps, GenreCategory, GenresGridView(), GenresGridViewProps, LOCAL_GENRES (+5 more)
+### Community 95 - "TidalProvider"
+Cohesion: 0.18
+Nodes (10): AcquisitionSettings, AppError, Client, Default, Fn, Option, Result, Self (+2 more)
 
-### Community 94 - "SettingsView.tsx"
-Cohesion: 0.47
-Nodes (4): SettingsView(), SettingsViewProps, mocks, LibraryRoot
+### Community 96 - "Bebop — Design"
+Cohesion: 0.11
+Nodes (17): A theme is more than colour, Bebop — Design, Colour, Community authoring, Copy, Density, Local vs. remote, Motion (+9 more)
+
+### Community 97 - "themeService.tsx"
+Cohesion: 0.13
+Nodes (24): createPlaylistFromQueue(), loadFavoriteTrackIds(), loadHomeSnapshot(), loadPersistentPlayerState(), loadPlaylists(), loadPlaylistTracks(), loadUiPreference(), saveLibraryViewPreference() (+16 more)
+
+### Community 98 - "download_with_fallback"
+Cohesion: 0.15
+Nodes (16): AudioExtension, all_providers(), download_with_fallback(), DownloadedAudio, Provider, AcquisitionSettings, AppError, Box (+8 more)
+
+### Community 99 - "Request"
+Cohesion: 0.15
+Nodes (15): GenreSummary, list_favorites(), query_discovery(), query_genres(), query_tracks(), Request, Box, CatalogQuery (+7 more)
+
+### Community 102 - "FullscreenNowPlaying.tsx"
+Cohesion: 0.24
+Nodes (6): FullscreenNowPlaying(), FullscreenNowPlayingProps, mockTrack, loadTrackLyrics(), unwrap(), LyricsDocument
+
+### Community 103 - "create_metadata_job"
+Cohesion: 0.26
+Nodes (12): MetadataJobStatus, create_metadata_job(), every_metadata_job_scope_resolves_its_tracks(), get_metadata_job(), list_metadata_jobs(), metadata_jobs_checkpoint_scopes_and_retry_only_unfinished_tracks(), open_connection(), record_metadata_job_track() (+4 more)
+
+### Community 105 - "Vec"
+Cohesion: 0.24
+Nodes (11): IntegrationStatus, configure_lastfm_session(), DesktopState, disconnect_lastfm(), get_desktop_state(), get_integration_statuses(), list_library_roots(), LibraryRoot (+3 more)
+
+### Community 106 - "resolve_playback_track"
+Cohesion: 0.24
+Nodes (6): resolve_playback_track(), Error, Into, PathBuf, Self, ToString
+
+### Community 107 - "Bebop Implementation Plan V4"
+Cohesion: 0.22
+Nodes (7): Bebop Implementation Plan V4, Generated Bindings & Tauri Commands, Interface and Data Changes, New Data Structures, New Database Tables, Summary, Verification and Acceptance Criteria
+
+### Community 108 - "Implementation Stages"
+Cohesion: 0.25
+Nodes (8): Implementation Stages, Stage 1: Remote Tracklist Ingestion & Unified Schema, Stage 2: Unified Album Page & Tracklist UX, Stage 3: Metadata & Cross-Service Resolver (Rust), Stage 4: Lossless Stream Providers (Rust), Stage 5: Audio Post-Processing, Tagging & Lyrics, Stage 6: Download Queue Manager & IPC Events, Stage 7: UI Surfaces & Settings Integration
+
+### Community 109 - "create_generated_playlist"
+Cohesion: 0.48
+Nodes (7): GeneratedPlaylist, PlaylistGenerationRequest, create_generated_playlist(), generate_playlist(), generate_playlist_from_database(), get_playlist(), Playlist
 
 ## Knowledge Gaps
-- **326 isolated node(s):** `singleQuote`, `trailingComma`, `printWidth`, `name`, `private` (+321 more)
+- **390 isolated node(s):** `singleQuote`, `trailingComma`, `printWidth`, `name`, `private` (+385 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **22 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **23 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `DatabaseWorker` connect `Result` to `persistence.rs`, `updates.rs`, `SpectrumAnalyzer`, `integrations.rs`, `lib.rs`, `get_album_detail`, `lyrics.rs`, `.in_memory`, `enrichment.rs`, `hydrate_track`, `LibraryWatcher`, `AppError`?**
-  _High betweenness centrality (0.145) - this node is a cross-community bridge._
-- **Why does `devDependencies` connect `devDependencies` to `@testing-library/react`, `frontend/package.json`, `vite`, `@eslint/js`, `eslint-plugin-react-hooks`, `jsdom`, `esbuild`, `@testing-library/user-event`, `vitest`, `globals`, `eslint`?**
-  _High betweenness centrality (0.052) - this node is a cross-community bridge._
-- **Why does `typescript` connect `devDependencies` to `lib.rs`?**
-  _High betweenness centrality (0.050) - this node is a cross-community bridge._
+- **Why does `DatabaseWorker` connect `Result` to `AcquisitionQueue`, `Request`, `updates.rs`, `SpectrumAnalyzer`, `integrations.rs`, `create_generated_playlist`, `AppState`, `String`, `persistence.rs`, `lyrics.rs`, `lib.rs`, `enrichment.rs`, `.in_memory`, `LibraryWatcher`, `.state_unavailable`?**
+  _High betweenness centrality (0.178) - this node is a cross-community bridge._
+- **Why does `AppState` connect `AppState` to `PlaybackEngine`, `AcquisitionQueue`, `integrations.rs`, `Vec`, `resolve_playback_track`, `create_generated_playlist`, `Result`, `String`, `LibraryWatcher`, `lib.rs`, `enrichment.rs`, `.state_unavailable`?**
+  _High betweenness centrality (0.034) - this node is a cross-community bridge._
+- **Why does `process_job()` connect `AcquisitionQueue` to `Result`, `download_with_fallback`, `catalog.rs`, `String`?**
+  _High betweenness centrality (0.034) - this node is a cross-community bridge._
 - **What connects `singleQuote`, `trailingComma`, `printWidth` to the rest of the system?**
-  _326 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _390 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `PlaybackEngine` be split into smaller, more focused modules?**
   _Cohesion score 0.07023214810461358 - nodes in this community are weakly interconnected._
 - **Should `devDependencies` be split into smaller, more focused modules?**

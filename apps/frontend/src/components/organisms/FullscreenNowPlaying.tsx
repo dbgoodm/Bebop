@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import {
   Minimize2,
   Play,
@@ -12,9 +12,12 @@ import {
   Disc3,
   ListMusic,
   ChevronDown,
+  Lock,
 } from 'lucide-react';
 import { TrackItem } from '@/types';
 import { PeakHoldVisualizer } from '@/components/organisms/PeakHoldVisualizer';
+import { ThemeAmbience } from '@/components/atoms/ThemeAmbience';
+import { visualizerStyleFromVars } from '@/services/visualizerStyle';
 import { loadTrackLyrics } from '@/services/lyricsService';
 import type { LyricsDocument } from '@/services/tauri-bindings';
 import { useTheme } from '@/services/themeService';
@@ -31,6 +34,10 @@ interface FullscreenNowPlayingProps {
   onSeek: (seconds: number) => void;
   queue: TrackItem[];
   onPlayQueueTrack: (track: TrackItem) => void;
+  isShuffle?: boolean;
+  onToggleShuffle?: () => void;
+  repeatMode?: 'off' | 'all' | 'one';
+  onToggleRepeat?: () => void;
   onSelectArtist?: (artistName: string) => void;
   onSelectAlbum?: (albumName: string) => void;
   volume?: number;
@@ -56,6 +63,10 @@ export const FullscreenNowPlaying: React.FC<FullscreenNowPlayingProps> = ({
   onSeek,
   queue,
   onPlayQueueTrack,
+  isShuffle: controlledShuffle,
+  onToggleShuffle,
+  repeatMode: controlledRepeat,
+  onToggleRepeat,
   onSelectArtist,
   onSelectAlbum,
   volume: controlledVolume,
@@ -69,19 +80,38 @@ export const FullscreenNowPlaying: React.FC<FullscreenNowPlayingProps> = ({
   getSpectrumBins,
 }) => {
   const { currentTheme } = useTheme();
+
+  // Bar width, gap, radius, fill, cap and glow from the theme's visualizer tokens.
+  const visualizerStyle = useMemo(
+    () => visualizerStyleFromVars(currentTheme.vars, currentTheme.visualizerPrimary),
+    [currentTheme],
+  );
+
   const [localVolume, setLocalVolume] = useState(85);
   const [localMuted, setLocalMuted] = useState(false);
-  const [isShuffle, setIsShuffle] = useState(false);
-  const [repeatMode, setRepeatMode] = useState<'off' | 'all' | 'one'>('off');
+  const [localShuffle, setLocalShuffle] = useState(false);
+  const [localRepeat, setLocalRepeat] = useState<'off' | 'all' | 'one'>('off');
   const [lyricsDocument, setLyricsDocument] = useState<LyricsDocument | null>(null);
   const seekRef = useRef<HTMLDivElement | null>(null);
   const [isHoveringSeek, setIsHoveringSeek] = useState(false);
   const [seekHoverRatio, setSeekHoverRatio] = useState<number | null>(null);
   const [isDraggingSeek, setIsDraggingSeek] = useState(false);
-  // Bars are sized to the bed so they reach the top of it rather than sitting in a
-  // short strip; the bed itself is a viewport-relative height.
-  const [visualizerHeight, setVisualizerHeight] = useState(420);
+  const [visualizerHeight, setVisualizerHeight] = useState(360);
+  const [rpmSpeed, setRpmSpeed] = useState<33 | 45>(33);
   const lyricsContainerRef = useRef<HTMLDivElement | null>(null);
+
+  const isShuffle = controlledShuffle ?? localShuffle;
+  const repeatMode = controlledRepeat ?? localRepeat;
+
+  const toggleShuffle = () => {
+    if (onToggleShuffle) onToggleShuffle();
+    else setLocalShuffle((prev) => !prev);
+  };
+
+  const toggleRepeat = () => {
+    if (onToggleRepeat) onToggleRepeat();
+    else setLocalRepeat((prev) => (prev === 'off' ? 'all' : prev === 'all' ? 'one' : 'off'));
+  };
 
   // Handle ESC key to exit fullscreen
   useEffect(() => {
@@ -94,6 +124,7 @@ export const FullscreenNowPlaying: React.FC<FullscreenNowPlayingProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
+  // Load lyrics for the active track
   useEffect(() => {
     if (!isOpen || !currentTrack) return;
     let active = true;
@@ -141,11 +172,10 @@ export const FullscreenNowPlaying: React.FC<FullscreenNowPlayingProps> = ({
     }
   }, [isOpen, activeLyricIndex]);
 
-  // Sizes the spectrum bed to the viewport. Must stay above the early return below —
-  // hooks cannot be called conditionally.
+  // Sizes the spectrum bed to the viewport
   useEffect(() => {
     if (!isOpen) return;
-    const measure = () => setVisualizerHeight(Math.round(Math.min(window.innerHeight * 0.52, 560)));
+    const measure = () => setVisualizerHeight(Math.round(Math.min(window.innerHeight * 0.38, 400)));
     measure();
     window.addEventListener('resize', measure);
     return () => window.removeEventListener('resize', measure);
@@ -207,17 +237,46 @@ export const FullscreenNowPlaying: React.FC<FullscreenNowPlayingProps> = ({
     return `${m}:${s < 10 ? '0' : ''}${s}`;
   };
 
-  const progressPercent = Math.min(
-    100,
-    Math.max(0, (currentTimeSeconds / (currentTrack.durationSeconds || 1)) * 100),
-  );
+  // Determine theme signature stamp quote
+  const themeStampText = currentTheme.id.includes('space-cowboy')
+    ? 'SEE YOU SPACE COWBOY...'
+    : currentTheme.id.includes('queen-of-hearts')
+      ? 'DEBT: 6,000,000 W // ♠ ♥ ♦ ♣'
+      : currentTheme.id.includes('radical')
+        ? 'ED-NET // ( ^ _ ^ ) // TERMINAL-01'
+        : currentTheme.id.includes('black-dog')
+          ? 'ISSP BOUNTY ARCHIVE // BEBOP-02'
+          : currentTheme.id.includes('poster')
+            ? 'SEE YOU SPACE COWBOY'
+            : `${currentTheme.name} // HIGH-FIDELITY SESSION`;
+
+  const isHiRes =
+    (currentTrack.sampleRate &&
+      (currentTrack.sampleRate.includes('96') ||
+        currentTrack.sampleRate.includes('192') ||
+        currentTrack.sampleRate.includes('88') ||
+        currentTrack.sampleRate.includes('176') ||
+        currentTrack.sampleRate.includes('24-bit') ||
+        currentTrack.sampleRate.includes('24/'))) ||
+    currentTrack.codec?.toUpperCase().includes('DSD') ||
+    currentTrack.codec?.toUpperCase().includes('FLAC');
 
   return (
     <div
       id="fullscreen-now-playing-container"
-      className="fixed inset-0 z-50 bg-[#06080d] text-white flex flex-col font-sans select-none overflow-y-auto overflow-x-hidden animate-fadeIn"
+      style={{
+        background: currentTheme.bgCanvasGradient || currentTheme.bgCanvas,
+        backgroundColor: currentTheme.bgCanvas,
+        color: currentTheme.textPrimary,
+        fontFamily: 'var(--f-b, inherit)',
+        cursor: 'var(--cursor, auto)',
+      }}
+      className="win-round fixed inset-0 z-50 flex flex-col justify-between select-none overflow-hidden h-screen max-h-screen animate-fadeIn"
     >
-      {/* Dynamic Blown Up and Blurred Album Art Background */}
+      {/* 1. Theme Ambience Layer: Starfield, Smoke, Ship, Planet, Contrails, Scanlines, Glitch */}
+      <ThemeAmbience />
+
+      {/* 2. Dynamic Blown Up Album Art with Theme Blend & Vignette */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
         {currentTrack.coverUrl ? (
           <img
@@ -225,80 +284,195 @@ export const FullscreenNowPlaying: React.FC<FullscreenNowPlayingProps> = ({
             src={currentTrack.coverUrl}
             alt=""
             referrerPolicy="no-referrer"
-            className="absolute inset-0 w-full h-full object-cover scale-125 blur-3xl opacity-35 brightness-75 transition-all duration-1000 ease-in-out"
+            className="absolute inset-0 w-full h-full object-cover scale-125 blur-3xl opacity-30 brightness-75 transition-all duration-1000 ease-in-out"
           />
-        ) : (
-          <div className="absolute inset-0 bg-[#0c1018]" />
-        )}
-        {/* Dark Vignette and Ambient Gradient Overlays for High Contrast */}
-        <div className="absolute inset-0 bg-gradient-to-t from-[#06080d] via-[#06080d]/80 to-[#06080d]/85" />
-        <div className="absolute inset-0 bg-radial from-transparent via-[#06080d]/50 to-[#06080d]/90" />
+        ) : null}
+        {/* Dynamic theme-colored radial vignette to blend cover art seamlessly into canvas */}
+        <div
+          className="absolute inset-0"
+          style={{
+            background: `radial-gradient(ellipse at 50% 40%, transparent 0%, color-mix(in oklab, ${currentTheme.bgCanvas} 65%, transparent) 55%, ${currentTheme.bgCanvas} 100%)`,
+          }}
+        />
+        <div
+          className="absolute inset-0"
+          style={{
+            background: `linear-gradient(180deg, ${currentTheme.bgCanvas} 0%, transparent 18%, transparent 72%, ${currentTheme.bgCanvas} 100%)`,
+          }}
+        />
       </div>
 
-      {/* Top Header Rail - Full Window Width */}
-      <header className="relative z-10 w-full px-6 sm:px-10 lg:px-14 xl:px-18 2xl:px-24 py-4 flex items-center justify-between border-b border-neutral-800/60 bg-[#090b10]/60 backdrop-blur-md">
+      {/* 3. Thematic Character Stamp / Watermark */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute bottom-24 right-6 lg:right-14 z-0 select-none hidden md:block"
+        style={{
+          opacity: 'var(--op-stamp, 0.08)',
+          transform: 'rotate(var(--stamp-rot, -3deg))',
+          fontFamily: "var(--f-stamp, var(--f-d, 'Big Shoulders Display', sans-serif))",
+          color: 'var(--stamp-col, var(--c-p, currentColor))',
+          letterSpacing: '0.12em',
+        }}
+      >
+        <div
+          className="border-2 px-4 py-2 text-xl lg:text-2xl font-black uppercase tracking-widest leading-none shadow-sm"
+          style={{ borderColor: 'currentColor' }}
+        >
+          {themeStampText}
+        </div>
+      </div>
+
+      {/* 4. Thematic Floating Card Suit Pips for Faye / Casino themes */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 z-0 overflow-hidden"
+        style={{ opacity: 'var(--op-pip, 0)' }}
+      >
+        <span className="absolute top-[16%] left-[6%] text-6xl text-[var(--pip-col,#e0344e)] opacity-25 select-none font-serif">
+          ♠
+        </span>
+        <span className="absolute top-[68%] left-[20%] text-5xl text-[var(--pip-col,#e0344e)] opacity-20 select-none font-serif">
+          ♥
+        </span>
+        <span className="absolute top-[26%] right-[12%] text-6xl text-[var(--pip-col,#e0344e)] opacity-20 select-none font-serif">
+          ♦
+        </span>
+        <span className="absolute bottom-[22%] right-[28%] text-5xl text-[var(--pip-col,#e0344e)] opacity-25 select-none font-serif">
+          ♣
+        </span>
+      </div>
+
+      {/* 5. Thematic Hacker Scrawl / ASCII for Radical Edward themes */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute top-18 left-8 z-0 font-mono text-xs tracking-widest select-none hidden xl:block"
+        style={{
+          opacity: 'var(--op-scrawl, 0)',
+          color: currentTheme.primary,
+        }}
+      >
+        <pre className="opacity-40 leading-tight font-mono">
+          {`  /\\_/\\   ED-NET
+ ( o.o )  ONLINE
+  > ^ <   [ACTIVE]`}
+        </pre>
+      </div>
+
+      {/* Top Header Rail */}
+      <header
+        data-tauri-drag-region
+        className="relative z-20 w-full px-6 sm:px-10 lg:px-14 xl:px-18 2xl:px-24 py-3 sm:py-3.5 flex items-center justify-between border-b backdrop-blur-md transition-colors shrink-0"
+        style={{
+          backgroundColor: `color-mix(in oklab, ${currentTheme.bgCard} 80%, transparent)`,
+          borderColor: currentTheme.borderColor,
+        }}
+      >
         {/* Left Branding */}
         <div className="flex items-center gap-2.5 text-sm tracking-wide">
-          <span className="text-[#f59e0b] font-bold tracking-wider">BEBOP</span>
+          <span
+            className="font-bold tracking-wider t-heading text-base sm:text-lg"
+            style={{
+              color: currentTheme.primary,
+              textShadow: `0 0 16px ${currentTheme.accentGlow}`,
+            }}
+          >
+            BEBOP
+          </span>
           <span className="text-neutral-500 font-light">//</span>
-          <span className="text-neutral-200 tracking-wider text-xs font-semibold uppercase">
+          <span
+            className="tracking-wider text-xs font-semibold uppercase opacity-85"
+            style={{ color: currentTheme.textSecondary }}
+          >
             Now Playing
           </span>
         </div>
 
-        {/* Center: Clean Format Tag */}
-        <div className="hidden md:flex items-center gap-2 text-xs font-mono text-neutral-400">
-          <span className="text-neutral-500">FORMAT:</span>
-          <span className="text-amber-400 font-semibold">
+        {/* Center: Audio Format Tag with Hi-Res Badge */}
+        <div
+          className="flex items-center gap-2 text-xs font-mono px-3 py-1 t-sm border transition-colors"
+          style={{
+            backgroundColor: `color-mix(in oklab, ${currentTheme.bgSurface} 60%, transparent)`,
+            borderColor: currentTheme.borderColor,
+            color: currentTheme.textSecondary,
+          }}
+        >
+          <span className="opacity-60">FORMAT:</span>
+          <span className="font-semibold" style={{ color: currentTheme.primary }}>
             {currentTrack.codec} {currentTrack.sampleRate}
           </span>
+          {isHiRes && (
+            <span
+              className="px-1.5 py-0.2 t-sm text-[10px] font-bold tracking-wider uppercase ml-1"
+              style={{
+                backgroundColor: 'color-mix(in oklab, var(--c-p, #f59e0b) 22%, transparent)',
+                color: currentTheme.primary,
+                border: `1px solid color-mix(in oklab, var(--c-p, #f59e0b) 45%, transparent)`,
+              }}
+            >
+              HI-RES
+            </span>
+          )}
         </div>
 
         {/* Right: Exit Fullscreen Button */}
-        <button
-          id="btn-exit-fullscreen"
-          type="button"
-          onClick={onClose}
-          className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-neutral-900/90 hover:bg-neutral-800 border border-neutral-700/80 text-neutral-300 hover:text-white transition-all cursor-pointer text-xs font-sans shadow-sm"
-          title="Exit Fullscreen (Esc)"
-        >
-          <Minimize2 className="w-3.5 h-3.5" />
-          <span>Exit Fullscreen</span>
-        </button>
+        <div className="flex items-center">
+          <button
+            id="btn-exit-fullscreen"
+            type="button"
+            onClick={onClose}
+            style={{
+              backgroundColor: `color-mix(in oklab, ${currentTheme.bgCard} 90%, transparent)`,
+              borderColor: currentTheme.borderColor,
+              color: currentTheme.textSecondary,
+            }}
+            className="flex items-center gap-2 px-3.5 py-1.5 t-control border hover:text-white transition-all cursor-pointer text-xs font-sans shadow-sm hover:border-[var(--c-p)]"
+            title="Exit Fullscreen (Esc)"
+          >
+            <Minimize2 className="w-3.5 h-3.5" style={{ color: currentTheme.primary }} />
+            <span>Exit Fullscreen</span>
+          </button>
+          <div aria-hidden="true" className="shrink-0" style={{ width: 'var(--wc-gutter, 0px)' }} />
+        </div>
       </header>
 
-      {/* Main 3-Column Content Layout */}
-      <main className="relative z-10 flex-1 w-full px-6 sm:px-10 lg:px-14 xl:px-18 2xl:px-24 py-6 grid grid-cols-1 lg:grid-cols-12 gap-8 xl:gap-12 items-center">
-        {/* Left Section: Vinyl Jacket, Extended Sliding Vinyl Record & Track Metadata (cols 1..5) */}
-        <div className="lg:col-span-5 flex flex-col items-center justify-center gap-6">
-          {/* Vinyl Composition Container with ample width to show ~60% of vinyl */}
-          <div className="relative w-full max-w-[420px] sm:max-w-[480px] lg:max-w-[520px] aspect-[1.35/1] flex items-center justify-start pl-2">
-            {/* Spinning Vinyl Record (Sliding out significantly to reveal grooves and center label) */}
+      {/* Main 3-Column Content Layout (Locked in viewport without vertical page scroll) */}
+      <main className="relative z-10 flex-1 min-h-0 w-full px-4 sm:px-8 lg:px-12 xl:px-16 2xl:px-20 py-2 sm:py-3 grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 xl:gap-8 items-center overflow-hidden">
+        {/* Left Section: Vinyl Deck, Animated Tonearm, Album Jacket & Track Metadata (cols 1..5) */}
+        <div className="lg:col-span-5 flex flex-col items-center justify-center gap-3 sm:gap-4 min-h-0">
+          {/* Turntable Deck Container */}
+          <div className="relative w-full max-w-[320px] sm:max-w-[380px] lg:max-w-[420px] xl:max-w-[460px] aspect-[1.35/1] flex items-center justify-start pl-2">
+            {/* Spinning Vinyl Record */}
             <div
-              className={`absolute top-0 left-0 w-[72%] aspect-square rounded-full shadow-[0_25px_60px_rgba(0,0,0,0.95)] transition-all duration-700 ${
+              onClick={onPlayPause}
+              className={`absolute top-0 left-0 w-[72%] aspect-square rounded-full transition-all duration-700 cursor-pointer ${
                 isPlaying
-                  ? 'translate-x-28 sm:translate-x-36 md:translate-x-44 lg:translate-x-52 xl:translate-x-56 rotate-12 scale-100'
-                  : 'translate-x-20 sm:translate-x-28 md:translate-x-36 scale-95 opacity-90'
+                  ? 'translate-x-24 sm:translate-x-32 md:translate-x-38 lg:translate-x-44 xl:translate-x-48 rotate-12 scale-100'
+                  : 'translate-x-16 sm:translate-x-24 md:translate-x-32 scale-95 opacity-90'
               }`}
               style={{
                 background:
                   'radial-gradient(circle, #080808 0%, #171717 18%, #060606 36%, #1c1c1c 50%, #080808 65%, #1f1f1f 80%, #050505 100%)',
-                boxShadow: '0 25px 60px rgba(0,0,0,0.95), inset 0 0 15px rgba(255,255,255,0.08)',
+                boxShadow: isPlaying
+                  ? `0 25px 60px rgba(0,0,0,0.95), 0 0 35px ${currentTheme.accentGlow}, inset 0 0 15px rgba(255,255,255,0.08)`
+                  : '0 25px 60px rgba(0,0,0,0.95), inset 0 0 15px rgba(255,255,255,0.08)',
               }}
+              title={isPlaying ? 'Click vinyl to pause' : 'Click vinyl to play'}
             >
-              {/* Spinning container */}
+              {/* Spinning container with selectable RPM speed */}
               <div
-                className={`w-full h-full rounded-full relative flex items-center justify-center ${
-                  isPlaying ? 'animate-[spin_7s_linear_infinite]' : ''
-                }`}
+                className="w-full h-full rounded-full relative flex items-center justify-center"
+                style={{
+                  animation: isPlaying
+                    ? `spin ${rpmSpeed === 33 ? '7s' : '4.5s'} linear infinite`
+                    : 'none',
+                }}
               >
-                {/* Authentic Vinyl Grooves Rings */}
+                {/* Vinyl Grooves Rings */}
                 <div className="absolute inset-2 sm:inset-3 rounded-full border border-neutral-800/80 pointer-events-none" />
                 <div className="absolute inset-5 sm:inset-7 rounded-full border border-neutral-800/50 pointer-events-none" />
                 <div className="absolute inset-8 sm:inset-11 rounded-full border border-neutral-800/60 pointer-events-none" />
                 <div className="absolute inset-12 sm:inset-16 rounded-full border border-neutral-800/40 pointer-events-none" />
                 <div className="absolute inset-16 sm:inset-20 rounded-full border border-neutral-800/50 pointer-events-none" />
-                <div className="absolute inset-20 sm:inset-26 rounded-full border border-neutral-800/40 pointer-events-none" />
 
                 {/* Vinyl Light Sheen (Conic Specular Reflections) */}
                 <div
@@ -309,28 +483,143 @@ export const FullscreenNowPlaying: React.FC<FullscreenNowPlayingProps> = ({
                   }}
                 />
 
-                {/* Center Vinyl Label */}
-                <div className="w-24 sm:w-28 md:w-32 h-24 sm:h-28 md:h-32 rounded-full overflow-hidden border-2 border-neutral-900 shadow-inner relative flex items-center justify-center bg-neutral-950">
+                {/* Center Vintage Audiophile Vinyl Label */}
+                <div
+                  className="w-20 sm:w-24 md:w-28 h-20 sm:h-24 md:h-28 rounded-full overflow-hidden border-2 shadow-inner relative flex flex-col items-center justify-center p-2 text-center select-none"
+                  style={{
+                    backgroundColor: `color-mix(in oklab, ${currentTheme.bgCard} 90%, black)`,
+                    borderColor: currentTheme.primary,
+                  }}
+                >
+                  {/* Outer accent ring */}
+                  <div
+                    className="absolute inset-1 rounded-full border border-dashed opacity-50 pointer-events-none"
+                    style={{ borderColor: currentTheme.primary }}
+                  />
+
                   {currentTrack.coverUrl ? (
                     <img
                       src={currentTrack.coverUrl}
                       alt={currentTrack.title}
                       referrerPolicy="no-referrer"
-                      className="w-full h-full object-cover scale-125"
+                      className="w-full h-full object-cover scale-125 opacity-85"
                     />
                   ) : (
-                    <Disc3 className="w-12 h-12 text-amber-500" />
+                    <Disc3 className="w-8 h-8" style={{ color: currentTheme.primary }} />
                   )}
-                  {/* Spindle hole */}
-                  <div className="absolute w-3.5 h-3.5 rounded-full bg-black border border-neutral-600 shadow-inner z-10" />
+
+                  {/* Label overlay branding */}
+                  <div
+                    className="absolute inset-0 flex flex-col items-center justify-between py-1.5 px-1 text-[8px] sm:text-[9px] font-mono pointer-events-none"
+                    style={{
+                      background:
+                        'radial-gradient(circle, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.85) 100%)',
+                      color: currentTheme.primary,
+                    }}
+                  >
+                    <span className="font-bold tracking-widest uppercase text-[6.5px] sm:text-[7.5px]">
+                      BEBOP STEREO
+                    </span>
+                    <span className="truncate max-w-[85%] font-semibold text-white text-[8px] sm:text-[9px]">
+                      {currentTrack.title}
+                    </span>
+                    <span className="opacity-75 text-[6.5px]">
+                      {rpmSpeed === 33 ? '33⅓ RPM' : '45 RPM'}
+                    </span>
+                  </div>
+
+                  {/* Spindle hole with metallic inner ring */}
+                  <div
+                    className="absolute w-3.5 h-3.5 rounded-full bg-black border-2 shadow-inner z-10"
+                    style={{ borderColor: currentTheme.primary }}
+                  />
                 </div>
               </div>
+            </div>
+
+            {/* Realistic Animated Turntable Tonearm */}
+            <div
+              aria-hidden="true"
+              className="absolute -top-3 right-0 sm:-right-3 w-24 sm:w-32 h-40 pointer-events-none z-20 transition-transform duration-700 ease-out hidden sm:block"
+              style={{
+                transformOrigin: 'top right',
+                transform: isPlaying ? 'rotate(25deg)' : 'rotate(0deg)',
+              }}
+            >
+              <svg
+                viewBox="0 0 120 180"
+                className="w-full h-full drop-shadow-[0_12px_24px_rgba(0,0,0,0.8)]"
+              >
+                {/* Tonearm Base & Pivot */}
+                <circle cx="95" cy="25" r="14" fill="#1b1d24" stroke="#383d4c" strokeWidth="2" />
+                <circle
+                  cx="95"
+                  cy="25"
+                  r="9"
+                  fill="#2a2e3d"
+                  stroke={currentTheme.primary}
+                  strokeWidth="1.5"
+                />
+                <circle cx="95" cy="25" r="3.5" fill="#0c0e14" />
+
+                {/* Counterweight */}
+                <rect
+                  x="87"
+                  y="4"
+                  width="16"
+                  height="10"
+                  rx="2.5"
+                  fill="#444b5e"
+                  stroke="#202430"
+                  strokeWidth="1"
+                />
+
+                {/* Curved Metallic Arm */}
+                <path
+                  d="M 95 35 Q 75 75 55 125 L 35 155"
+                  fill="none"
+                  stroke="url(#tonearm-metal-grad)"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                />
+
+                {/* Cartridge & Headshell */}
+                <g transform="translate(30, 150) rotate(22)">
+                  <rect
+                    x="-5"
+                    y="0"
+                    width="10"
+                    height="18"
+                    rx="1.5"
+                    fill="#151821"
+                    stroke={currentTheme.primary}
+                    strokeWidth="1.5"
+                  />
+                  {/* Stylus needle tip with active theme accent */}
+                  <polygon
+                    points="0,18 -2,24 2,24"
+                    fill={isPlaying ? currentTheme.primary : '#888888'}
+                  />
+                </g>
+
+                <defs>
+                  <linearGradient id="tonearm-metal-grad" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stopColor="#f3f4f6" />
+                    <stop offset="50%" stopColor="#9ca3af" />
+                    <stop offset="100%" stopColor="#4b5563" />
+                  </linearGradient>
+                </defs>
+              </svg>
             </div>
 
             {/* Album Cover Jacket (Front Square) */}
             <div
               id="album-jacket"
-              className="relative z-10 w-[72%] aspect-square rounded-sm overflow-hidden bg-neutral-900 border border-neutral-700/60 shadow-[0_20px_50px_rgba(0,0,0,0.95)] cursor-pointer group"
+              className="relative z-10 w-[72%] aspect-square t-card t-stroke overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.95)] cursor-pointer group transition-all"
+              style={{
+                backgroundColor: currentTheme.bgCard,
+                borderColor: currentTheme.borderColor,
+              }}
               onClick={() => {
                 if (currentTrack.album) onSelectAlbum?.(currentTrack.album);
               }}
@@ -341,11 +630,14 @@ export const FullscreenNowPlaying: React.FC<FullscreenNowPlayingProps> = ({
                   src={currentTrack.coverUrl}
                   alt={currentTrack.album}
                   referrerPolicy="no-referrer"
-                  className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-500"
+                  className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-500"
                 />
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-neutral-600 bg-neutral-950">
-                  <Disc3 className="w-16 h-16" />
+                <div
+                  className="w-full h-full flex items-center justify-center"
+                  style={{ backgroundColor: currentTheme.bgSurface }}
+                >
+                  <Disc3 className="w-14 h-14" style={{ color: currentTheme.primary }} />
                 </div>
               )}
               {/* Vinyl spine reflection highlight */}
@@ -353,28 +645,84 @@ export const FullscreenNowPlaying: React.FC<FullscreenNowPlayingProps> = ({
             </div>
           </div>
 
-          {/* Track Title, Artist and Album listed side by side */}
-          <div className="w-full text-center lg:text-left flex flex-col gap-2">
-            <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight leading-snug">
+          {/* Turntable Speed / RPM & Hi-Fi Controls Bar */}
+          <div className="flex items-center justify-between w-full max-w-[320px] sm:max-w-[380px] lg:max-w-[420px] xl:max-w-[460px] px-1 text-xs font-mono">
+            {/* RPM Speed Selector */}
+            <div
+              className="flex items-center gap-2 px-2 py-0.5 t-sm border text-[11px]"
+              style={{
+                backgroundColor: `color-mix(in oklab, ${currentTheme.bgCard} 85%, transparent)`,
+                borderColor: currentTheme.borderColor,
+              }}
+            >
+              <span
+                className={`w-1.5 h-1.5 rounded-full transition-all ${
+                  isPlaying ? 'animate-pulse' : 'opacity-40'
+                }`}
+                style={{
+                  backgroundColor: currentTheme.primary,
+                  boxShadow: isPlaying ? `0 0 8px ${currentTheme.accentGlow}` : 'none',
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => setRpmSpeed((prev) => (prev === 33 ? 45 : 33))}
+                className="hover:underline transition-colors cursor-pointer font-bold"
+                style={{ color: currentTheme.primary }}
+                title="Toggle Turntable Speed (33⅓ vs 45 RPM)"
+              >
+                {rpmSpeed === 33 ? '33⅓ RPM' : '45 RPM'}
+              </button>
+            </div>
+
+            {/* Audiophile Hi-Fi Status */}
+            <div
+              className="flex items-center gap-1.5 px-2 py-0.5 t-sm border text-[10px]"
+              style={{
+                backgroundColor: `color-mix(in oklab, ${currentTheme.bgCard} 85%, transparent)`,
+                borderColor: currentTheme.borderColor,
+                color: currentTheme.textSecondary,
+              }}
+            >
+              <span className="opacity-60">DECK:</span>
+              <span className="font-semibold" style={{ color: currentTheme.primary }}>
+                {isPlaying ? 'ROTATING' : 'IDLE'}
+              </span>
+            </div>
+          </div>
+
+          {/* Track Title, Artist and Album */}
+          <div className="w-full text-center lg:text-left flex flex-col gap-1.5">
+            <h2
+              className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight leading-tight t-heading truncate max-w-full"
+              style={{
+                color: currentTheme.textPrimary,
+                fontFamily: "var(--f-d, 'Big Shoulders Display', sans-serif)",
+                letterSpacing: 'var(--ls-d, 0.03em)',
+                fontWeight: 'var(--w-d, 800)',
+              }}
+            >
               {currentTrack.title}
             </h2>
 
             {/* Artist and Album listed together with dot separator */}
-            <div className="flex items-center justify-center lg:justify-start gap-2 text-sm sm:text-base text-neutral-300 font-medium flex-wrap">
+            <div className="flex items-center justify-center lg:justify-start gap-2 text-xs sm:text-sm font-medium flex-wrap">
               <button
                 type="button"
                 onClick={() => onSelectArtist?.(currentTrack.artist)}
-                className="text-neutral-200 hover:text-[#f59e0b] hover:underline transition-colors cursor-pointer"
+                className="hover:underline transition-colors cursor-pointer"
+                style={{ color: currentTheme.textPrimary }}
               >
                 {currentTrack.artist}
               </button>
               {currentTrack.album && (
                 <>
-                  <span className="text-neutral-500 select-none">•</span>
+                  <span className="opacity-50 select-none">•</span>
                   <button
                     type="button"
                     onClick={() => onSelectAlbum?.(currentTrack.album)}
-                    className="text-neutral-400 hover:text-[#f59e0b] hover:underline transition-colors cursor-pointer"
+                    className="hover:underline transition-colors cursor-pointer"
+                    style={{ color: currentTheme.textSecondary }}
                   >
                     {currentTrack.album} {currentTrack.year ? `(${currentTrack.year})` : ''}
                   </button>
@@ -383,17 +731,38 @@ export const FullscreenNowPlaying: React.FC<FullscreenNowPlayingProps> = ({
             </div>
 
             {/* Audiophile format badges */}
-            <div className="flex items-center justify-center lg:justify-start gap-2 mt-1 flex-wrap">
-              <span className="px-2.5 py-0.5 rounded bg-amber-500/15 text-amber-400 border border-amber-500/30 text-xs font-mono font-semibold">
+            <div className="flex items-center justify-center lg:justify-start gap-1.5 mt-0.5 flex-wrap font-mono text-[11px]">
+              <span
+                className="px-2 py-0.5 t-sm border font-semibold"
+                style={{
+                  backgroundColor: 'color-mix(in oklab, var(--c-p, #f59e0b) 15%, transparent)',
+                  borderColor: 'color-mix(in oklab, var(--c-p, #f59e0b) 35%, transparent)',
+                  color: currentTheme.primary,
+                }}
+              >
                 {currentTrack.codec} {currentTrack.sampleRate}
               </span>
               {currentTrack.dynamicRange && (
-                <span className="px-2.5 py-0.5 rounded bg-neutral-900/90 text-neutral-300 border border-neutral-800 text-xs font-mono">
+                <span
+                  className="px-2 py-0.5 t-sm border"
+                  style={{
+                    backgroundColor: `color-mix(in oklab, ${currentTheme.bgSurface} 80%, transparent)`,
+                    borderColor: currentTheme.borderColor,
+                    color: currentTheme.textSecondary,
+                  }}
+                >
                   {currentTrack.dynamicRange}
                 </span>
               )}
               {currentTrack.bitrate && (
-                <span className="px-2.5 py-0.5 rounded bg-neutral-900/90 text-neutral-400 border border-neutral-800 text-xs font-mono hidden sm:inline">
+                <span
+                  className="px-2 py-0.5 t-sm border hidden sm:inline"
+                  style={{
+                    backgroundColor: `color-mix(in oklab, ${currentTheme.bgSurface} 80%, transparent)`,
+                    borderColor: currentTheme.borderColor,
+                    color: currentTheme.textMuted,
+                  }}
+                >
                   {currentTrack.bitrate}
                 </span>
               )}
@@ -401,12 +770,37 @@ export const FullscreenNowPlaying: React.FC<FullscreenNowPlayingProps> = ({
           </div>
         </div>
 
-        {/* Middle Section: Lyrics Card (cols 6..8 / span 4) */}
-        <div className="lg:col-span-4 h-[480px] lg:h-[540px] xl:h-[580px] 2xl:h-[620px] bg-[#11131a]/85 border border-[#222634] rounded-2xl p-6 lg:p-7 flex flex-col shadow-2xl relative overflow-hidden backdrop-blur-md">
+        {/* Middle Section: Lyrics Card with Locked Vertical Height (cols 6..8 / span 4) */}
+        <div
+          className="lg:col-span-4 h-full max-h-[calc(100vh-190px)] min-h-[260px] t-card t-stroke p-4 sm:p-5 lg:p-6 flex flex-col relative overflow-hidden backdrop-blur-md transition-colors"
+          style={{
+            backgroundColor: `color-mix(in oklab, ${currentTheme.bgCard} 90%, transparent)`,
+            borderColor: currentTheme.borderColor,
+            boxShadow: 'var(--shadow, 0 8px 26px rgba(0,0,0,0.45))',
+          }}
+        >
           {/* Card Header */}
-          <div className="flex items-center justify-between pb-3.5 border-b border-neutral-800/80">
-            <h3 className="text-base font-medium text-white tracking-wide">Lyrics</h3>
-            <span className="text-[11px] font-mono text-neutral-500 uppercase tracking-wider">
+          <div
+            className="flex items-center justify-between pb-2.5 border-b shrink-0"
+            style={{ borderColor: currentTheme.borderColor }}
+          >
+            <h3
+              className="text-sm sm:text-base font-bold tracking-wide t-heading"
+              style={{
+                color: currentTheme.textPrimary,
+                fontFamily: "var(--f-h, var(--f-d, 'Big Shoulders Display', sans-serif))",
+              }}
+            >
+              Lyrics
+            </h3>
+            <span
+              className="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 t-sm border"
+              style={{
+                backgroundColor: `color-mix(in oklab, ${currentTheme.bgSurface} 70%, transparent)`,
+                borderColor: currentTheme.borderColor,
+                color: lyricsDocument?.synchronized ? currentTheme.primary : currentTheme.textMuted,
+              }}
+            >
               {lyricsDocument
                 ? lyricsDocument.synchronized
                   ? 'Synchronized'
@@ -420,10 +814,10 @@ export const FullscreenNowPlaying: React.FC<FullscreenNowPlayingProps> = ({
           {/* Lyrics Stream */}
           <div
             ref={lyricsContainerRef}
-            className="flex-1 overflow-y-auto pr-2 space-y-3.5 text-left scroll-smooth pt-3"
+            className="flex-1 min-h-0 overflow-y-auto pr-2 space-y-3.5 text-left scroll-smooth pt-2"
           >
             {lyricsDocument?.source === 'unavailable' ? (
-              <p className="pt-6 text-sm leading-relaxed text-neutral-400">
+              <p className="pt-6 text-sm leading-relaxed" style={{ color: currentTheme.textMuted }}>
                 Lyrics unavailable for this track.
               </p>
             ) : (
@@ -435,15 +829,20 @@ export const FullscreenNowPlaying: React.FC<FullscreenNowPlayingProps> = ({
                     key={idx}
                     data-lyric-index={idx}
                     onClick={() => line.timeMs !== null && onSeek(line.timeMs / 1_000)}
-                    className={`text-sm sm:text-base leading-relaxed transition-all duration-300 select-none ${
+                    className={`leading-relaxed transition-all duration-300 select-none cursor-pointer ${
                       isActive
-                        ? 'text-[#f59e0b] font-semibold text-base sm:text-lg'
+                        ? 'font-bold text-base sm:text-lg scale-[1.02] origin-left'
                         : isPast
-                          ? 'text-neutral-400 font-normal opacity-70 hover:opacity-100'
-                          : 'text-neutral-400 font-normal opacity-70 hover:opacity-100'
+                          ? 'text-xs sm:text-sm font-normal opacity-60 hover:opacity-100'
+                          : 'text-xs sm:text-sm font-normal opacity-60 hover:opacity-100'
                     }`}
                     style={{
-                      textShadow: isActive ? '0 0 12px rgba(245, 158, 11, 0.45)' : 'none',
+                      color: isActive
+                        ? currentTheme.primary
+                        : isPast
+                          ? currentTheme.textMuted
+                          : currentTheme.textSecondary,
+                      textShadow: isActive ? `0 0 16px ${currentTheme.accentGlow}` : 'none',
                     }}
                   >
                     {line.text}
@@ -454,14 +853,23 @@ export const FullscreenNowPlaying: React.FC<FullscreenNowPlayingProps> = ({
           </div>
 
           {lyricsDocument && lyricsDocument.source !== 'unavailable' && (
-            <p className="pt-3 text-[11px] text-neutral-500">
-              Source:{' '}
-              {lyricsDocument.source === 'lrclib'
-                ? 'LRCLIB'
-                : lyricsDocument.source.replace('-', ' ')}
+            <p
+              className="pt-2 text-[10px] border-t flex items-center justify-between shrink-0"
+              style={{
+                borderColor: currentTheme.borderColor,
+                color: currentTheme.textMuted,
+              }}
+            >
+              <span>
+                Source:{' '}
+                {lyricsDocument.source === 'lrclib'
+                  ? 'LRCLIB'
+                  : lyricsDocument.source.replace('-', ' ')}
+              </span>
               {lyricsDocument.sourceUrl && (
                 <a
-                  className="ml-1 text-neutral-400 underline hover:text-white"
+                  className="underline hover:opacity-100"
+                  style={{ color: currentTheme.primary }}
                   href={lyricsDocument.sourceUrl}
                   target="_blank"
                   rel="noreferrer"
@@ -473,37 +881,80 @@ export const FullscreenNowPlaying: React.FC<FullscreenNowPlayingProps> = ({
           )}
 
           {/* Bottom Down Chevron Scroll Hint */}
-          <div className="pt-2 flex justify-center text-neutral-500">
-            <ChevronDown className="w-4 h-4" />
+          <div
+            className="pt-1.5 flex justify-center opacity-50 shrink-0"
+            style={{ color: currentTheme.textMuted }}
+          >
+            <ChevronDown className="w-3.5 h-3.5 animate-bounce" />
           </div>
         </div>
 
-        {/* Right Section: Up Next Queue Card (cols 9..12 / span 3) */}
-        <div className="lg:col-span-3 h-[480px] lg:h-[540px] xl:h-[580px] 2xl:h-[620px] bg-[#11131a]/85 border border-[#222634] rounded-2xl p-6 lg:p-7 flex flex-col shadow-2xl relative overflow-hidden backdrop-blur-md">
+        {/* Right Section: Up Next Queue Card with Locked Vertical Height (cols 9..12 / span 3) */}
+        <div
+          className="lg:col-span-3 h-full max-h-[calc(100vh-190px)] min-h-[260px] t-card t-stroke p-4 sm:p-5 lg:p-6 flex flex-col relative overflow-hidden backdrop-blur-md transition-colors"
+          style={{
+            backgroundColor: `color-mix(in oklab, ${currentTheme.bgCard} 90%, transparent)`,
+            borderColor: currentTheme.borderColor,
+            boxShadow: 'var(--shadow, 0 8px 26px rgba(0,0,0,0.45))',
+          }}
+        >
           {/* Card Header */}
-          <div className="flex items-center justify-between pb-3.5 border-b border-neutral-800/80">
+          <div
+            className="flex items-center justify-between pb-2.5 border-b shrink-0"
+            style={{ borderColor: currentTheme.borderColor }}
+          >
             <div className="flex items-center gap-2">
-              <ListMusic className="w-4 h-4 text-amber-400" />
-              <h3 className="text-base font-medium text-white tracking-wide">Queue</h3>
+              <ListMusic className="w-4 h-4" style={{ color: currentTheme.primary }} />
+              <h3
+                className="text-sm sm:text-base font-bold tracking-wide t-heading"
+                style={{
+                  color: currentTheme.textPrimary,
+                  fontFamily: "var(--f-h, var(--f-d, 'Big Shoulders Display', sans-serif))",
+                }}
+              >
+                Queue
+              </h3>
             </div>
-            <span className="text-xs text-neutral-400 font-mono">{queue.length} tracks</span>
+            <span
+              className="text-[11px] font-mono px-2 py-0.5 t-sm border"
+              style={{
+                backgroundColor: `color-mix(in oklab, ${currentTheme.bgSurface} 70%, transparent)`,
+                borderColor: currentTheme.borderColor,
+                color: currentTheme.textSecondary,
+              }}
+            >
+              {queue.length} tracks
+            </span>
           </div>
 
           {/* Queue List */}
-          <div className="flex-1 overflow-y-auto pr-1 space-y-2 pt-3">
+          <div className="flex-1 min-h-0 overflow-y-auto pr-1 space-y-1.5 pt-2">
             {queue.map((track, idx) => {
               const isCurrent = track.id === currentTrack.id;
               return (
                 <div
                   key={`${track.id}-${idx}`}
                   onClick={() => onPlayQueueTrack(track)}
-                  className={`p-2.5 rounded-lg flex items-center gap-3 transition-colors cursor-pointer border ${
-                    isCurrent
-                      ? 'bg-amber-500/10 border-amber-500/30 text-amber-200'
-                      : 'bg-[#0b0e14]/90 border-neutral-800/70 hover:bg-[#121622] hover:border-neutral-700 text-neutral-300'
+                  className={`p-2 t-card t-stroke flex items-center gap-2.5 transition-all cursor-pointer border ${
+                    isCurrent ? 'shadow-md' : 'hover:border-[var(--c-p)]'
                   }`}
+                  style={{
+                    backgroundColor: isCurrent
+                      ? 'color-mix(in oklab, var(--c-p, #f59e0b) 14%, transparent)'
+                      : `color-mix(in oklab, ${currentTheme.bgSurface} 80%, transparent)`,
+                    borderColor: isCurrent
+                      ? 'color-mix(in oklab, var(--c-p, #f59e0b) 40%, transparent)'
+                      : currentTheme.borderColor,
+                    color: isCurrent ? currentTheme.textPrimary : currentTheme.textSecondary,
+                  }}
                 >
-                  <div className="w-9 h-9 rounded bg-neutral-900 shrink-0 overflow-hidden border border-neutral-800">
+                  <div
+                    className="w-8 h-8 t-sm shrink-0 overflow-hidden border"
+                    style={{
+                      backgroundColor: currentTheme.bgCanvas,
+                      borderColor: currentTheme.borderColor,
+                    }}
+                  >
                     {track.coverUrl ? (
                       <img
                         src={track.coverUrl}
@@ -512,18 +963,55 @@ export const FullscreenNowPlaying: React.FC<FullscreenNowPlayingProps> = ({
                         referrerPolicy="no-referrer"
                       />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-neutral-600">
-                        <Disc3 className="w-4 h-4" />
+                      <div
+                        className="w-full h-full flex items-center justify-center opacity-60"
+                        style={{ color: currentTheme.primary }}
+                      >
+                        <Disc3 className="w-3.5 h-3.5" />
                       </div>
                     )}
                   </div>
 
                   <div className="flex-1 min-w-0">
-                    <h5 className="text-xs font-semibold text-white truncate">{track.title}</h5>
-                    <p className="text-[11px] text-neutral-400 truncate">{track.artist}</p>
+                    <div className="flex items-center gap-1.5">
+                      <h5
+                        className="text-xs font-semibold truncate"
+                        style={{
+                          color: isCurrent ? currentTheme.primary : currentTheme.textPrimary,
+                        }}
+                      >
+                        {track.title}
+                      </h5>
+                      {/* Equalizer animation bars for the currently playing track */}
+                      {isCurrent && isPlaying && (
+                        <div className="flex items-end gap-0.5 h-2.5 shrink-0">
+                          <span
+                            className="w-0.5 h-full rounded-full animate-[pulse_0.6s_ease-in-out_infinite]"
+                            style={{ backgroundColor: currentTheme.primary }}
+                          />
+                          <span
+                            className="w-0.5 h-2/3 rounded-full animate-[pulse_0.8s_ease-in-out_infinite_0.2s]"
+                            style={{ backgroundColor: currentTheme.primary }}
+                          />
+                          <span
+                            className="w-0.5 h-4/5 rounded-full animate-[pulse_0.5s_ease-in-out_infinite_0.4s]"
+                            style={{ backgroundColor: currentTheme.primary }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                    <p
+                      className="text-[10px] truncate opacity-75"
+                      style={{ color: currentTheme.textSecondary }}
+                    >
+                      {track.artist}
+                    </p>
                   </div>
 
-                  <span className="text-[11px] font-mono text-neutral-500 shrink-0">
+                  <span
+                    className="text-[10px] font-mono shrink-0"
+                    style={{ color: currentTheme.textMuted }}
+                  >
                     {track.duration}
                   </span>
                 </div>
@@ -533,40 +1021,40 @@ export const FullscreenNowPlaying: React.FC<FullscreenNowPlayingProps> = ({
         </div>
       </main>
 
-      {/* Peak-hold spectrum spans the full window as a floor-to-high bed, with the
-          transport sitting on top of it. */}
+      {/* Peak-hold spectrum floor bed */}
       <div
         id="fullscreen-visualizer-bed"
         className="pointer-events-none absolute inset-x-0 bottom-0 z-0 flex items-end"
-        style={{ height: 'min(52vh, 560px)' }}
+        style={{ height: 'min(36vh, 340px)' }}
       >
         <PeakHoldVisualizer
           isPlaying={spectrumAvailable && isPlaying}
           height={visualizerHeight}
-          barWidth={6}
-          barGap={3}
-          color={currentTheme.visualizerPrimary}
-          glowEffect={currentTheme.waveformGlow}
+          style={visualizerStyle}
           autoFillWidth={true}
           particles={true}
           frequencyDataProvider={frequencyDataProvider}
           getSpectrumBins={getSpectrumBins}
         />
       </div>
-      {/* Fades the top of the bars into the page so they do not cut off hard. */}
+
+      {/* Seamless theme-colored fade overlay at top of visualizer floor */}
       <div
         className="pointer-events-none absolute inset-x-0 bottom-0 z-0"
         style={{
-          height: 'min(52vh, 560px)',
-          background:
-            'linear-gradient(180deg, #06080d 0%, rgba(6,8,13,0.72) 20%, rgba(6,8,13,0.1) 55%, rgba(6,8,13,0.5) 100%)',
+          height: 'min(36vh, 340px)',
+          background: `linear-gradient(180deg, ${currentTheme.bgCanvas} 0%, color-mix(in oklab, ${currentTheme.bgCanvas} 75%, transparent) 22%, transparent 55%, color-mix(in oklab, ${currentTheme.bgCanvas} 65%, transparent) 100%)`,
         }}
       />
 
-      <footer className="relative z-10 w-full px-6 sm:px-10 lg:px-14 xl:px-18 2xl:px-24 pb-8 flex flex-col gap-4">
-        {/* Plain seek bar — the waveform was dropped here. */}
+      {/* Footer / Transport Controls & Seek Bar */}
+      <footer className="relative z-10 w-full px-6 sm:px-10 lg:px-14 xl:px-18 2xl:px-24 pb-4 sm:pb-5 flex flex-col gap-2 shrink-0">
+        {/* Scrubber Progress Bar */}
         <div className="flex w-full items-center gap-3 font-mono text-xs">
-          <span className="w-11 text-right font-bold" style={{ color: currentTheme.primary }}>
+          <span
+            className="w-11 text-right font-bold text-[11px]"
+            style={{ color: currentTheme.primary }}
+          >
             {formatTime(currentTimeSeconds)}
           </span>
           <div
@@ -579,42 +1067,42 @@ export const FullscreenNowPlaying: React.FC<FullscreenNowPlayingProps> = ({
               setIsHoveringSeek(false);
               setSeekHoverRatio(null);
             }}
-            className="group relative flex h-5 flex-1 cursor-pointer items-center"
+            className="group relative flex h-4 flex-1 cursor-pointer items-center"
           >
             <div
-              className="relative w-full rounded-full transition-all"
+              className="relative w-full t-bar transition-all"
               style={{
-                height: isHoveringSeek ? '7px' : '5px',
+                height: isHoveringSeek ? '6px' : '4px',
                 backgroundColor: currentTheme.waveformUnplayedBot,
               }}
             >
               <div
-                className="absolute inset-y-0 left-0 rounded-full"
+                className="absolute inset-y-0 left-0 t-bar"
                 style={{
                   width: `${seekRatio * 100}%`,
                   background: `linear-gradient(90deg, ${currentTheme.waveformPlayedBot} 0%, ${currentTheme.primary} 100%)`,
                 }}
               />
               <div
-                className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full transition-all"
+                className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 t-btn transition-all"
                 style={{
                   left: `${seekRatio * 100}%`,
-                  width: isHoveringSeek ? '15px' : '11px',
-                  height: isHoveringSeek ? '15px' : '11px',
+                  width: isHoveringSeek ? '14px' : '10px',
+                  height: isHoveringSeek ? '14px' : '10px',
                   backgroundColor: currentTheme.primary,
                   boxShadow: currentTheme.waveformGlow
-                    ? `0 0 14px ${currentTheme.accentGlow}`
+                    ? `0 0 16px ${currentTheme.accentGlow}`
                     : undefined,
                 }}
               />
             </div>
             {isHoveringSeek && seekHoverRatio !== null && (
               <div
-                className="pointer-events-none absolute -top-8 z-30 -translate-x-1/2"
+                className="pointer-events-none absolute -top-7 z-30 -translate-x-1/2"
                 style={{ left: `${seekHoverRatio * 100}%` }}
               >
                 <div
-                  className="whitespace-nowrap rounded border px-1.5 py-0.5 text-[10px] font-bold shadow-xl"
+                  className="whitespace-nowrap t-sm border px-1.5 py-0.5 text-[10px] font-bold shadow-xl"
                   style={{
                     backgroundColor: currentTheme.bgCanvas,
                     borderColor: currentTheme.primary,
@@ -626,29 +1114,35 @@ export const FullscreenNowPlaying: React.FC<FullscreenNowPlayingProps> = ({
               </div>
             )}
           </div>
-          <span className="w-11 text-neutral-400">
+          <span className="w-11 text-[11px]" style={{ color: currentTheme.textMuted }}>
             {formatTime(currentTrack.durationSeconds || 240)}
           </span>
         </div>
 
         {/* Bottom Transport Controls Bar */}
-        <div className="flex items-center justify-between text-neutral-400 pt-2">
+        <div
+          className="flex items-center justify-between pt-1"
+          style={{ color: currentTheme.textSecondary }}
+        >
           {/* Left spacer / format badges */}
-          <div className="w-1/4 hidden sm:flex items-center gap-3 text-xs font-mono text-neutral-500">
+          <div className="w-1/4 hidden sm:flex items-center gap-3 text-[11px] font-mono opacity-80">
             <span>DR: {currentTrack.dynamicRange || '—'}</span>
             <span>•</span>
             <span>{currentTrack.catalogNumber || 'BEBOP-HRA-001'}</span>
           </div>
 
           {/* Center Playback Buttons */}
-          <div className="flex items-center justify-center gap-6">
+          <div className="flex items-center justify-center gap-5 sm:gap-6">
             <button
               type="button"
-              onClick={() => setIsShuffle(!isShuffle)}
-              className="transition-colors cursor-pointer"
-              style={{ color: isShuffle ? currentTheme.primary : undefined }}
+              onClick={toggleShuffle}
+              className="transition-colors cursor-pointer hover:opacity-100"
+              style={{
+                color: isShuffle ? currentTheme.primary : currentTheme.textSecondary,
+                opacity: isShuffle ? 1 : 0.7,
+              }}
               aria-label="Shuffle"
-              title="Shuffle"
+              title={`Shuffle: ${isShuffle ? 'On' : 'Off'}`}
             >
               <Shuffle className="w-4 h-4" />
             </button>
@@ -656,7 +1150,7 @@ export const FullscreenNowPlaying: React.FC<FullscreenNowPlayingProps> = ({
             <button
               type="button"
               onClick={onPrev}
-              className="hover:text-white transition-colors cursor-pointer"
+              className="hover:text-white transition-colors cursor-pointer opacity-80 hover:opacity-100"
               aria-label="Previous Track"
               title="Previous"
             >
@@ -668,22 +1162,23 @@ export const FullscreenNowPlaying: React.FC<FullscreenNowPlayingProps> = ({
               onClick={onPlayPause}
               style={{
                 backgroundColor: currentTheme.primary,
-                boxShadow: `0 0 16px ${currentTheme.accentGlow}`,
+                color: 'var(--c-on-p, #000000)',
+                boxShadow: `0 0 22px ${currentTheme.accentGlow}`,
               }}
-              className="w-12 h-12 rounded-full text-black flex items-center justify-center transition-transform hover:scale-105 cursor-pointer hover:brightness-110"
+              className="w-11 h-11 sm:w-12 sm:h-12 t-btn flex items-center justify-center transition-transform hover:scale-108 cursor-pointer hover:brightness-110"
               aria-label={isPlaying ? 'Pause' : 'Play'}
             >
               {isPlaying ? (
-                <Pause className="w-5 h-5 fill-black" />
+                <Pause className="w-5 h-5 fill-current" />
               ) : (
-                <Play className="w-5 h-5 fill-black ml-0.5" />
+                <Play className="w-5 h-5 fill-current ml-0.5" />
               )}
             </button>
 
             <button
               type="button"
               onClick={onNext}
-              className="hover:text-white transition-colors cursor-pointer"
+              className="hover:text-white transition-colors cursor-pointer opacity-80 hover:opacity-100"
               aria-label="Next Track"
               title="Next"
             >
@@ -692,31 +1187,56 @@ export const FullscreenNowPlaying: React.FC<FullscreenNowPlayingProps> = ({
 
             <button
               type="button"
-              onClick={() =>
-                setRepeatMode((prev) => (prev === 'off' ? 'all' : prev === 'all' ? 'one' : 'off'))
-              }
-              className={`transition-colors cursor-pointer ${
-                repeatMode !== 'off' ? 'text-amber-400' : 'hover:text-white'
-              }`}
+              onClick={toggleRepeat}
+              className="transition-colors cursor-pointer relative hover:opacity-100"
+              style={{
+                color: repeatMode !== 'off' ? currentTheme.primary : currentTheme.textSecondary,
+                opacity: repeatMode !== 'off' ? 1 : 0.7,
+              }}
               aria-label="Repeat Mode"
-              title="Repeat"
+              title={`Repeat: ${repeatMode === 'one' ? 'Repeat One' : repeatMode === 'all' ? 'Repeat All' : 'Off'}`}
             >
               <Repeat className="w-4 h-4" />
+              {repeatMode === 'one' && (
+                <span
+                  className="absolute -top-1.5 -right-1.5 text-[8px] font-bold font-mono px-0.5 rounded-full"
+                  style={{
+                    backgroundColor: currentTheme.primary,
+                    color: 'var(--c-on-p, #000000)',
+                  }}
+                >
+                  1
+                </span>
+              )}
             </button>
           </div>
 
           {/* Right Volume Controls */}
           <div className="w-1/4 flex items-center justify-end gap-3">
+            {volumeLocked && (
+              <span
+                className="text-[10px] font-mono px-1.5 py-0.5 t-sm border flex items-center gap-1"
+                style={{
+                  backgroundColor: 'color-mix(in oklab, var(--c-p, #f59e0b) 12%, transparent)',
+                  borderColor: 'color-mix(in oklab, var(--c-p, #f59e0b) 30%, transparent)',
+                  color: currentTheme.primary,
+                }}
+                title="Hi-Fi Bit-Perfect Output (Adjusting volume switches to variable mode)"
+              >
+                <Lock className="w-3 h-3" />
+                <span className="hidden xl:inline">HI-FI</span>
+              </span>
+            )}
             <button
               type="button"
               onClick={() => void toggleMute()}
-              className="hover:text-white cursor-pointer"
+              className="hover:text-white cursor-pointer transition-colors opacity-80 hover:opacity-100"
               aria-label="Toggle Mute"
             >
               {isMuted || volume === 0 ? (
-                <VolumeX className="w-4 h-4 text-neutral-500" />
+                <VolumeX className="w-4 h-4 opacity-60" />
               ) : (
-                <Volume2 className="w-4 h-4" />
+                <Volume2 className="w-4 h-4" style={{ color: currentTheme.primary }} />
               )}
             </button>
             <input
@@ -732,7 +1252,10 @@ export const FullscreenNowPlaying: React.FC<FullscreenNowPlayingProps> = ({
                   ? 'Adjusting volume switches from hi-fi unity gain to adjustable-volume mode.'
                   : 'Playback volume'
               }
-              className="w-20 sm:w-28 h-1.5 bg-neutral-800 rounded-lg appearance-none cursor-pointer accent-amber-500"
+              style={{
+                accentColor: currentTheme.primary,
+              }}
+              className="w-20 sm:w-28 h-1.5 bg-neutral-800 t-sm appearance-none cursor-pointer"
             />
           </div>
         </div>

@@ -23,10 +23,10 @@ export const AlbumsGridView: React.FC<AlbumsGridViewProps> = ({
             key={album.id}
             id={`album-card-${album.id}`}
             onClick={() => onSelectAlbum?.(album)}
-            className="group bg-[#0c1017] border border-neutral-800 hover:border-amber-600/50 rounded-lg p-3 flex flex-col transition-all duration-200 hover:-translate-y-1 hover:shadow-lg cursor-pointer relative"
+            className="group bg-[#0c1017] border border-neutral-800 hover:border-amber-600/50 t-card t-stroke p-3 flex flex-col transition-all duration-200 t-lift hover:shadow-lg cursor-pointer relative"
           >
             {/* Album Cover with format badge & hover play button */}
-            <div className="relative aspect-square w-full rounded-md overflow-hidden mb-3 bg-neutral-900 shadow-md">
+            <div className="relative aspect-square w-full t-sm overflow-hidden mb-3 bg-neutral-900 shadow-md">
               {album.coverUrl ? (
                 <img
                   src={album.coverUrl}
@@ -41,7 +41,7 @@ export const AlbumsGridView: React.FC<AlbumsGridViewProps> = ({
               )}
 
               {/* Format Badge */}
-              <div className="absolute bottom-2 right-2 px-1.5 py-0.5 rounded bg-black/80 text-[10px] font-mono text-amber-400 border border-amber-500/30">
+              <div className="absolute bottom-2 right-2 px-1.5 py-0.5 t-sm bg-black/80 text-[10px] font-mono text-amber-400 border border-amber-500/30">
                 {album.format}
               </div>
 
@@ -55,7 +55,7 @@ export const AlbumsGridView: React.FC<AlbumsGridViewProps> = ({
                 className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-pointer"
                 aria-label={`Play ${album.title}`}
               >
-                <div className="w-11 h-11 rounded-full bg-amber-500 text-black flex items-center justify-center shadow-lg hover:scale-105 transition-transform">
+                <div className="w-11 h-11 t-btn bg-amber-500 text-black flex items-center justify-center shadow-lg hover:scale-105 transition-transform">
                   <Play className="w-5 h-5 fill-black ml-0.5" />
                 </div>
               </button>

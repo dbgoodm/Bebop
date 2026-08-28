@@ -8,8 +8,22 @@ vi.mock('@/services/themeService', () => ({
   useTheme: () => ({
     currentTheme: { id: 'night' },
     allThemes: [
-      { id: 'night', name: 'Night', description: 'Dark', primary: '#fff', borderColor: '#111', bgCard: '#000' },
-      { id: 'day', name: 'Day', description: 'Light', primary: '#000', borderColor: '#ddd', bgCard: '#fff' },
+      {
+        id: 'night',
+        name: 'Night',
+        description: 'Dark',
+        primary: '#fff',
+        borderColor: '#111',
+        bgCard: '#000',
+      },
+      {
+        id: 'day',
+        name: 'Day',
+        description: 'Light',
+        primary: '#000',
+        borderColor: '#ddd',
+        bgCard: '#fff',
+      },
     ],
     setThemeById: mocks.setThemeById,
   }),
@@ -26,7 +40,18 @@ describe('SettingsView', () => {
     const onRemoveRoot = vi.fn();
     render(
       <SettingsView
-        roots={[{ id: 'root-1', path: '/music', label: 'Music', enabled: true, availability: 'online', watchMode: 'manual', trackCount: 1, lastScanAt: null }]}
+        roots={[
+          {
+            id: 'root-1',
+            path: '/music',
+            label: 'Music',
+            enabled: true,
+            availability: 'online',
+            watchMode: 'manual',
+            trackCount: 1,
+            lastScanAt: null,
+          },
+        ]}
         isScanning={false}
         onAddRoot={onAddRoot}
         onRescanRoot={onRescanRoot}
@@ -96,14 +121,18 @@ describe('SettingsView', () => {
       />,
     );
 
-    expect(screen.getAllByRole('heading', { name: /lossless acquisition settings/i })[0]).toBeInTheDocument();
+    expect(
+      screen.getAllByRole('heading', { name: /lossless acquisition settings/i })[0],
+    ).toBeInTheDocument();
     expect(screen.getAllByText(/hi-res 24-bit/i)[0]).toBeInTheDocument();
     expect(screen.getAllByText(/cd quality 16-bit/i)[0]).toBeInTheDocument();
 
     const cdQualityBtn = screen.getAllByRole('button', { name: /cd quality 16-bit/i })[0];
     fireEvent.click(cdQualityBtn);
 
-    expect(screen.getByPlaceholderText('{Artist}/{Album}/{TrackNumber} - {Title}')).toBeInTheDocument();
+    expect(
+      screen.getByPlaceholderText('{Artist}/{Album}/{TrackNumber} - {Title}'),
+    ).toBeInTheDocument();
     expect(screen.getByPlaceholderText(/paste arl token/i)).toBeInTheDocument();
     expect(screen.getByPlaceholderText(/paste qobuz user token/i)).toBeInTheDocument();
   });

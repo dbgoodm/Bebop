@@ -74,7 +74,6 @@ function formatBytes(bytes: number) {
   return `${(bytes / 1_024 ** index).toFixed(index < 2 ? 0 : 1)} ${units[index]}`;
 }
 
-
 export function DesktopLibraryPage() {
   const { currentTheme } = useTheme();
   const [activeTab, setActiveTab] = useState<NavTab>('HOME');
@@ -107,6 +106,8 @@ export function DesktopLibraryPage() {
   const [editingTrack, setEditingTrack] = useState<TrackItem | null>(null);
   const [isFullscreenOpen, setIsFullscreenOpen] = useState(false);
   const [isQueueOpen, setIsQueueOpen] = useState(false);
+  const [isShuffle, setIsShuffle] = useState(false);
+  const [repeatMode, setRepeatMode] = useState<'off' | 'all' | 'one'>('off');
   const completedEnds = useRef(0);
   const isScanning = library.phase === 'scanning';
   const currentTrack =
@@ -434,15 +435,54 @@ export function DesktopLibraryPage() {
     [playTrack],
   );
 
+  const shuffleQueue = useCallback(() => {
+    setQueue((current) => {
+      const active = current.filter((track) => track.id === currentTrack?.id);
+      const remaining = current.filter((track) => track.id !== currentTrack?.id);
+      for (let index = remaining.length - 1; index > 0; index -= 1) {
+        const swapIndex = Math.floor(Math.random() * (index + 1));
+        [remaining[index], remaining[swapIndex]] = [remaining[swapIndex], remaining[index]];
+      }
+      return [...active, ...remaining];
+    });
+  }, [currentTrack?.id]);
+
+  const toggleShuffle = useCallback(() => {
+    setIsShuffle((prev) => {
+      const next = !prev;
+      if (next) {
+        shuffleQueue();
+      }
+      return next;
+    });
+  }, [shuffleQueue]);
+
+  const toggleRepeat = useCallback(() => {
+    setRepeatMode((prev) => (prev === 'off' ? 'all' : prev === 'all' ? 'one' : 'off'));
+  }, []);
+
   const playRelativeTrack = useCallback(
     (offset: number) => {
       if (queue.length === 0) return;
+      if (repeatMode === 'one' && offset === 0 && currentTrack) {
+        void playTrack(currentTrack);
+        return;
+      }
       const currentIndex = queue.findIndex((track) => track.id === currentTrack?.id);
+      if (isShuffle && offset > 0 && queue.length > 1) {
+        const candidates = queue.filter((track) => track.id !== currentTrack?.id);
+        const randomTrack = candidates[Math.floor(Math.random() * candidates.length)];
+        void playTrack(randomTrack);
+        return;
+      }
       const startIndex = currentIndex < 0 ? 0 : currentIndex;
+      if (repeatMode === 'off' && offset > 0 && startIndex >= queue.length - 1) {
+        return;
+      }
       const nextIndex = (startIndex + offset + queue.length) % queue.length;
       void playTrack(queue[nextIndex]);
     },
-    [currentTrack?.id, playTrack, queue],
+    [currentTrack, isShuffle, playTrack, queue, repeatMode],
   );
 
   const playHomeTrack = useCallback(
@@ -461,8 +501,12 @@ export function DesktopLibraryPage() {
   useEffect(() => {
     if (nativePlayback.endedCount === completedEnds.current) return;
     completedEnds.current = nativePlayback.endedCount;
-    playRelativeTrack(1);
-  }, [nativePlayback.endedCount, playRelativeTrack]);
+    if (repeatMode === 'one' && currentTrack) {
+      void playTrack(currentTrack);
+    } else {
+      playRelativeTrack(1);
+    }
+  }, [currentTrack, nativePlayback.endedCount, playRelativeTrack, playTrack, repeatMode]);
 
   const toggleCurrentPlayback = useCallback(() => {
     if (currentTrack && !matchesActivePlayback(nativePlayback.playback.status)) {
@@ -487,18 +531,6 @@ export function DesktopLibraryPage() {
 
   const clearQueue = useCallback(() => {
     setQueue((current) => current.filter((track) => track.id === currentTrack?.id));
-  }, [currentTrack?.id]);
-
-  const shuffleQueue = useCallback(() => {
-    setQueue((current) => {
-      const active = current.filter((track) => track.id === currentTrack?.id);
-      const remaining = current.filter((track) => track.id !== currentTrack?.id);
-      for (let index = remaining.length - 1; index > 0; index -= 1) {
-        const swapIndex = Math.floor(Math.random() * (index + 1));
-        [remaining[index], remaining[swapIndex]] = [remaining[swapIndex], remaining[index]];
-      }
-      return [...active, ...remaining];
-    });
   }, [currentTrack?.id]);
 
   return (
@@ -565,10 +597,8 @@ export function DesktopLibraryPage() {
               <section className="flex flex-col gap-3">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
-                    <div className="h-4 w-1.5 rounded-sm bg-amber-400" />
-                    <h2 className="font-serif text-sm font-bold uppercase tracking-wider text-neutral-200">
-                      Library preview
-                    </h2>
+                    <div className="h-4 w-1.5 t-sm bg-amber-400" />
+                    <h2 className="text-sm text-neutral-200 t-heading">Library preview</h2>
                     <span className="text-xs text-neutral-500">First indexed files</span>
                   </div>
                   <button
@@ -585,9 +615,9 @@ export function DesktopLibraryPage() {
                       key={track.id}
                       type="button"
                       onClick={() => void playTrack(track)}
-                      className="group flex items-center gap-3 rounded-xl border border-neutral-800 bg-neutral-950/50 p-3 text-left transition hover:-translate-y-0.5 hover:border-amber-400/50 hover:bg-neutral-900"
+                      className="group flex items-center gap-3 t-control border border-neutral-800 bg-neutral-950/50 p-3 text-left transition hover:-translate-y-0.5 hover:border-amber-400/50 hover:bg-neutral-900"
                     >
-                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-amber-400/25 bg-amber-500/10 text-amber-300">
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center t-sm border border-amber-400/25 bg-amber-500/10 text-amber-300">
                         {currentTrack?.id === track.id && isPlaying ? (
                           <Play className="h-4 w-4 fill-current" />
                         ) : (
@@ -628,7 +658,7 @@ export function DesktopLibraryPage() {
 
         {activeTab === 'DISCOVER' && (
           <div className="py-8 animate-fadeIn">
-            <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-neutral-800 bg-neutral-950/40 px-6 py-20 text-center">
+            <div className="flex flex-col items-center justify-center gap-3 t-card t-stroke border border-dashed border-neutral-800 bg-neutral-950/40 px-6 py-20 text-center">
               <Compass className="h-10 w-10 text-neutral-700" />
               <h2 className="text-lg font-semibold text-neutral-200">Discover is not built yet</h2>
               <p className="max-w-md text-sm text-neutral-500">
@@ -638,7 +668,7 @@ export function DesktopLibraryPage() {
               <button
                 type="button"
                 onClick={() => setActiveTab('LIBRARY')}
-                className="mt-2 rounded border border-neutral-700 px-4 py-2 text-xs font-semibold text-neutral-300 hover:border-neutral-500 hover:text-white"
+                className="mt-2 t-control border border-neutral-700 px-4 py-2 text-xs font-semibold text-neutral-300 hover:border-neutral-500 hover:text-white"
               >
                 Go to Library
               </button>
@@ -662,176 +692,182 @@ export function DesktopLibraryPage() {
             }}
             audioSlot={
               <>
-              <div className="rounded border border-neutral-800 bg-neutral-950/50 p-5 text-sm text-neutral-300">
-                <label className="mb-4 block text-xs font-semibold uppercase tracking-wide text-neutral-500">
-                  Output device
-                  <select
-                    value={nativePlayback.outputDevices.find((device) => device.isSelected)?.id ?? ''}
-                    onChange={(event) => void nativePlayback.selectOutput(event.target.value || null)}
-                    className="mt-2 block w-full rounded border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm normal-case tracking-normal text-white"
+                <div className="t-sm border border-neutral-800 bg-neutral-950/50 p-5 text-sm text-neutral-300">
+                  <label className="mb-4 block text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                    Output device
+                    <select
+                      value={
+                        nativePlayback.outputDevices.find((device) => device.isSelected)?.id ?? ''
+                      }
+                      onChange={(event) =>
+                        void nativePlayback.selectOutput(event.target.value || null)
+                      }
+                      className="mt-2 block w-full t-sm border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm normal-case tracking-normal text-white"
+                    >
+                      <option value="">System default</option>
+                      {nativePlayback.outputDevices.map((device) => (
+                        <option key={device.id} value={device.id}>
+                          {device.name}
+                          {device.isDefault ? ' (default)' : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  {nativePlayback.playback.output ? (
+                    <>
+                      <p className="font-semibold text-white">
+                        {nativePlayback.playback.output.deviceName}
+                      </p>
+                      <p className="mt-2">{nativePlayback.playback.output.disclosure}</p>
+                      <dl className="mt-3 grid grid-cols-2 gap-2 font-mono text-xs text-neutral-400">
+                        <div>
+                          <dt>Source</dt>
+                          <dd className="text-neutral-200">
+                            {nativePlayback.playback.output.sourceBitDepth ?? '—'}-bit ·{' '}
+                            {nativePlayback.playback.output.sourceSampleRate} Hz ·{' '}
+                            {nativePlayback.playback.output.sourceChannels} ch
+                          </dd>
+                        </div>
+                        <div>
+                          <dt>Output</dt>
+                          <dd className="text-neutral-200">
+                            {nativePlayback.playback.output.outputSampleFormat} ·{' '}
+                            {nativePlayback.playback.output.outputSampleRate} Hz ·{' '}
+                            {nativePlayback.playback.output.outputChannels} ch
+                          </dd>
+                        </div>
+                      </dl>
+                    </>
+                  ) : (
+                    <p>Play a scanned track to inspect the active output stream.</p>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => void nativePlayback.setHifi(!nativePlayback.playback.hifiMode)}
+                    className="mt-4 text-sm font-semibold text-amber-300 underline"
                   >
-                    <option value="">System default</option>
-                    {nativePlayback.outputDevices.map((device) => (
-                      <option key={device.id} value={device.id}>
-                        {device.name}
-                        {device.isDefault ? ' (default)' : ''}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                {nativePlayback.playback.output ? (
-                  <>
-                    <p className="font-semibold text-white">
-                      {nativePlayback.playback.output.deviceName}
-                    </p>
-                    <p className="mt-2">{nativePlayback.playback.output.disclosure}</p>
-                    <dl className="mt-3 grid grid-cols-2 gap-2 font-mono text-xs text-neutral-400">
-                      <div>
-                        <dt>Source</dt>
-                        <dd className="text-neutral-200">
-                          {nativePlayback.playback.output.sourceBitDepth ?? '—'}-bit ·{' '}
-                          {nativePlayback.playback.output.sourceSampleRate} Hz ·{' '}
-                          {nativePlayback.playback.output.sourceChannels} ch
-                        </dd>
-                      </div>
-                      <div>
-                        <dt>Output</dt>
-                        <dd className="text-neutral-200">
-                          {nativePlayback.playback.output.outputSampleFormat} ·{' '}
-                          {nativePlayback.playback.output.outputSampleRate} Hz ·{' '}
-                          {nativePlayback.playback.output.outputChannels} ch
-                        </dd>
-                      </div>
-                    </dl>
-                  </>
-                ) : (
-                  <p>Play a scanned track to inspect the active output stream.</p>
-                )}
-                <button
-                  type="button"
-                  onClick={() => void nativePlayback.setHifi(!nativePlayback.playback.hifiMode)}
-                  className="mt-4 text-sm font-semibold text-amber-300 underline"
-                >
-                  {nativePlayback.playback.hifiMode
-                    ? 'Allow software volume'
-                    : 'Enable hi-fi unity gain'}
-                </button>
-                <label className="mt-4 flex items-center gap-2 text-sm text-neutral-300">
-                  <input
-                    type="checkbox"
-                    checked={visualizationEnabled}
-                    onChange={(event) => {
-                      const enabled = event.target.checked;
-                      setVisualizationEnabled(enabled);
-                      void nativePlayback.setVisualization(enabled);
-                    }}
-                  />
-                  Native 64-band spectrum visualization
-                </label>
-              </div>
+                    {nativePlayback.playback.hifiMode
+                      ? 'Allow software volume'
+                      : 'Enable hi-fi unity gain'}
+                  </button>
+                  <label className="mt-4 flex items-center gap-2 text-sm text-neutral-300">
+                    <input
+                      type="checkbox"
+                      checked={visualizationEnabled}
+                      onChange={(event) => {
+                        const enabled = event.target.checked;
+                        setVisualizationEnabled(enabled);
+                        void nativePlayback.setVisualization(enabled);
+                      }}
+                    />
+                    Native 64-band spectrum visualization
+                  </label>
+                </div>
               </>
             }
             onlineSlot={
               <>
-              <div className="rounded border border-neutral-800 bg-neutral-950/50 p-5 text-sm text-neutral-300">
-                <h2 className="text-sm font-semibold text-white">Optional online integrations</h2>
-                <p className="mt-1 text-xs text-neutral-500">
-                  Disabled by default. Integration failures never interrupt local playback.
-                </p>
-                <div className="mt-4 space-y-4">
-                  <div className="rounded border border-neutral-800 p-3">
-                    <label className="flex items-center justify-between gap-3">
-                      <span>
-                        <span className="block font-semibold text-white">Last.fm scrobbling</span>
-                        <span className="text-xs text-neutral-500">
-                          {lastFmStatus?.configured
-                            ? `${lastFmStatus.pendingJobs} queued scrobbles`
-                            : 'Requires a release API key and account session'}
+                <div className="t-sm border border-neutral-800 bg-neutral-950/50 p-5 text-sm text-neutral-300">
+                  <h2 className="text-sm font-semibold text-white">Optional online integrations</h2>
+                  <p className="mt-1 text-xs text-neutral-500">
+                    Disabled by default. Integration failures never interrupt local playback.
+                  </p>
+                  <div className="mt-4 space-y-4">
+                    <div className="t-sm border border-neutral-800 p-3">
+                      <label className="flex items-center justify-between gap-3">
+                        <span>
+                          <span className="block font-semibold text-white">Last.fm scrobbling</span>
+                          <span className="text-xs text-neutral-500">
+                            {lastFmStatus?.configured
+                              ? `${lastFmStatus.pendingJobs} queued scrobbles`
+                              : 'Requires a release API key and account session'}
+                          </span>
                         </span>
-                      </span>
-                      <input
-                        type="checkbox"
-                        checked={integrationSettings.lastfmEnabled ?? false}
-                        onChange={(event) =>
-                          void updateIntegrations({
-                            ...integrationSettings,
-                            lastfmEnabled: event.target.checked,
-                          })
-                        }
-                      />
-                    </label>
-                    <div className="mt-3 flex gap-2">
-                      <input
-                        type="password"
-                        value={lastFmSessionKey}
-                        onChange={(event) => setLastFmSessionKey(event.target.value)}
-                        placeholder="Last.fm session key"
-                        autoComplete="off"
-                        className="min-w-0 flex-1 rounded border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs text-white"
-                      />
-                      <button
-                        type="button"
-                        disabled={!lastFmSessionKey.trim()}
-                        onClick={() => {
-                          const key = lastFmSessionKey;
-                          setLastFmSessionKey('');
-                          void connectLastFm(key).then(setIntegrationStatuses);
-                        }}
-                        className="rounded border border-neutral-700 px-3 py-2 text-xs disabled:opacity-40"
-                      >
-                        Store in OS credentials
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => void disconnectLastFm().then(setIntegrationStatuses)}
-                        className="rounded border border-neutral-700 px-3 py-2 text-xs"
-                      >
-                        Disconnect
-                      </button>
+                        <input
+                          type="checkbox"
+                          checked={integrationSettings.lastfmEnabled ?? false}
+                          onChange={(event) =>
+                            void updateIntegrations({
+                              ...integrationSettings,
+                              lastfmEnabled: event.target.checked,
+                            })
+                          }
+                        />
+                      </label>
+                      <div className="mt-3 flex gap-2">
+                        <input
+                          type="password"
+                          value={lastFmSessionKey}
+                          onChange={(event) => setLastFmSessionKey(event.target.value)}
+                          placeholder="Last.fm session key"
+                          autoComplete="off"
+                          className="min-w-0 flex-1 t-sm border border-neutral-700 bg-neutral-900 px-3 py-2 text-xs text-white"
+                        />
+                        <button
+                          type="button"
+                          disabled={!lastFmSessionKey.trim()}
+                          onClick={() => {
+                            const key = lastFmSessionKey;
+                            setLastFmSessionKey('');
+                            void connectLastFm(key).then(setIntegrationStatuses);
+                          }}
+                          className="t-control border border-neutral-700 px-3 py-2 text-xs disabled:opacity-40"
+                        >
+                          Store in OS credentials
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void disconnectLastFm().then(setIntegrationStatuses)}
+                          className="t-control border border-neutral-700 px-3 py-2 text-xs"
+                        >
+                          Disconnect
+                        </button>
+                      </div>
+                    </div>
+                    <div className="t-sm border border-neutral-800 p-3">
+                      <label className="flex items-center justify-between gap-3">
+                        <span>
+                          <span className="block font-semibold text-white">
+                            Discord Rich Presence
+                          </span>
+                          <span className="text-xs text-neutral-500">
+                            {discordStatus?.configured
+                              ? discordStatus.connected
+                                ? 'Connected'
+                                : 'Ready when Discord is running'
+                              : 'Requires a release application ID'}
+                          </span>
+                        </span>
+                        <input
+                          type="checkbox"
+                          checked={integrationSettings.discordEnabled ?? false}
+                          onChange={(event) =>
+                            void updateIntegrations({
+                              ...integrationSettings,
+                              discordEnabled: event.target.checked,
+                            })
+                          }
+                        />
+                      </label>
+                      <label className="mt-3 block text-xs text-neutral-500">
+                        Shared detail
+                        <select
+                          value={integrationSettings.discordDetail ?? 'full'}
+                          onChange={(event) =>
+                            void updateIntegrations({
+                              ...integrationSettings,
+                              discordDetail: event.target.value,
+                            })
+                          }
+                          className="mt-1 block t-sm border border-neutral-700 bg-neutral-900 px-2 py-1 text-neutral-200"
+                        >
+                          <option value="full">Title, artist, album, and time</option>
+                          <option value="private">Only “Listening locally”</option>
+                        </select>
+                      </label>
                     </div>
                   </div>
-                  <div className="rounded border border-neutral-800 p-3">
-                    <label className="flex items-center justify-between gap-3">
-                      <span>
-                        <span className="block font-semibold text-white">Discord Rich Presence</span>
-                        <span className="text-xs text-neutral-500">
-                          {discordStatus?.configured
-                            ? discordStatus.connected
-                              ? 'Connected'
-                              : 'Ready when Discord is running'
-                            : 'Requires a release application ID'}
-                        </span>
-                      </span>
-                      <input
-                        type="checkbox"
-                        checked={integrationSettings.discordEnabled ?? false}
-                        onChange={(event) =>
-                          void updateIntegrations({
-                            ...integrationSettings,
-                            discordEnabled: event.target.checked,
-                          })
-                        }
-                      />
-                    </label>
-                    <label className="mt-3 block text-xs text-neutral-500">
-                      Shared detail
-                      <select
-                        value={integrationSettings.discordDetail ?? 'full'}
-                        onChange={(event) =>
-                          void updateIntegrations({
-                            ...integrationSettings,
-                            discordDetail: event.target.value,
-                          })
-                        }
-                        className="mt-1 block rounded border border-neutral-700 bg-neutral-900 px-2 py-1 text-neutral-200"
-                      >
-                        <option value="full">Title, artist, album, and time</option>
-                        <option value="private">Only “Listening locally”</option>
-                      </select>
-                    </label>
-                  </div>
                 </div>
-              </div>
               </>
             }
             updatesSlot={<UpdatePanel />}
@@ -843,7 +879,7 @@ export function DesktopLibraryPage() {
             {isScanning && (
               <div
                 role="status"
-                className="rounded border border-sky-500/30 bg-sky-500/10 px-4 py-3 text-sm text-sky-200"
+                className="t-sm border border-sky-500/30 bg-sky-500/10 px-4 py-3 text-sm text-sky-200"
               >
                 {progressLabel}
               </div>
@@ -852,7 +888,7 @@ export function DesktopLibraryPage() {
             {nativePlayback.error && (
               <div
                 role="alert"
-                className="flex gap-3 rounded border border-red-500/40 bg-red-500/10 p-4 text-sm text-red-100"
+                className="flex gap-3 t-sm border border-red-500/40 bg-red-500/10 p-4 text-sm text-red-100"
               >
                 <TriangleAlert className="h-5 w-5 shrink-0" />
                 <div>
@@ -871,7 +907,7 @@ export function DesktopLibraryPage() {
             )}
 
             {nativePlayback.playback.output && (
-              <div className="flex flex-wrap items-center justify-between gap-3 rounded border border-neutral-800 bg-neutral-950/50 px-4 py-3 text-xs text-neutral-300">
+              <div className="flex flex-wrap items-center justify-between gap-3 t-sm border border-neutral-800 bg-neutral-950/50 px-4 py-3 text-xs text-neutral-300">
                 <p>
                   {nativePlayback.playback.output.deviceName} ·{' '}
                   {nativePlayback.playback.output.disclosure}
@@ -898,13 +934,13 @@ export function DesktopLibraryPage() {
             )}
 
             {library.phase === 'idle' && (
-              <div className="rounded border border-neutral-800 bg-neutral-950/50 p-6 text-neutral-400">
+              <div className="t-sm border border-neutral-800 bg-neutral-950/50 p-6 text-neutral-400">
                 No folder has been selected yet.
               </div>
             )}
 
             {library.phase === 'empty' && (
-              <div className="rounded border border-neutral-800 bg-neutral-950/50 p-6 text-neutral-400">
+              <div className="t-sm border border-neutral-800 bg-neutral-950/50 p-6 text-neutral-400">
                 No supported audio files were found in{' '}
                 <span className="text-neutral-200">{library.root}</span>.
               </div>
@@ -914,7 +950,7 @@ export function DesktopLibraryPage() {
               library.error && (
                 <div
                   role="alert"
-                  className="flex gap-3 rounded border border-red-500/40 bg-red-500/10 p-4 text-sm text-red-100"
+                  className="flex gap-3 t-sm border border-red-500/40 bg-red-500/10 p-4 text-sm text-red-100"
                 >
                   <TriangleAlert className="h-5 w-5 shrink-0" />
                   <div>
@@ -929,7 +965,7 @@ export function DesktopLibraryPage() {
             {library.phase === 'partial-error' && (
               <div
                 role="alert"
-                className="rounded border border-yellow-500/40 bg-yellow-500/10 p-4 text-sm text-yellow-100"
+                className="t-sm border border-yellow-500/40 bg-yellow-500/10 p-4 text-sm text-yellow-100"
               >
                 Indexed {library.tracks.length} track{library.tracks.length === 1 ? '' : 's'}, but
                 skipped {library.warnings.length} unreadable or unsafe path
@@ -961,35 +997,35 @@ export function DesktopLibraryPage() {
               />
             ) : (
               (library.phase === 'complete' || library.phase === 'partial-error') && (
-              <LibraryView
-                tracks={visibleTracks}
-                artists={artistCatalog.items}
-                albums={discovery.albums}
-                genres={discovery.genres}
-                currentTrackId={currentTrack?.id}
-                isPlaying={isPlaying}
-                onPlayTrack={(track) => void playTrack(track)}
-                onPlayAlbum={(album) => void playAlbum(album)}
-                onPlayArtist={(artist) => void playArtist(artist)}
-                onSelectArtist={(artist) => void selectArtist(artist)}
-                onSelectAlbum={(album) => void selectAlbum(album)}
-                onEditTrack={setEditingTrack}
-                favoriteTrackIds={favoriteTrackIds}
-                onFavoriteChange={changeTrackFavorite}
-                selectedSubTab={librarySubTab}
-                onSubTabChange={changeLibrarySubTab}
-                artistHasMore={Boolean(artistCatalog.nextCursor)}
-                artistLoading={artistCatalog.loading}
-                onLoadMoreArtists={() => void artistCatalog.loadMore()}
-                queue={queue}
-                onReplaceQueue={setQueue}
-                onAppendQueue={(tracks) =>
-                  setQueue((current) => [
-                    ...current,
-                    ...tracks.filter((track) => !current.some((item) => item.id === track.id)),
-                  ])
-                }
-              />
+                <LibraryView
+                  tracks={visibleTracks}
+                  artists={artistCatalog.items}
+                  albums={discovery.albums}
+                  genres={discovery.genres}
+                  currentTrackId={currentTrack?.id}
+                  isPlaying={isPlaying}
+                  onPlayTrack={(track) => void playTrack(track)}
+                  onPlayAlbum={(album) => void playAlbum(album)}
+                  onPlayArtist={(artist) => void playArtist(artist)}
+                  onSelectArtist={(artist) => void selectArtist(artist)}
+                  onSelectAlbum={(album) => void selectAlbum(album)}
+                  onEditTrack={setEditingTrack}
+                  favoriteTrackIds={favoriteTrackIds}
+                  onFavoriteChange={changeTrackFavorite}
+                  selectedSubTab={librarySubTab}
+                  onSubTabChange={changeLibrarySubTab}
+                  artistHasMore={Boolean(artistCatalog.nextCursor)}
+                  artistLoading={artistCatalog.loading}
+                  onLoadMoreArtists={() => void artistCatalog.loadMore()}
+                  queue={queue}
+                  onReplaceQueue={setQueue}
+                  onAppendQueue={(tracks) =>
+                    setQueue((current) => [
+                      ...current,
+                      ...tracks.filter((track) => !current.some((item) => item.id === track.id)),
+                    ])
+                  }
+                />
               )
             )}
           </div>
@@ -1007,6 +1043,10 @@ export function DesktopLibraryPage() {
         onExpandFullscreen={() => setIsFullscreenOpen(true)}
         onToggleQueue={() => setIsQueueOpen((open) => !open)}
         queueCount={queue.length}
+        isShuffle={isShuffle}
+        onToggleShuffle={toggleShuffle}
+        repeatMode={repeatMode}
+        onToggleRepeat={toggleRepeat}
         volume={nativePlayback.playback.volume ?? 1}
         muted={nativePlayback.playback.muted}
         onVolumeChange={(volume) => void nativePlayback.setVolume(volume)}
@@ -1046,6 +1086,10 @@ export function DesktopLibraryPage() {
         onSeek={(seconds) => void nativePlayback.seek(seconds)}
         queue={queue}
         onPlayQueueTrack={(track) => void playTrack(track)}
+        isShuffle={isShuffle}
+        onToggleShuffle={toggleShuffle}
+        repeatMode={repeatMode}
+        onToggleRepeat={toggleRepeat}
         volume={nativePlayback.playback.volume ?? 1}
         muted={nativePlayback.playback.muted}
         onVolumeChange={(volume) => void nativePlayback.setVolume(volume)}

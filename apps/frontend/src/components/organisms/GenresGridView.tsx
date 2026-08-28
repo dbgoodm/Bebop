@@ -92,7 +92,7 @@ export function GenresGridView({
           return (
             <article
               key={genre.id}
-              className={`rounded-xl border p-5 transition ${
+              className={`t-card t-stroke border p-5 transition ${
                 selected
                   ? 'border-amber-500/80 bg-neutral-900'
                   : 'border-neutral-800 bg-neutral-950/60'
@@ -115,7 +115,7 @@ export function GenresGridView({
                     type="button"
                     key={artist}
                     onClick={() => onSelectArtist?.(artist)}
-                    className="rounded border border-neutral-800 px-2 py-0.5 text-[10px] text-neutral-300"
+                    className="t-control border border-neutral-800 px-2 py-0.5 text-[10px] text-neutral-300"
                   >
                     {artist}
                   </button>
@@ -135,7 +135,7 @@ export function GenresGridView({
         })}
       </div>
       {activeGenre && (
-        <div className="rounded-xl border border-neutral-800 bg-neutral-950/60 p-5">
+        <div className="t-card t-stroke border border-neutral-800 bg-neutral-950/60 p-5">
           <h3 className="font-semibold text-white">{activeGenre.name}</h3>
           <div className="mt-3 grid gap-2">
             {filteredTracks.map((track) => (

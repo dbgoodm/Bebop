@@ -101,7 +101,9 @@ export const ArtistDetailPage: React.FC<ArtistDetailPageProps> = ({
 
   // Separate into Local Albums and Remote Discography releases
   const localAlbums = rawAlbums.filter((a) => a.availability === 'in-library' || a.isLocal);
-  const otherDiscographyAlbums = rawAlbums.filter((a) => a.availability !== 'in-library' && !a.isLocal);
+  const otherDiscographyAlbums = rawAlbums.filter(
+    (a) => a.availability !== 'in-library' && !a.isLocal,
+  );
 
   return (
     <div id="artist-detail-page" className="w-full flex flex-col gap-6 font-sans text-neutral-200">
@@ -114,7 +116,7 @@ export const ArtistDetailPage: React.FC<ArtistDetailPageProps> = ({
             backgroundColor: currentTheme.bgCard,
             borderColor: currentTheme.borderColor,
           }}
-          className="inline-flex items-center gap-2 px-3 py-1.5 rounded text-xs font-mono text-neutral-300 hover:text-white border transition-colors cursor-pointer hover:brightness-125"
+          className="inline-flex items-center gap-2 px-3 py-1.5 t-control text-xs font-mono text-neutral-300 hover:text-white border transition-colors cursor-pointer hover:brightness-125"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
           <span>Back to Library</span>
@@ -134,10 +136,12 @@ export const ArtistDetailPage: React.FC<ArtistDetailPageProps> = ({
               backgroundColor: currentTheme.bgCard,
               borderColor: currentTheme.borderColor,
             }}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs font-mono text-neutral-300 hover:text-white border transition-colors cursor-pointer hover:brightness-125 disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 t-control text-xs font-mono text-neutral-300 hover:text-white border transition-colors cursor-pointer hover:brightness-125 disabled:opacity-50"
             title="Refresh MusicBrainz discography"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-amber-400' : ''}`} />
+            <RefreshCw
+              className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-amber-400' : ''}`}
+            />
             <span>{isRefreshing ? 'Refreshing…' : 'Refresh Discography'}</span>
           </button>
         </div>
@@ -151,7 +155,7 @@ export const ArtistDetailPage: React.FC<ArtistDetailPageProps> = ({
           borderColor: currentTheme.borderColor,
           background: currentTheme.cardGradient || currentTheme.bgCard,
         }}
-        className="relative w-full rounded-xl overflow-hidden border min-h-[260px] md:min-h-[290px] flex flex-col justify-between p-6 sm:p-7 shadow-2xl"
+        className="relative w-full t-card t-stroke overflow-hidden border min-h-[260px] md:min-h-[290px] flex flex-col justify-between p-6 sm:p-7 shadow-2xl"
       >
         {/* Full-bleed background band photo on right with seamless gradient fade */}
         <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none">
@@ -179,7 +183,7 @@ export const ArtistDetailPage: React.FC<ArtistDetailPageProps> = ({
           {/* Left: Featured Album Cover & Artist Details */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5 sm:gap-6 flex-1">
             {/* Featured Album Cover Artwork */}
-            <div className="flex-shrink-0 relative w-36 h-36 sm:w-44 sm:h-44 md:w-48 md:h-48 rounded-lg overflow-hidden bg-neutral-900 border border-neutral-700/80 shadow-2xl group">
+            <div className="flex-shrink-0 relative w-36 h-36 sm:w-44 sm:h-44 md:w-48 md:h-48 t-card t-stroke overflow-hidden bg-neutral-900 border border-neutral-700/80 shadow-2xl group">
               {artist.featuredCoverUrl ? (
                 <img
                   src={artist.featuredCoverUrl}
@@ -199,7 +203,7 @@ export const ArtistDetailPage: React.FC<ArtistDetailPageProps> = ({
                 className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-pointer"
                 aria-label={`Play ${displayName}`}
               >
-                <div className="w-12 h-12 rounded-full bg-amber-500 text-black flex items-center justify-center shadow-lg hover:scale-105 transition-transform">
+                <div className="w-12 h-12 t-btn bg-amber-500 text-black flex items-center justify-center shadow-lg hover:scale-105 transition-transform">
                   <Play className="w-6 h-6 fill-black ml-0.5" />
                 </div>
               </button>
@@ -242,9 +246,15 @@ export const ArtistDetailPage: React.FC<ArtistDetailPageProps> = ({
                 </div>
               )}
 
-              {(artist.country || artist.activeFrom || artist.activeTo || artist.aliases?.length) && (
+              {(artist.country ||
+                artist.activeFrom ||
+                artist.activeTo ||
+                artist.aliases?.length) && (
                 <p className="text-xs text-neutral-400">
-                  {[artist.country, [artist.activeFrom, artist.activeTo].filter(Boolean).join(' – ')]
+                  {[
+                    artist.country,
+                    [artist.activeFrom, artist.activeTo].filter(Boolean).join(' – '),
+                  ]
                     .filter(Boolean)
                     .join(' · ')}
                   {artist.aliases?.length ? ` · Also known as ${artist.aliases.join(', ')}` : ''}
@@ -256,7 +266,7 @@ export const ArtistDetailPage: React.FC<ArtistDetailPageProps> = ({
                 {artist.genres.map((genre) => (
                   <span
                     key={genre}
-                    className="px-3 py-1 rounded-full text-xs font-medium bg-neutral-900/90 text-neutral-200 border border-neutral-700/60 shadow-xs"
+                    className="px-3 py-1 t-sm text-xs font-medium bg-neutral-900/90 text-neutral-200 border border-neutral-700/60 shadow-xs"
                   >
                     {genre}
                   </span>
@@ -268,7 +278,7 @@ export const ArtistDetailPage: React.FC<ArtistDetailPageProps> = ({
           {/* Right Bottom: 4 Translucent Stat Cards */}
           <div className="w-full md:w-auto self-end md:self-end mt-4 md:mt-0 flex justify-end">
             <div className="grid grid-cols-4 gap-2 sm:gap-2.5">
-              <div className="bg-[#121620]/80 backdrop-blur-md border border-neutral-700/60 rounded-lg py-2.5 px-3 sm:px-4 flex flex-col items-center justify-center text-center shadow-lg min-w-[68px] sm:min-w-[80px]">
+              <div className="bg-[#121620]/80 backdrop-blur-md border border-neutral-700/60 t-card t-stroke py-2.5 px-3 sm:px-4 flex flex-col items-center justify-center text-center shadow-lg min-w-[68px] sm:min-w-[80px]">
                 <span className="text-base sm:text-lg font-bold text-white font-mono leading-none">
                   {localAlbums.length}
                 </span>
@@ -277,7 +287,7 @@ export const ArtistDetailPage: React.FC<ArtistDetailPageProps> = ({
                 </span>
               </div>
 
-              <div className="bg-[#121620]/80 backdrop-blur-md border border-neutral-700/60 rounded-lg py-2.5 px-3 sm:px-4 flex flex-col items-center justify-center text-center shadow-lg min-w-[68px] sm:min-w-[80px]">
+              <div className="bg-[#121620]/80 backdrop-blur-md border border-neutral-700/60 t-card t-stroke py-2.5 px-3 sm:px-4 flex flex-col items-center justify-center text-center shadow-lg min-w-[68px] sm:min-w-[80px]">
                 <span className="text-base sm:text-lg font-bold text-white font-mono leading-none">
                   {artist.trackCount}
                 </span>
@@ -286,7 +296,7 @@ export const ArtistDetailPage: React.FC<ArtistDetailPageProps> = ({
                 </span>
               </div>
 
-              <div className="bg-[#121620]/80 backdrop-blur-md border border-neutral-700/60 rounded-lg py-2.5 px-3 sm:px-4 flex flex-col items-center justify-center text-center shadow-lg min-w-[68px] sm:min-w-[80px]">
+              <div className="bg-[#121620]/80 backdrop-blur-md border border-neutral-700/60 t-card t-stroke py-2.5 px-3 sm:px-4 flex flex-col items-center justify-center text-center shadow-lg min-w-[68px] sm:min-w-[80px]">
                 <span className="text-base sm:text-lg font-bold text-white font-mono leading-none">
                   {artist.losslessPercentage || '—'}
                 </span>
@@ -295,7 +305,7 @@ export const ArtistDetailPage: React.FC<ArtistDetailPageProps> = ({
                 </span>
               </div>
 
-              <div className="bg-[#121620]/80 backdrop-blur-md border border-neutral-700/60 rounded-lg py-2.5 px-3 sm:px-4 flex flex-col items-center justify-center text-center shadow-lg min-w-[74px] sm:min-w-[88px]">
+              <div className="bg-[#121620]/80 backdrop-blur-md border border-neutral-700/60 t-card t-stroke py-2.5 px-3 sm:px-4 flex flex-col items-center justify-center text-center shadow-lg min-w-[74px] sm:min-w-[88px]">
                 <span className="text-base sm:text-lg font-bold text-white font-mono leading-none">
                   {artist.localStorageSize || '—'}
                 </span>
@@ -330,7 +340,7 @@ export const ArtistDetailPage: React.FC<ArtistDetailPageProps> = ({
                   className="group flex flex-col cursor-pointer"
                 >
                   {/* Album Cover */}
-                  <div className="relative aspect-square w-full rounded-md overflow-hidden bg-neutral-900 border border-neutral-800 group-hover:border-amber-500/50 transition-colors shadow-sm">
+                  <div className="relative aspect-square w-full t-sm overflow-hidden bg-neutral-900 border border-neutral-800 group-hover:border-amber-500/50 transition-colors shadow-sm">
                     {album.isNoDisc || !album.coverUrl ? (
                       <div className="w-full h-full flex flex-col items-center justify-center bg-[#151921] text-neutral-500 p-2 text-center">
                         <Disc className="w-8 h-8 opacity-40 mb-1" />
@@ -347,17 +357,17 @@ export const ArtistDetailPage: React.FC<ArtistDetailPageProps> = ({
 
                     {/* Format tag badge */}
                     {album.formatBadge && (
-                      <div className="absolute bottom-1.5 right-1.5 px-1 py-0.5 rounded bg-black/80 text-[9px] font-mono text-amber-400 font-semibold border border-amber-500/30">
+                      <div className="absolute bottom-1.5 right-1.5 px-1 py-0.5 t-sm bg-black/80 text-[9px] font-mono text-amber-400 font-semibold border border-amber-500/30">
                         {album.formatBadge}
                       </div>
                     )}
-                    <div className="absolute top-1.5 left-1.5 rounded border border-emerald-400/30 bg-emerald-500/15 px-1.5 py-0.5 text-[9px] font-mono text-emerald-300">
+                    <div className="absolute top-1.5 left-1.5 t-sm border border-emerald-400/30 bg-emerald-500/15 px-1.5 py-0.5 text-[9px] font-mono text-emerald-300">
                       {album.availability === 'not-local' ? 'Not Local' : 'In Library'}
                     </div>
 
                     {/* Play hover button */}
                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                      <div className="w-8 h-8 rounded-full bg-amber-500 text-black flex items-center justify-center shadow">
+                      <div className="w-8 h-8 t-btn bg-amber-500 text-black flex items-center justify-center shadow">
                         <Play className="w-4 h-4 fill-black ml-0.5" />
                       </div>
                     </div>
@@ -395,10 +405,10 @@ export const ArtistDetailPage: React.FC<ArtistDetailPageProps> = ({
                     key={album.id}
                     id={`discography-card-${album.id}`}
                     onClick={() => onSelectAlbum?.(album.id)}
-                    className="group flex flex-col rounded-md p-1.5 transition-all bg-[#0e121a]/60 border border-neutral-800/80 hover:border-neutral-700 cursor-pointer"
+                    className="group flex flex-col t-sm p-1.5 transition-all bg-[#0e121a]/60 border border-neutral-800/80 hover:border-neutral-700 cursor-pointer"
                   >
                     {/* Album Cover */}
-                    <div className="relative aspect-square w-full rounded overflow-hidden bg-neutral-900 border border-neutral-800/80 group-hover:border-neutral-600 transition-colors shadow-xs">
+                    <div className="relative aspect-square w-full t-sm overflow-hidden bg-neutral-900 border border-neutral-800/80 group-hover:border-neutral-600 transition-colors shadow-xs">
                       {album.isNoDisc || !album.coverUrl || artworkFailed[album.id] ? (
                         <div className="w-full h-full flex flex-col items-center justify-center bg-[#141720] text-neutral-500 p-2 text-center">
                           <Disc className="w-8 h-8 opacity-40 mb-1" />
@@ -421,7 +431,7 @@ export const ArtistDetailPage: React.FC<ArtistDetailPageProps> = ({
 
                       {/* "Not Local" already states the provenance, so the format badge
                           is redundant here and would collide with it on narrow cards. */}
-                      <div className="absolute top-1.5 left-1.5 rounded border border-neutral-600/50 bg-neutral-900/80 px-1.5 py-0.5 text-[9px] font-mono text-neutral-400">
+                      <div className="absolute top-1.5 left-1.5 t-sm border border-neutral-600/50 bg-neutral-900/80 px-1.5 py-0.5 text-[9px] font-mono text-neutral-400">
                         Not Local
                       </div>
                     </div>

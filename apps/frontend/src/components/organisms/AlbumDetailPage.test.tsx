@@ -114,12 +114,7 @@ describe('AlbumDetailPage', () => {
 
   it('renders "Get Full Album" button for a fully remote / missing album', () => {
     const acquireSpy = vi.spyOn(acquisitionService, 'acquireAlbum').mockResolvedValue([]);
-    render(
-      <AlbumDetailPage
-        album={mockRemoteAlbum}
-        onBack={vi.fn()}
-      />,
-    );
+    render(<AlbumDetailPage album={mockRemoteAlbum} onBack={vi.fn()} />);
 
     const getFullAlbumBtn = screen.getByRole('button', { name: /get full album/i });
     expect(getFullAlbumBtn).toBeInTheDocument();
@@ -132,13 +127,7 @@ describe('AlbumDetailPage', () => {
     const onPlayAlbum = vi.fn();
     const acquireSpy = vi.spyOn(acquisitionService, 'acquireAlbum').mockResolvedValue([]);
 
-    render(
-      <AlbumDetailPage
-        album={mockPartialAlbum}
-        onBack={vi.fn()}
-        onPlayAlbum={onPlayAlbum}
-      />,
-    );
+    render(<AlbumDetailPage album={mockPartialAlbum} onBack={vi.fn()} onPlayAlbum={onPlayAlbum} />);
 
     const playAvailableBtn = screen.getByRole('button', { name: /play available \(1\)/i });
     const acquireMissingBtn = screen.getByRole('button', { name: /acquire missing tracks \(1\)/i });
@@ -156,13 +145,7 @@ describe('AlbumDetailPage', () => {
   it('renders "Play Album" and "Shuffle" for 100% local albums', () => {
     const onPlayAlbum = vi.fn();
 
-    render(
-      <AlbumDetailPage
-        album={mockLocalAlbum}
-        onBack={vi.fn()}
-        onPlayAlbum={onPlayAlbum}
-      />,
-    );
+    render(<AlbumDetailPage album={mockLocalAlbum} onBack={vi.fn()} onPlayAlbum={onPlayAlbum} />);
 
     const playAlbumBtns = screen.getAllByRole('button', { name: /play album/i });
     const shuffleBtn = screen.getByRole('button', { name: /shuffle/i });
@@ -186,12 +169,7 @@ describe('AlbumDetailPage', () => {
       createdAt: new Date().toISOString(),
     });
 
-    render(
-      <AlbumDetailPage
-        album={mockPartialAlbum}
-        onBack={vi.fn()}
-      />,
-    );
+    render(<AlbumDetailPage album={mockPartialAlbum} onBack={vi.fn()} />);
 
     const getTrackBtns = screen.getAllByTitle('Get Track');
     expect(getTrackBtns.length).toBeGreaterThan(0);

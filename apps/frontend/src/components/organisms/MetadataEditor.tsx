@@ -113,12 +113,12 @@ export function MetadataEditor({ track, onClose }: MetadataEditorProps) {
     }));
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 p-4">
+    <div className="win-round fixed inset-0 z-[100] flex items-center justify-center bg-black/75 p-4">
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="metadata-editor-title"
-        className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-xl border border-neutral-700 bg-neutral-950 p-6"
+        className="max-h-[90vh] w-full max-w-xl overflow-y-auto t-card t-stroke border border-neutral-700 bg-neutral-950 p-6"
       >
         <h2 id="metadata-editor-title" className="text-xl font-bold text-white">
           Edit metadata
@@ -130,7 +130,7 @@ export function MetadataEditor({ track, onClose }: MetadataEditorProps) {
             <input
               value={patch.title ?? ''}
               onChange={(event) => update('title', event.target.value)}
-              className="mt-1 w-full rounded border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white"
+              className="mt-1 w-full t-sm border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white"
             />
           </label>
           <label className="text-xs text-neutral-400">
@@ -143,7 +143,7 @@ export function MetadataEditor({ track, onClose }: MetadataEditorProps) {
                   artists: splitValues(event.target.value),
                 }))
               }
-              className="mt-1 w-full rounded border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white"
+              className="mt-1 w-full t-sm border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white"
             />
           </label>
           <label className="text-xs text-neutral-400">
@@ -151,7 +151,7 @@ export function MetadataEditor({ track, onClose }: MetadataEditorProps) {
             <input
               value={patch.album ?? ''}
               onChange={(event) => update('album', event.target.value)}
-              className="mt-1 w-full rounded border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white"
+              className="mt-1 w-full t-sm border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white"
             />
           </label>
           <label className="text-xs text-neutral-400">
@@ -164,7 +164,7 @@ export function MetadataEditor({ track, onClose }: MetadataEditorProps) {
                   albumArtists: splitValues(event.target.value),
                 }))
               }
-              className="mt-1 w-full rounded border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white"
+              className="mt-1 w-full t-sm border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white"
             />
           </label>
           <label className="text-xs text-neutral-400">
@@ -177,7 +177,7 @@ export function MetadataEditor({ track, onClose }: MetadataEditorProps) {
                   genres: splitValues(event.target.value),
                 }))
               }
-              className="mt-1 w-full rounded border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white"
+              className="mt-1 w-full t-sm border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white"
             />
           </label>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
@@ -197,7 +197,7 @@ export function MetadataEditor({ track, onClose }: MetadataEditorProps) {
                   min="0"
                   value={patch[field] ?? ''}
                   onChange={(event) => updateNumber(field, event.target.value)}
-                  className="mt-1 w-full rounded border border-neutral-700 bg-neutral-900 px-2 py-2 text-sm text-white"
+                  className="mt-1 w-full t-sm border border-neutral-700 bg-neutral-900 px-2 py-2 text-sm text-white"
                 />
               </label>
             ))}
@@ -217,7 +217,7 @@ export function MetadataEditor({ track, onClose }: MetadataEditorProps) {
                 <input
                   value={patch[field] ?? ''}
                   onChange={(event) => update(field, event.target.value)}
-                  className="mt-1 w-full rounded border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white"
+                  className="mt-1 w-full t-sm border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white"
                 />
               </label>
             ))}
@@ -234,7 +234,7 @@ export function MetadataEditor({ track, onClose }: MetadataEditorProps) {
                 <input
                   value={patch[field] ?? ''}
                   onChange={(event) => update(field, event.target.value)}
-                  className="mt-1 w-full rounded border border-neutral-700 bg-neutral-900 px-3 py-2 font-mono text-xs text-white"
+                  className="mt-1 w-full t-sm border border-neutral-700 bg-neutral-900 px-3 py-2 font-mono text-xs text-white"
                 />
               </label>
             ))}
@@ -249,7 +249,7 @@ export function MetadataEditor({ track, onClose }: MetadataEditorProps) {
                   musicbrainzArtistIds: splitValues(event.target.value),
                 }))
               }
-              className="mt-1 w-full rounded border border-neutral-700 bg-neutral-900 px-3 py-2 font-mono text-xs text-white"
+              className="mt-1 w-full t-sm border border-neutral-700 bg-neutral-900 px-3 py-2 font-mono text-xs text-white"
             />
           </label>
           <label className="text-xs text-neutral-400">
@@ -262,7 +262,7 @@ export function MetadataEditor({ track, onClose }: MetadataEditorProps) {
                   musicbrainzAlbumArtistIds: splitValues(event.target.value),
                 }))
               }
-              className="mt-1 w-full rounded border border-neutral-700 bg-neutral-900 px-3 py-2 font-mono text-xs text-white"
+              className="mt-1 w-full t-sm border border-neutral-700 bg-neutral-900 px-3 py-2 font-mono text-xs text-white"
             />
           </label>
           <label className="text-xs text-neutral-400">
@@ -271,11 +271,11 @@ export function MetadataEditor({ track, onClose }: MetadataEditorProps) {
               value={patch.lyrics ?? ''}
               onChange={(event) => update('lyrics', event.target.value)}
               rows={5}
-              className="mt-1 w-full resize-y rounded border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white"
+              className="mt-1 w-full resize-y t-sm border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white"
             />
           </label>
         </div>
-        <section className="mt-5 rounded-lg border border-neutral-800 bg-neutral-900/50 p-4">
+        <section className="mt-5 t-card t-stroke border border-neutral-800 bg-neutral-900/50 p-4">
           <div className="flex items-start justify-between gap-4">
             <div>
               <h3 className="text-sm font-semibold text-white">MusicBrainz enrichment</h3>
@@ -291,7 +291,7 @@ export function MetadataEditor({ track, onClose }: MetadataEditorProps) {
                 const enabled = !musicBrainzEnabled;
                 void setMusicBrainzEnabled(enabled).then(setMusicBrainzEnabledState);
               }}
-              className="rounded border border-neutral-700 px-3 py-1 text-xs text-neutral-200 disabled:opacity-40"
+              className="t-control border border-neutral-700 px-3 py-1 text-xs text-neutral-200 disabled:opacity-40"
             >
               {musicBrainzEnabled ? 'Enabled' : 'Enable'}
             </button>
@@ -303,9 +303,11 @@ export function MetadataEditor({ track, onClose }: MetadataEditorProps) {
                   type="password"
                   aria-label="AcoustID client key"
                   value={acoustIdKey}
-                  placeholder={acoustIdConfigured ? 'AcoustID key configured' : 'AcoustID client key'}
+                  placeholder={
+                    acoustIdConfigured ? 'AcoustID key configured' : 'AcoustID client key'
+                  }
                   onChange={(event) => setAcoustIdKey(event.target.value)}
-                  className="min-w-48 flex-1 rounded border border-neutral-700 bg-neutral-950 px-3 py-2 text-xs text-white"
+                  className="min-w-48 flex-1 t-sm border border-neutral-700 bg-neutral-950 px-3 py-2 text-xs text-white"
                 />
                 <button
                   type="button"
@@ -317,7 +319,7 @@ export function MetadataEditor({ track, onClose }: MetadataEditorProps) {
                       setAcoustIdKey('');
                     }, 'AcoustID client key saved securely.')
                   }
-                  className="rounded border border-neutral-700 px-3 py-2 text-xs text-neutral-200 disabled:opacity-40"
+                  className="t-control border border-neutral-700 px-3 py-2 text-xs text-neutral-200 disabled:opacity-40"
                 >
                   Save key
                 </button>
@@ -335,7 +337,7 @@ export function MetadataEditor({ track, onClose }: MetadataEditorProps) {
                     }
                   }, 'Metadata lookup complete.')
                 }
-                className="rounded border border-sky-700 px-3 py-2 text-xs font-semibold text-sky-300 disabled:opacity-40"
+                className="t-control border border-sky-700 px-3 py-2 text-xs font-semibold text-sky-300 disabled:opacity-40"
               >
                 {acoustIdConfigured ? 'Fingerprint & match' : 'Search MusicBrainz'}
               </button>
@@ -349,7 +351,7 @@ export function MetadataEditor({ track, onClose }: MetadataEditorProps) {
                 enrichment.candidates.map((candidate) => (
                   <div
                     key={`${candidate.recordingId}:${candidate.releaseId ?? ''}`}
-                    className="flex items-center justify-between gap-3 rounded border border-neutral-800 p-2 text-xs"
+                    className="flex items-center justify-between gap-3 t-sm border border-neutral-800 p-2 text-xs"
                   >
                     <div className="min-w-0">
                       <p className="truncate text-neutral-200">
@@ -383,7 +385,7 @@ export function MetadataEditor({ track, onClose }: MetadataEditorProps) {
             </div>
           ) : null}
           {reviewingCandidate ? (
-            <div className="mt-3 rounded border border-amber-700/50 bg-black/30 p-3 text-xs">
+            <div className="mt-3 t-sm border border-amber-700/50 bg-black/30 p-3 text-xs">
               <p className="font-semibold text-amber-200">
                 {reviewingCandidate.source} · {Math.round(reviewingCandidate.confidence * 100)}%
               </p>
@@ -398,7 +400,7 @@ export function MetadataEditor({ track, onClose }: MetadataEditorProps) {
                   type="button"
                   disabled={busy}
                   onClick={() => void applyCandidate(reviewingCandidate)}
-                  className="mt-3 rounded bg-amber-500 px-3 py-2 font-semibold text-black disabled:opacity-40"
+                  className="mt-3 t-control bg-amber-500 px-3 py-2 font-semibold text-black disabled:opacity-40"
                 >
                   Apply reviewed candidate
                 </button>
@@ -408,7 +410,7 @@ export function MetadataEditor({ track, onClose }: MetadataEditorProps) {
             </div>
           ) : null}
         </section>
-        <section className="mt-5 rounded-lg border border-neutral-800 bg-neutral-900/50 p-4">
+        <section className="mt-5 t-card t-stroke border border-neutral-800 bg-neutral-900/50 p-4">
           <div className="flex items-center justify-between gap-3">
             <div>
               <h3 className="text-sm font-semibold text-white">Review manual changes</h3>
@@ -424,7 +426,7 @@ export function MetadataEditor({ track, onClose }: MetadataEditorProps) {
                   setManualReview(await previewMetadataChanges([track.id], patch));
                 }, 'Change preview ready.')
               }
-              className="rounded border border-neutral-700 px-3 py-2 text-xs text-neutral-200 disabled:opacity-40"
+              className="t-control border border-neutral-700 px-3 py-2 text-xs text-neutral-200 disabled:opacity-40"
             >
               Review changes
             </button>
@@ -462,7 +464,7 @@ export function MetadataEditor({ track, onClose }: MetadataEditorProps) {
                 setDraftSaved(true);
               }, 'Saved to Bebop. The audio file was not changed.')
             }
-            className="rounded border border-amber-500/50 px-3 py-2 text-amber-300 disabled:opacity-40"
+            className="t-control border border-amber-500/50 px-3 py-2 text-amber-300 disabled:opacity-40"
           >
             Save to Bebop
           </button>
@@ -477,7 +479,7 @@ export function MetadataEditor({ track, onClose }: MetadataEditorProps) {
               )
                 void run(() => writeMetadataToFile(track.id), 'Tags written and validated.');
             }}
-            className="rounded bg-amber-500 px-3 py-2 text-black disabled:opacity-40"
+            className="t-control bg-amber-500 px-3 py-2 text-black disabled:opacity-40"
           >
             Write tags to files
           </button>
@@ -492,7 +494,7 @@ function MetadataDiffTable({ diffs }: { diffs: MetadataReview['diffs'] }) {
     return <p className="mt-2 text-neutral-500">No field changes.</p>;
   }
   return (
-    <div className="mt-2 overflow-x-auto rounded border border-neutral-800">
+    <div className="mt-2 overflow-x-auto t-sm border border-neutral-800">
       <table className="w-full text-left text-xs">
         <thead className="bg-neutral-900 text-neutral-500">
           <tr>

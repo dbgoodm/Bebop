@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TrackItem } from '@/types';
 
@@ -28,6 +28,7 @@ const mocks = vi.hoisted(() => ({
   toggleMute: vi.fn(),
   setHifi: vi.fn(),
   stop: vi.fn(),
+  savePlayerQueue: vi.fn(),
 }));
 
 vi.mock('@/hooks/useLibraryScan', () => ({
@@ -131,7 +132,7 @@ vi.mock('@/services/playerStateService', () => ({
     }),
   loadFavoriteTrackIds: () => Promise.resolve(new Set()),
   loadPlaylists: () => Promise.resolve([]),
-  savePlayerQueue: vi.fn(),
+  savePlayerQueue: mocks.savePlayerQueue,
   setTrackFavorite: vi.fn(),
   createPlaylistFromQueue: vi.fn(),
   saveLibraryViewPreference: vi.fn(),
@@ -236,10 +237,11 @@ describe('DesktopLibraryPage', () => {
       mocks.toggleMute,
       mocks.setHifi,
       mocks.stop,
+      mocks.savePlayerQueue,
     ].forEach((mock) => mock.mockReset());
   });
 
-  it('connects scanned tracks and transport controls to native playback', () => {
+  it('connects scanned tracks and transport controls to native playback', async () => {
     render(<DesktopLibraryPage />);
 
     // Home leads with listening data, not a marketing header.
@@ -262,5 +264,6 @@ describe('DesktopLibraryPage', () => {
     expect(mocks.setVolume).toHaveBeenCalledWith(0.5);
     expect(mocks.toggleMute).toHaveBeenCalledOnce();
     expect(screen.getByText(/spectrum active/i)).toBeInTheDocument();
+    await waitFor(() => expect(mocks.savePlayerQueue).toHaveBeenCalled());
   });
 });

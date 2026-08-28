@@ -367,9 +367,9 @@ export const UniversalTracklist: React.FC<UniversalTracklistProps> = ({
             </span>
             {isDownloading ? (
               <div className="flex items-center gap-2 mt-1">
-                <div className="w-20 bg-neutral-800 rounded-full h-1.5 overflow-hidden">
+                <div className="w-20 bg-neutral-800 t-bar h-1.5 overflow-hidden">
                   <div
-                    className="bg-amber-400 h-full transition-all duration-300 rounded-full"
+                    className="bg-amber-400 h-full transition-all duration-300 t-bar"
                     style={{ width: `${Math.max(5, track.acquisitionProgress || 0)}%` }}
                   />
                 </div>
@@ -435,7 +435,7 @@ export const UniversalTracklist: React.FC<UniversalTracklistProps> = ({
 
       case 'dynamicRange':
         return (
-          <span className="px-1.5 py-0.5 rounded bg-[#151b26] border border-neutral-700/60 text-amber-300 font-bold font-mono text-[11px]">
+          <span className="px-1.5 py-0.5 t-sm bg-[#151b26] border border-neutral-700/60 text-amber-300 font-bold font-mono text-[11px]">
             {track.dynamicRange}
           </span>
         );
@@ -446,7 +446,7 @@ export const UniversalTracklist: React.FC<UniversalTracklistProps> = ({
       case 'codec':
         return (
           <span
-            className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold ${
+            className={`px-1.5 py-0.5 t-sm text-[10px] font-mono font-bold ${
               track.codec?.startsWith('DSD')
                 ? 'bg-amber-950/80 text-amber-300 border border-amber-600/40'
                 : 'bg-neutral-800 text-neutral-300 border border-neutral-700'
@@ -488,7 +488,7 @@ export const UniversalTracklist: React.FC<UniversalTracklistProps> = ({
         if (isMissing) {
           if (isDownloading) {
             return (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 text-[10px] font-mono border border-amber-500/20">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 t-sm bg-amber-500/10 text-amber-400 text-[10px] font-mono border border-amber-500/20">
                 <Loader2 className="w-2.5 h-2.5 animate-spin" />
                 <span>{track.acquisitionStatus === 'tagging' ? 'Tagging' : 'Getting'}</span>
               </span>
@@ -501,7 +501,7 @@ export const UniversalTracklist: React.FC<UniversalTracklistProps> = ({
                 e.stopPropagation();
                 onAcquireTrack?.(track);
               }}
-              className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-500/15 hover:bg-amber-500/30 text-amber-400 hover:text-amber-300 border border-amber-500/40 text-[10px] font-mono transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1 px-2 py-0.5 t-control bg-amber-500/15 hover:bg-amber-500/30 text-amber-400 hover:text-amber-300 border border-amber-500/40 text-[10px] font-mono transition-colors cursor-pointer"
               title="Get Track"
             >
               <ArrowDownToLine className="w-3 h-3" />
@@ -561,7 +561,7 @@ export const UniversalTracklist: React.FC<UniversalTracklistProps> = ({
           <button
             type="button"
             onClick={() => setShowCustomizer(!showCustomizer)}
-            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-mono transition-colors border cursor-pointer ${
+            className={`inline-flex items-center gap-1.5 px-2.5 py-1 t-control text-xs font-mono transition-colors border cursor-pointer ${
               showCustomizer
                 ? 'bg-amber-500/20 text-amber-400 border-amber-500/60'
                 : 'bg-neutral-900 hover:bg-neutral-800 text-neutral-300 border-neutral-800 hover:border-neutral-700'
@@ -577,7 +577,7 @@ export const UniversalTracklist: React.FC<UniversalTracklistProps> = ({
       {showCustomizer && (
         <div
           id={`${idPrefix}-column-customizer`}
-          className="p-4 mb-4 bg-[#0c1017] border border-neutral-800 rounded-xl shadow-xl animate-fadeIn"
+          className="p-4 mb-4 bg-[#0c1017] border border-neutral-800 t-card t-stroke shadow-xl animate-fadeIn"
         >
           <div className="flex items-center justify-between pb-2.5 mb-3 border-b border-neutral-800">
             <div className="flex items-center gap-2">
@@ -590,7 +590,7 @@ export const UniversalTracklist: React.FC<UniversalTracklistProps> = ({
             <button
               type="button"
               onClick={() => setShowCustomizer(false)}
-              className="text-xs text-neutral-400 hover:text-white px-2 py-0.5 rounded bg-neutral-900 border border-neutral-800 cursor-pointer"
+              className="text-xs text-neutral-400 hover:text-white px-2 py-0.5 t-control bg-neutral-900 border border-neutral-800 cursor-pointer"
             >
               Done
             </button>
@@ -604,7 +604,7 @@ export const UniversalTracklist: React.FC<UniversalTracklistProps> = ({
                   key={col.id}
                   type="button"
                   onClick={() => toggleColumnVisibility(col.id)}
-                  className={`flex items-center justify-between px-2.5 py-1.5 rounded text-xs font-mono border transition-all cursor-pointer ${
+                  className={`flex items-center justify-between px-2.5 py-1.5 t-control text-xs font-mono border transition-all cursor-pointer ${
                     isVis
                       ? 'bg-amber-950/30 text-amber-300 border-amber-500/40 shadow-xs'
                       : 'bg-neutral-900/60 text-neutral-500 border-neutral-800 hover:border-neutral-700 hover:text-neutral-300'
@@ -624,7 +624,7 @@ export const UniversalTracklist: React.FC<UniversalTracklistProps> = ({
       )}
 
       {/* Table Container */}
-      <div className="w-full overflow-x-auto rounded-lg border border-neutral-800 bg-[#0a0d13] shadow-md">
+      <div className="w-full overflow-x-auto t-card t-stroke border border-neutral-800 bg-[#0a0d13] shadow-md">
         <table className="w-full text-left border-collapse text-xs font-sans">
           <thead>
             <tr className="border-b border-neutral-800 text-neutral-400 font-medium bg-[#080b10] select-none text-[11px] font-mono">

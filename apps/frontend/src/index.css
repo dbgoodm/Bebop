@@ -1,4 +1,15 @@
+@import url('https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@400;600;700;800;900&family=Barlow:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Space+Mono:wght@400;700&family=Bodoni+Moda:opsz,wght@6..96,400..900&family=Jost:wght@300;400;500;600&family=Courier+Prime:wght@400;700&family=Oswald:wght@300;400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&family=Rubik+Mono+One&family=Space+Grotesk:wght@400;500;600;700&family=VT323&family=Caveat:wght@400;600;700&display=swap');
 @import 'tailwindcss';
+
+/* Tailwind's font utilities are pointed at the theme's type tokens, so the ~160
+   existing `font-mono` / `font-sans` / `font-serif` call sites follow the active
+   theme instead of the framework defaults. `font-serif` is used in this app for
+   section headings, which is the display role. */
+@theme {
+  --font-sans: var(--f-b, 'Barlow', system-ui, sans-serif);
+  --font-mono: var(--f-m, 'Space Mono', ui-monospace, monospace);
+  --font-serif: var(--f-d, 'Big Shoulders Display', sans-serif);
+}
 
 /* Theme Variable Dynamic Styles */
 :root {
@@ -15,19 +26,28 @@
   --theme-text-muted: #7c8ba1;
 }
 
-/* Custom Sleek Scrollbar */
+/* Custom Sleek Scrollbar.
+
+   The bar is 12px but paints only its 6px padding box, so the thumb still reads
+   as a hairline while keeping a wide enough hit area. The window is undecorated,
+   and Tauri claims the outer 5px of every edge as a resize border — at the old
+   6px width almost nothing of the right-hand scrollbar was left to grab. */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 12px;
+  height: 12px;
 }
 
 ::-webkit-scrollbar-track {
   background: rgba(10, 14, 23, 0.6);
+  background-clip: padding-box;
+  border: 3px solid transparent;
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.16);
+  background-clip: padding-box;
+  border: 3px solid transparent;
   border-radius: 9999px;
   transition:
     background-color 0.2s ease,
@@ -35,12 +55,12 @@
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--theme-primary, #f59e0b);
+  background-color: var(--theme-primary, #f59e0b);
   box-shadow: 0 0 8px var(--theme-glow, rgba(245, 158, 11, 0.4));
 }
 
 ::-webkit-scrollbar-thumb:active {
-  background: var(--theme-primary-hover, #fbbf24);
+  background-color: var(--theme-primary-hover, #fbbf24);
 }
 
 ::-webkit-scrollbar-corner {
@@ -103,5 +123,324 @@
   .no-scrollbar {
     -ms-overflow-style: none; /* IE and Edge */
     scrollbar-width: none; /* Firefox */
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Theme ambience
+   Keyframes for the layers in ThemeAmbience. Every layer is gated by an opacity
+   token that defaults to 0, so these only run for themes that opt in.
+   --------------------------------------------------------------------------- */
+
+@keyframes bb-stars {
+  0% {
+    background-position:
+      0 0,
+      0 0,
+      0 0;
+  }
+  100% {
+    background-position:
+      -300px 180px,
+      220px -140px,
+      -140px -220px;
+  }
+}
+
+@keyframes bb-twinkle {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes bb-ember {
+  0%,
+  100% {
+    opacity: 0.4;
+    box-shadow: 0 0 6px 2px rgba(255, 107, 61, 0.5);
+  }
+  45% {
+    opacity: 1;
+    box-shadow: 0 0 15px 5px rgba(255, 107, 61, 0.9);
+  }
+}
+
+/* Each strand rises the full column once, fading in as it leaves the cigarette
+   and out before it wraps — so the restart is never visible and the paths do
+   not need to be periodic. With several strands on unrelated durations the
+   composite never settles into a recognisable repeat. */
+@keyframes bb-smoke-drift {
+  0% {
+    transform: translateY(90px) scaleX(0.75);
+    opacity: 0;
+  }
+  14% {
+    opacity: 1;
+  }
+  62% {
+    opacity: 0.85;
+  }
+  100% {
+    transform: translateY(-330px) scaleX(1.5);
+    opacity: 0;
+  }
+}
+
+/* A slow lean, so the column of smoke is never rigid. */
+@keyframes bb-sway {
+  from {
+    transform: translateX(-5px) rotate(-1.4deg) scaleY(0.98);
+  }
+  to {
+    transform: translateX(6px) rotate(1.8deg) scaleY(1.03);
+  }
+}
+
+/* Travel runs along the layer's own rotated axis, so the craft climbs on the
+   diagonal and its trail stays behind it. The rotation is repeated in every
+   step because an animated transform replaces the inline one outright. */
+@keyframes bb-ascend {
+  0% {
+    transform: rotate(var(--ascent-angle, 58deg)) translateY(var(--ascent-start, 160px));
+    opacity: 0;
+  }
+  5% {
+    opacity: 1;
+  }
+  86% {
+    transform: rotate(var(--ascent-angle, 58deg))
+      translateY(calc(var(--ascent-travel, 1800px) * -1));
+    opacity: 1;
+  }
+  96% {
+    transform: rotate(var(--ascent-angle, 58deg))
+      translateY(calc(var(--ascent-travel, 1800px) * -1.12));
+    opacity: 0;
+  }
+  100% {
+    transform: rotate(var(--ascent-angle, 58deg))
+      translateY(calc(var(--ascent-travel, 1800px) * -1.12));
+    opacity: 0;
+  }
+}
+
+/* The old horizontal fly-past, kept for themes that prefer it. */
+@keyframes bb-ship {
+  0%,
+  62% {
+    transform: translate3d(-6vw, 26vh, 0) rotate(11deg);
+    opacity: 0;
+  }
+  66% {
+    opacity: 0.85;
+  }
+  88% {
+    opacity: 0.65;
+  }
+  100% {
+    transform: translate3d(104vw, -6vh, 0) rotate(11deg);
+    opacity: 0;
+  }
+}
+
+/* Contrails breathe rather than travel — they are sky, not traffic. */
+@keyframes bb-ribbon {
+  from {
+    transform: translateX(-1.5%) rotate(var(--ribbon-rot, 0deg));
+  }
+  to {
+    transform: translateX(1.5%) rotate(var(--ribbon-rot, 0deg));
+  }
+}
+
+@keyframes bb-scan {
+  0% {
+    transform: translateY(-100%);
+  }
+  100% {
+    transform: translateY(1200%);
+  }
+}
+
+@keyframes bb-glitch {
+  0%,
+  88%,
+  100% {
+    transform: none;
+    opacity: 0;
+  }
+  89% {
+    transform: translateX(-6px);
+    opacity: 0.5;
+  }
+  91% {
+    transform: translateX(5px);
+    opacity: 0.35;
+  }
+  93% {
+    transform: translateX(-2px);
+    opacity: 0.45;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [style*='bb-stars'],
+  [style*='bb-ember'],
+  [style*='bb-smoke-drift'],
+  [style*='bb-sway'],
+  [style*='bb-ascend'],
+  [style*='bb-ship'],
+  [style*='bb-ribbon'],
+  [style*='bb-scan'],
+  [style*='bb-glitch'] {
+    animation: none !important;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Theme geometry
+   The design project ships shape as tokens, not just colour: corner radius,
+   corner clipping, stroke weight, type families. Components must not hardcode
+   `rounded-lg` or `border` if they want a theme to change their silhouette, so
+   every shaped element reaches for one of these instead.
+
+   Defaults here stand in for themes that predate the token set (the legacy
+   presets carry no `vars` at all), and are restored automatically when a theme
+   that omits a token is selected, because ThemeProvider removes the inline
+   properties the previous theme set.
+   --------------------------------------------------------------------------- */
+
+:root {
+  --r: 12px;
+  --r-sm: 8px;
+  --btn-r: 9999px;
+  --rule-r: 9999px;
+  --bar-r: 9999px;
+  --clip: none;
+  --clip-btn: none;
+  --sw: 1;
+  --shadow: 0 8px 26px rgba(0, 0, 0, 0.45);
+  --trans: 220ms cubic-bezier(0.2, 0.7, 0.3, 1);
+  --hover-t: translateY(-4px);
+  --f-d: 'Big Shoulders Display', sans-serif;
+  --f-b: 'Barlow', system-ui, sans-serif;
+  --f-m: 'Space Mono', ui-monospace, monospace;
+  --ls-d: 0.035em;
+  --w-d: 800;
+  --tt-l: uppercase;
+}
+
+@layer utilities {
+  /* Cards and panels, following the design source's card recipe:
+       border-radius: var(--r); clip-path: var(--clip);
+       box-shadow: var(--shadow); transition: ... var(--trans);
+     `.t-panel` takes the radius alone, for containers whose children are
+     allowed to escape the box (menus, popovers, sticky headers) — clip-path
+     would cut those off. */
+  .t-card {
+    border-radius: var(--r, 12px);
+    clip-path: var(--clip, none);
+    box-shadow: var(--shadow, none);
+    transition:
+      transform var(--trans, 220ms ease),
+      border-color var(--trans, 220ms ease);
+  }
+
+  .t-panel {
+    border-radius: var(--r, 12px);
+    box-shadow: var(--shadow, none);
+  }
+
+  /* The corner ornament. Every card in the design source carries an overlay
+     div painting `--corner` / `--corner-shadow` / `--corner-op`: Spike's
+     film-slate marks, Jet's rivets, Faye's gold inlay, Ed's brackets. Drawn
+     here as a pseudo-element so it needs no markup at 60-odd call sites.
+     `:where()` has zero specificity, so a card that is positioned by a
+     Tailwind utility keeps that position and still anchors the overlay. */
+  :where(.t-card, .t-panel) {
+    position: relative;
+  }
+
+  .t-card::after,
+  .t-panel::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    background: var(--corner, none);
+    box-shadow: var(--corner-shadow, none);
+    opacity: var(--corner-op, 0);
+  }
+
+  /* Small surfaces: badges, chips, table rows, inputs, thumbnails. */
+  .t-sm {
+    border-radius: var(--r-sm, 8px);
+  }
+
+  /* Controls come in two kinds in the design source, and the split matters:
+     only the round play/pause transport buttons and the seek handles take
+     `--btn-r` (a pill under Space Cowboy and Queen of Hearts). Every other
+     button — toolbar, chevron, filter, dialog — takes `--r-sm` and the card
+     clip, the same shape as a chip. */
+  .t-btn {
+    border-radius: var(--btn-r, var(--r, 8px));
+    clip-path: var(--clip-btn, none);
+  }
+
+  .t-control {
+    border-radius: var(--r-sm, 8px);
+    clip-path: var(--clip, none);
+  }
+
+  /* Progress, seek and meter fills. */
+  .t-bar {
+    border-radius: var(--bar-r, 9999px);
+  }
+
+  /* Section headings: display face, theme weight, theme tracking and case. */
+  .t-heading {
+    font-family: var(--f-d, inherit);
+    font-weight: var(--w-d, 700);
+    letter-spacing: var(--ls-h, normal);
+    text-transform: var(--tt-l, uppercase);
+  }
+
+  /* Corner treatment for the frameless window.
+
+     The window is transparent so its corners can be cut out, and no single
+     ancestor can do the cutting: `position: fixed` layers escape any clip an
+     ancestor applies, so the canvas, the ambience beds, the now-playing bar and
+     every full-bleed overlay each round themselves. `--win-r` is published by
+     the window chrome and stays `0px` in the browser demo, where the page is
+     not the window and square corners are correct. */
+  .win-round {
+    border-radius: var(--win-r, 0px);
+  }
+
+  .win-round-b {
+    border-bottom-left-radius: var(--win-r, 0px);
+    border-bottom-right-radius: var(--win-r, 0px);
+  }
+
+  .win-round-tr {
+    border-top-right-radius: var(--win-r, 0px);
+  }
+
+  /* Theme stroke weight, for elements that carry a border on every side.
+     Declared after Tailwind's `border` so it overrides that 1px. */
+  .t-stroke {
+    border-width: calc(var(--sw, 1) * 1px);
+    border-style: solid;
+  }
+}
+
+@layer utilities {
+  .t-lift:hover {
+    transform: var(--hover-t, translateY(-4px));
   }
 }

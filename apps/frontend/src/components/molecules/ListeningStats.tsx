@@ -161,11 +161,11 @@ export const ListeningStats: React.FC<ListeningStatsProps> = ({
             borderColor: currentTheme.borderColor,
             background: currentTheme.cardGradient || currentTheme.bgCard,
           }}
-          className={`w-full px-4 py-2.5 border ${currentTheme.cardRadius} flex flex-wrap items-center justify-between gap-3 shadow-md transition-all duration-300`}
+          className={`w-full px-4 py-2.5 border t-card t-stroke flex flex-wrap items-center justify-between gap-3 shadow-md transition-all duration-300`}
         >
           <div className="flex items-center gap-2.5">
             <div
-              className="px-2.5 py-1 rounded text-xs font-mono font-bold tracking-wider uppercase flex items-center gap-1.5 border"
+              className="px-2.5 py-1 t-sm text-xs font-mono font-bold tracking-wider uppercase flex items-center gap-1.5 border"
               style={{
                 backgroundColor: `${currentTheme.primary}20`,
                 color: currentTheme.primary,
@@ -177,14 +177,26 @@ export const ListeningStats: React.FC<ListeningStatsProps> = ({
             </div>
             <div className="flex items-center gap-1.5 text-xs italic text-neutral-300">
               <Quote className="w-3 h-3 text-neutral-400 shrink-0" />
-              <span className="font-serif tracking-wide">&ldquo;{currentTheme.tagline}&rdquo;</span>
+              {/* Themes carry a separate quote face — Ed's is handwritten, Spike's
+                  is an italic of the body — so the tagline reads in their voice. */}
+              <span
+                className="tracking-wide"
+                style={{
+                  fontFamily: 'var(--f-q, inherit)',
+                  fontStyle: 'var(--fi-q, italic)',
+                  fontSize: 'var(--fs-q, inherit)',
+                  letterSpacing: 'var(--ls-q, inherit)',
+                }}
+              >
+                &ldquo;{currentTheme.tagline}&rdquo;
+              </span>
             </div>
           </div>
 
           <div className="flex items-center gap-2 text-xs font-mono text-neutral-400">
             <span className="hidden sm:inline">THEME ACTIVE:</span>
             <span
-              className="font-bold px-2 py-0.5 rounded border"
+              className="font-bold px-2 py-0.5 t-sm border"
               style={{
                 backgroundColor: `${currentTheme.secondary}15`,
                 color: currentTheme.secondary,
@@ -216,7 +228,7 @@ export const ListeningStats: React.FC<ListeningStatsProps> = ({
                 borderTopWidth: '3px',
                 background: currentTheme.cardGradient || currentTheme.bgCard,
               }}
-              className={`group border ${currentTheme.cardRadius} p-4 flex flex-col justify-between transition-all duration-200 hover:-translate-y-1 hover:shadow-xl cursor-pointer select-none`}
+              className={`group border t-card t-stroke p-4 flex flex-col justify-between transition-all duration-200 t-lift hover:shadow-xl cursor-pointer select-none`}
             >
               {/* Card Header: Label & Themed Icon */}
               <div className="flex items-center justify-between gap-2">
@@ -227,7 +239,7 @@ export const ListeningStats: React.FC<ListeningStatsProps> = ({
                   {item.label}
                 </span>
                 <div
-                  className="w-7 h-7 rounded-lg flex items-center justify-center border shrink-0 transition-transform group-hover:scale-110"
+                  className="w-7 h-7 t-sm flex items-center justify-center border shrink-0 transition-transform group-hover:scale-110"
                   style={{
                     backgroundColor: item.colorConfig.badgeBg,
                     borderColor: `${item.colorConfig.borderTop}50`,
@@ -250,7 +262,6 @@ export const ListeningStats: React.FC<ListeningStatsProps> = ({
                   {item.value}
                 </span>
               </div>
-
             </div>
           );
         })}
@@ -271,7 +282,7 @@ export const ListeningStats: React.FC<ListeningStatsProps> = ({
                   borderColor: currentTheme.borderColor,
                   background: currentTheme.cardGradient || currentTheme.bgCard,
                 }}
-                className={`group border ${currentTheme.cardRadius} p-4 flex flex-col justify-between transition-all duration-200 hover:-translate-y-1 hover:shadow-xl cursor-pointer select-none`}
+                className={`group border t-card t-stroke p-4 flex flex-col justify-between transition-all duration-200 t-lift hover:shadow-xl cursor-pointer select-none`}
               >
                 <div className="flex items-center justify-between gap-2">
                   <span
@@ -289,7 +300,7 @@ export const ListeningStats: React.FC<ListeningStatsProps> = ({
 
                 <div className="my-2.5 flex items-center gap-3">
                   <div
-                    className="w-9 h-9 rounded-xl flex items-center justify-center border shrink-0 transition-transform group-hover:scale-110"
+                    className="w-9 h-9 t-sm flex items-center justify-center border shrink-0 transition-transform group-hover:scale-110"
                     style={{
                       backgroundColor: `${item.badgeColor}18`,
                       borderColor: `${item.badgeColor}60`,
@@ -305,7 +316,6 @@ export const ListeningStats: React.FC<ListeningStatsProps> = ({
                     {item.value}
                   </span>
                 </div>
-
               </div>
             );
           })}

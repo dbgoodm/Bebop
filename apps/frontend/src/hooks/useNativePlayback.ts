@@ -94,12 +94,10 @@ export function useNativePlayback() {
       subscribe<AppError>('playback://error', setError),
       listen<SpectrumFrame>('playback://spectrum', ({ payload }) => {
         spectrumRef.current = payload.bins;
-      }).then(
-        (unlisten) => {
-          if (disposed) unlisten();
-          else unlisteners.push(unlisten);
-        },
-      ),
+      }).then((unlisten) => {
+        if (disposed) unlisten();
+        else unlisteners.push(unlisten);
+      }),
       listAudioOutputDevices()
         .then(setOutputDevices)
         .catch(() => undefined),

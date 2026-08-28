@@ -27,6 +27,7 @@ import {
 import { LOCAL_TRACKS, LOCAL_ALBUMS, LOCAL_ARTISTS } from '@/demo/catalog';
 import { loadArtistDetail, loadAlbumDetail } from '@/services/catalogService';
 
+import { WindowControls } from '@/components/molecules/WindowControls';
 import { ThemeProvider, useTheme } from '@/services/themeService';
 import { ThemeSelectorModal } from '@/components/organisms/ThemeSelectorModal';
 import { useDemoMode } from '@/hooks/useDemoMode';
@@ -39,11 +40,10 @@ export default function MusicPlayerPage() {
 
   return (
     <ThemeProvider>
-      {demoMode ? (
-        <DemoMusicPlayer />
-      ) : (
-        <DesktopLibraryPage />
-      )}
+      {/* Outside both branches so the frameless window's caption buttons survive
+          whatever the page mounts over itself. */}
+      <WindowControls />
+      {demoMode ? <DemoMusicPlayer /> : <DesktopLibraryPage />}
     </ThemeProvider>
   );
 }
@@ -67,6 +67,8 @@ function DemoMusicPlayer() {
   // Fullscreen view & Queue modal states
   const [isFullscreenNowPlaying, setIsFullscreenNowPlaying] = useState(false);
   const [isQueueModalOpen, setIsQueueModalOpen] = useState(false);
+  const [isShuffle, setIsShuffle] = useState(false);
+  const [repeatMode, setRepeatMode] = useState<'off' | 'all' | 'one'>('off');
 
   // Playback Queue state
   const [playQueue, setPlayQueue] = useState<TrackItem[]>([
@@ -84,28 +86,41 @@ function DemoMusicPlayer() {
     };
   }, []);
 
+  const handleToggleShuffle = useCallback(() => {
+    setIsShuffle((prev) => !prev);
+  }, []);
+
+  const handleToggleRepeat = useCallback(() => {
+    setRepeatMode((prev) => (prev === 'off' ? 'all' : prev === 'all' ? 'one' : 'off'));
+  }, []);
+
   const handleNextTrack = useCallback(() => {
-    if (playQueue.length > 0) {
-      const currentIndex = playQueue.findIndex((t) => t.id === currentTrack?.id);
-      const nextIndex = (currentIndex + 1) % playQueue.length;
-      handlePlayTrack(playQueue[nextIndex]);
-    } else {
-      const currentIndex = LOCAL_TRACKS.findIndex((t) => t.id === currentTrack?.id);
-      const nextIndex = (currentIndex + 1) % LOCAL_TRACKS.length;
-      handlePlayTrack(LOCAL_TRACKS[nextIndex]);
+    if (repeatMode === 'one' && currentTrack) {
+      handlePlayTrack(currentTrack);
+      return;
     }
-  }, [playQueue, currentTrack]);
+    const trackList = playQueue.length > 0 ? playQueue : LOCAL_TRACKS;
+    if (trackList.length === 0) return;
+    if (isShuffle && trackList.length > 1) {
+      const candidates = trackList.filter((t) => t.id !== currentTrack?.id);
+      const randomTrack = candidates[Math.floor(Math.random() * candidates.length)];
+      handlePlayTrack(randomTrack);
+      return;
+    }
+    const currentIndex = trackList.findIndex((t) => t.id === currentTrack?.id);
+    if (repeatMode === 'off' && currentIndex >= trackList.length - 1) {
+      return;
+    }
+    const nextIndex = (currentIndex + 1) % trackList.length;
+    handlePlayTrack(trackList[nextIndex]);
+  }, [playQueue, currentTrack, isShuffle, repeatMode]);
 
   const handlePrevTrack = useCallback(() => {
-    if (playQueue.length > 0) {
-      const currentIndex = playQueue.findIndex((t) => t.id === currentTrack?.id);
-      const prevIndex = (currentIndex - 1 + playQueue.length) % playQueue.length;
-      handlePlayTrack(playQueue[prevIndex]);
-    } else {
-      const currentIndex = LOCAL_TRACKS.findIndex((t) => t.id === currentTrack?.id);
-      const prevIndex = (currentIndex - 1 + LOCAL_TRACKS.length) % LOCAL_TRACKS.length;
-      handlePlayTrack(LOCAL_TRACKS[prevIndex]);
-    }
+    const trackList = playQueue.length > 0 ? playQueue : LOCAL_TRACKS;
+    if (trackList.length === 0) return;
+    const currentIndex = trackList.findIndex((t) => t.id === currentTrack?.id);
+    const prevIndex = (currentIndex - 1 + trackList.length) % trackList.length;
+    handlePlayTrack(trackList[prevIndex]);
   }, [playQueue, currentTrack]);
 
   // Hook real audio engine events
@@ -224,9 +239,7 @@ function DemoMusicPlayer() {
       } catch {
         // Fallback
       }
-      const match = LOCAL_ARTISTS.find(
-        (a) => a.name.toLowerCase() === artistOrName.toLowerCase(),
-      );
+      const match = LOCAL_ARTISTS.find((a) => a.name.toLowerCase() === artistOrName.toLowerCase());
       if (match) {
         setSelectedArtist(match);
       }
@@ -345,10 +358,10 @@ function DemoMusicPlayer() {
         backgroundColor: currentTheme.bgCanvas,
         background: currentTheme.bgCanvasGradient || currentTheme.bgCanvas,
       }}
-      className="min-h-screen text-neutral-100 flex flex-col font-sans pb-28 transition-colors duration-500 relative overflow-x-hidden"
+      className="win-round min-h-screen text-neutral-100 flex flex-col font-sans pb-28 transition-colors duration-500 relative overflow-x-hidden"
     >
       {/* Dynamic Ambient Background Glow Orbs for Optical Depth */}
-      <div className="pointer-events-none fixed inset-0 overflow-hidden z-0">
+      <div className="win-round pointer-events-none fixed inset-0 overflow-hidden z-0">
         {currentTheme.ambientOrbs?.map((orb, index) => (
           <div
             key={index}
@@ -489,7 +502,7 @@ function DemoMusicPlayer() {
             {['DISCOVER', 'SETTINGS'].includes(activeTab) && (
               <div
                 id="other-view-container"
-                className="p-6 bg-[#0c1017] border border-neutral-800 rounded-md"
+                className="p-6 bg-[#0c1017] border border-neutral-800 t-sm"
               >
                 <h1 className="text-xl font-bold text-white mb-2">{activeTab}</h1>
                 <p className="text-sm text-neutral-400">
@@ -507,7 +520,7 @@ function DemoMusicPlayer() {
       {nowResuming && (
         <div
           id="resume-toast"
-          className="fixed bottom-24 right-6 p-3 px-4 bg-[#0e131d] border border-amber-500/50 text-white text-xs rounded-lg shadow-2xl flex items-center justify-between gap-4 z-50 animate-fadeIn"
+          className="fixed bottom-24 right-6 p-3 px-4 bg-[#0e131d] border border-amber-500/50 text-white text-xs t-panel t-stroke shadow-2xl flex items-center justify-between gap-4 z-50 animate-fadeIn"
         >
           <div className="flex items-center gap-2.5">
             <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
@@ -539,6 +552,10 @@ function DemoMusicPlayer() {
         onExpandFullscreen={() => setIsFullscreenNowPlaying(true)}
         onToggleQueue={() => setIsQueueModalOpen((prev) => !prev)}
         queueCount={playQueue.length}
+        isShuffle={isShuffle}
+        onToggleShuffle={handleToggleShuffle}
+        repeatMode={repeatMode}
+        onToggleRepeat={handleToggleRepeat}
         frequencyDataProvider={audioEngine?.getFrequencyData.bind(audioEngine)}
       />
 
@@ -571,6 +588,10 @@ function DemoMusicPlayer() {
         onSeek={handleSeek}
         queue={playQueue}
         onPlayQueueTrack={handlePlayTrack}
+        isShuffle={isShuffle}
+        onToggleShuffle={handleToggleShuffle}
+        repeatMode={repeatMode}
+        onToggleRepeat={handleToggleRepeat}
         onSelectArtist={handleSelectArtist}
         onSelectAlbum={handleSelectAlbum}
         frequencyDataProvider={audioEngine?.getFrequencyData.bind(audioEngine)}

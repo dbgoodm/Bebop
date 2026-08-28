@@ -27,7 +27,7 @@ export const ArtistsGridView: React.FC<ArtistsGridViewProps> = ({
             key={artist.id}
             id={`artist-card-${artist.id}`}
             onClick={() => onSelectArtist?.(artist)}
-            className="group bg-[#0c1017] border border-neutral-800 hover:border-amber-600/50 rounded-lg p-4 flex flex-col items-center text-center transition-all duration-200 hover:-translate-y-1 hover:shadow-lg cursor-pointer relative"
+            className="group bg-[#0c1017] border border-neutral-800 hover:border-amber-600/50 t-card t-stroke p-4 flex flex-col items-center text-center transition-all duration-200 t-lift hover:shadow-lg cursor-pointer relative"
           >
             {/* Circular Artist Avatar with hover play overlay */}
             <div className="relative w-28 h-28 sm:w-32 sm:h-32 rounded-full overflow-hidden mb-3 border-2 border-neutral-700/60 shadow-md bg-neutral-900 group-hover:border-amber-500 transition-colors">
@@ -54,7 +54,7 @@ export const ArtistsGridView: React.FC<ArtistsGridViewProps> = ({
                 className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-pointer"
                 aria-label={`Play ${artist.name}`}
               >
-                <div className="w-11 h-11 rounded-full bg-amber-500 text-black flex items-center justify-center shadow-lg hover:scale-105 transition-transform">
+                <div className="w-11 h-11 t-btn bg-amber-500 text-black flex items-center justify-center shadow-lg hover:scale-105 transition-transform">
                   <Play className="w-5 h-5 fill-black ml-0.5" />
                 </div>
               </button>
@@ -70,7 +70,7 @@ export const ArtistsGridView: React.FC<ArtistsGridViewProps> = ({
               {artist.genres.slice(0, 2).map((genre) => (
                 <span
                   key={genre}
-                  className="px-2 py-0.5 rounded text-[10px] bg-neutral-800 text-neutral-300 font-medium"
+                  className="px-2 py-0.5 t-sm text-[10px] bg-neutral-800 text-neutral-300 font-medium"
                 >
                   {genre}
                 </span>
@@ -96,7 +96,7 @@ export const ArtistsGridView: React.FC<ArtistsGridViewProps> = ({
           type="button"
           onClick={onLoadMore}
           disabled={isLoading}
-          className="self-center rounded border border-neutral-700 px-4 py-2 text-xs font-semibold text-neutral-300 transition hover:border-amber-500/50 hover:text-amber-300 disabled:opacity-50"
+          className="self-center t-control border border-neutral-700 px-4 py-2 text-xs font-semibold text-neutral-300 transition hover:border-amber-500/50 hover:text-amber-300 disabled:opacity-50"
         >
           {isLoading ? 'Loading artists…' : 'Load more artists'}
         </button>

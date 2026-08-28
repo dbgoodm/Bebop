@@ -42,7 +42,7 @@ export const RediscoverRail: React.FC<RediscoverRailProps> = ({
               color: currentTheme.primary,
               borderColor: `${currentTheme.primary}60`,
             }}
-            className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border"
+            className="inline-flex items-center gap-1 px-2 py-0.5 t-sm text-[10px] font-bold uppercase tracking-wider border"
           >
             <Disc3 className="w-3 h-3" />
             Album
@@ -56,7 +56,7 @@ export const RediscoverRail: React.FC<RediscoverRailProps> = ({
               color: currentTheme.secondary,
               borderColor: `${currentTheme.secondary}60`,
             }}
-            className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border"
+            className="inline-flex items-center gap-1 px-2 py-0.5 t-sm text-[10px] font-bold uppercase tracking-wider border"
           >
             <User className="w-3 h-3" />
             Artist
@@ -64,7 +64,7 @@ export const RediscoverRail: React.FC<RediscoverRailProps> = ({
         );
       case 'playlist':
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-blue-950/90 text-blue-300 border border-blue-800/60">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 t-sm text-[10px] font-bold uppercase tracking-wider bg-blue-950/90 text-blue-300 border border-blue-800/60">
             <ListMusic className="w-3 h-3" />
             Playlist
           </span>
@@ -77,10 +77,8 @@ export const RediscoverRail: React.FC<RediscoverRailProps> = ({
       {/* Section Header */}
       <div id="rediscover-header" className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="w-1.5 h-4 rounded-sm" style={{ backgroundColor: currentTheme.primary }} />
-          <h2 className="text-sm font-bold tracking-wider text-neutral-200 uppercase font-serif">
-            Rediscover
-          </h2>
+          <div className="w-1.5 h-4 t-sm" style={{ backgroundColor: currentTheme.primary }} />
+          <h2 className="text-sm text-neutral-200 t-heading">Rediscover</h2>
           <span className="text-xs text-neutral-500 font-normal">
             (Unplayed Local Favorites & Deep Cuts)
           </span>
@@ -96,7 +94,7 @@ export const RediscoverRail: React.FC<RediscoverRailProps> = ({
               backgroundColor: currentTheme.bgCard,
               borderColor: currentTheme.borderColor,
             }}
-            className="w-8 h-8 rounded border text-neutral-300 hover:text-white transition-colors flex items-center justify-center cursor-pointer hover:brightness-125"
+            className="w-8 h-8 t-control border text-neutral-300 hover:text-white transition-colors flex items-center justify-center cursor-pointer hover:brightness-125"
             aria-label="Scroll Left"
           >
             <ChevronLeft className="w-4 h-4" />
@@ -109,7 +107,7 @@ export const RediscoverRail: React.FC<RediscoverRailProps> = ({
               backgroundColor: currentTheme.bgCard,
               borderColor: currentTheme.borderColor,
             }}
-            className="w-8 h-8 rounded border text-neutral-300 hover:text-white transition-colors flex items-center justify-center cursor-pointer hover:brightness-125"
+            className="w-8 h-8 t-control border text-neutral-300 hover:text-white transition-colors flex items-center justify-center cursor-pointer hover:brightness-125"
             aria-label="Scroll Right"
           >
             <ChevronRight className="w-4 h-4" />
@@ -132,7 +130,7 @@ export const RediscoverRail: React.FC<RediscoverRailProps> = ({
               backgroundColor: currentTheme.bgCard,
               borderColor: currentTheme.borderColor,
             }}
-            className="group relative flex-none w-72 sm:w-80 border rounded-xl overflow-hidden flex flex-col justify-between transition-all duration-200 hover:-translate-y-1 hover:shadow-xl cursor-pointer snap-start"
+            className="group relative flex-none w-72 sm:w-80 border t-card t-stroke overflow-hidden flex flex-col justify-between transition-all duration-200 t-lift hover:shadow-xl cursor-pointer snap-start"
           >
             {/* Media Cover Image Banner */}
             <div className="relative h-36 w-full overflow-hidden bg-neutral-900">
@@ -161,7 +159,7 @@ export const RediscoverRail: React.FC<RediscoverRailProps> = ({
                     color: currentTheme.primary,
                     borderColor: `${currentTheme.primary}60`,
                   }}
-                  className="inline-flex items-center gap-1 text-[11px] font-semibold backdrop-blur-sm px-2 py-0.5 rounded border"
+                  className="inline-flex items-center gap-1 text-[11px] font-semibold backdrop-blur-sm px-2 py-0.5 t-sm border"
                 >
                   <History className="w-3 h-3" style={{ color: currentTheme.primary }} />
                   {item.lastPlayedText}
@@ -180,7 +178,7 @@ export const RediscoverRail: React.FC<RediscoverRailProps> = ({
                   backgroundColor: currentTheme.primary,
                   boxShadow: `0 4px 16px ${currentTheme.accentGlow}`,
                 }}
-                className="absolute right-3 bottom-3 w-11 h-11 rounded-full text-black flex items-center justify-center shadow-lg transform translate-y-2 opacity-90 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-200 cursor-pointer hover:scale-105 hover:brightness-110"
+                className="absolute right-3 bottom-3 w-11 h-11 t-btn text-black flex items-center justify-center shadow-lg transform translate-y-2 opacity-90 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-200 cursor-pointer hover:scale-105 hover:brightness-110"
                 aria-label={`Rediscover ${item.title}`}
               >
                 <Play className="w-5 h-5 fill-black ml-0.5" />

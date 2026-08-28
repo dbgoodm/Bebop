@@ -119,7 +119,7 @@ export const ContinueListeningRail: React.FC<ContinueListeningRailProps> = ({
               color: currentTheme.primary,
               borderColor: `${currentTheme.primary}60`,
             }}
-            className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border"
+            className="inline-flex items-center gap-1 px-2 py-0.5 t-sm text-[10px] font-bold uppercase tracking-wider border"
           >
             <Disc3 className="w-3 h-3" />
             Album
@@ -133,7 +133,7 @@ export const ContinueListeningRail: React.FC<ContinueListeningRailProps> = ({
               color: currentTheme.secondary,
               borderColor: `${currentTheme.secondary}60`,
             }}
-            className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border"
+            className="inline-flex items-center gap-1 px-2 py-0.5 t-sm text-[10px] font-bold uppercase tracking-wider border"
           >
             <User className="w-3 h-3" />
             Artist Session
@@ -141,7 +141,7 @@ export const ContinueListeningRail: React.FC<ContinueListeningRailProps> = ({
         );
       case 'playlist':
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-blue-950/80 text-blue-300 border border-blue-800/60">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 t-sm text-[10px] font-bold uppercase tracking-wider bg-blue-950/80 text-blue-300 border border-blue-800/60">
             <ListMusic className="w-3 h-3" />
             Playlist
           </span>
@@ -154,13 +154,8 @@ export const ContinueListeningRail: React.FC<ContinueListeningRailProps> = ({
       {/* Section Header */}
       <div id="continue-listening-header" className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div
-            className="w-1.5 h-4 rounded-sm"
-            style={{ backgroundColor: currentTheme.secondary }}
-          />
-          <h2 className="text-sm font-bold tracking-wider text-neutral-200 uppercase font-serif">
-            Continue Listening
-          </h2>
+          <div className="w-1.5 h-4 t-sm" style={{ backgroundColor: currentTheme.secondary }} />
+          <h2 className="text-sm text-neutral-200 t-heading">Continue Listening</h2>
           <span className="text-xs text-neutral-500 font-normal">
             (Playlists, Artists & Albums)
           </span>
@@ -176,7 +171,7 @@ export const ContinueListeningRail: React.FC<ContinueListeningRailProps> = ({
               backgroundColor: currentTheme.bgCard,
               borderColor: currentTheme.borderColor,
             }}
-            className="w-8 h-8 rounded border text-neutral-300 hover:text-white transition-colors flex items-center justify-center cursor-pointer hover:brightness-125"
+            className="w-8 h-8 t-control border text-neutral-300 hover:text-white transition-colors flex items-center justify-center cursor-pointer hover:brightness-125"
             aria-label="Scroll Left"
           >
             <ChevronLeft className="w-4 h-4" />
@@ -189,7 +184,7 @@ export const ContinueListeningRail: React.FC<ContinueListeningRailProps> = ({
               backgroundColor: currentTheme.bgCard,
               borderColor: currentTheme.borderColor,
             }}
-            className="w-8 h-8 rounded border text-neutral-300 hover:text-white transition-colors flex items-center justify-center cursor-pointer hover:brightness-125"
+            className="w-8 h-8 t-control border text-neutral-300 hover:text-white transition-colors flex items-center justify-center cursor-pointer hover:brightness-125"
             aria-label="Scroll Right"
           >
             <ChevronRight className="w-4 h-4" />
@@ -205,7 +200,7 @@ export const ContinueListeningRail: React.FC<ContinueListeningRailProps> = ({
       >
         {items.length === 0 ? (
           <div
-            className="flex min-h-48 w-full flex-col items-center justify-center rounded-xl border border-dashed px-6 py-8 text-center"
+            className="flex min-h-48 w-full flex-col items-center justify-center t-card t-stroke border border-dashed px-6 py-8 text-center"
             style={{
               backgroundColor: currentTheme.bgCard,
               borderColor: currentTheme.borderColor,
@@ -235,7 +230,7 @@ export const ContinueListeningRail: React.FC<ContinueListeningRailProps> = ({
                 backgroundColor: currentTheme.bgCard,
                 borderColor: currentTheme.borderColor,
               }}
-              className="group relative flex-none w-72 sm:w-80 border rounded-xl overflow-hidden flex flex-col justify-between transition-all duration-200 hover:-translate-y-1 hover:shadow-xl cursor-pointer snap-start"
+              className="group relative flex-none w-72 sm:w-80 border t-card t-stroke overflow-hidden flex flex-col justify-between transition-all duration-200 t-lift hover:shadow-xl cursor-pointer snap-start"
             >
               {/* Top Media Banner / Cover Art & Resume Play Trigger */}
               <div className="relative h-36 w-full overflow-hidden bg-neutral-900">
@@ -260,7 +255,7 @@ export const ContinueListeningRail: React.FC<ContinueListeningRailProps> = ({
                 {/* Top Bar Badges on Image */}
                 <div className="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between">
                   {getTypeBadge(item.type)}
-                  <span className="inline-flex items-center gap-1 text-[11px] font-medium text-neutral-300 bg-black/60 backdrop-blur-sm px-2 py-0.5 rounded border border-white/10">
+                  <span className="inline-flex items-center gap-1 text-[11px] font-medium text-neutral-300 bg-black/60 backdrop-blur-sm px-2 py-0.5 t-sm border border-white/10">
                     <Clock className="w-3 h-3 text-neutral-400" />
                     {item.lastPlayedText}
                   </span>
@@ -278,7 +273,7 @@ export const ContinueListeningRail: React.FC<ContinueListeningRailProps> = ({
                     backgroundColor: currentTheme.primary,
                     boxShadow: `0 4px 16px ${currentTheme.accentGlow}`,
                   }}
-                  className="absolute right-3 bottom-3 w-11 h-11 rounded-full text-black flex items-center justify-center shadow-lg transform translate-y-2 opacity-90 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-200 cursor-pointer hover:scale-105 hover:brightness-110"
+                  className="absolute right-3 bottom-3 w-11 h-11 t-btn text-black flex items-center justify-center shadow-lg transform translate-y-2 opacity-90 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-200 cursor-pointer hover:scale-105 hover:brightness-110"
                   aria-label={`Resume ${item.title}`}
                 >
                   <Play className="w-5 h-5 fill-black ml-0.5" />

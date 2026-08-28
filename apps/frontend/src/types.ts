@@ -217,7 +217,20 @@ export interface TrackItem {
   title: string;
   artist: string;
   album: string;
-  codec: 'FLAC' | 'DSD64' | 'DSD256' | 'WAV' | 'ALAC' | 'MP3' | 'OGG' | 'AAC' | 'AIFF' | 'M4A' | 'UNKNOWN' | '—' | string;
+  codec:
+    | 'FLAC'
+    | 'DSD64'
+    | 'DSD256'
+    | 'WAV'
+    | 'ALAC'
+    | 'MP3'
+    | 'OGG'
+    | 'AAC'
+    | 'AIFF'
+    | 'M4A'
+    | 'UNKNOWN'
+    | '—'
+    | string;
   sampleRate: string; // e.g. "24-bit/192kHz", "24/96", "DSD256"
   dynamicRange: string; // e.g. "DR15", "DR13", "DR14"
   bitrate: string; // e.g. "4608 kbps", "2906 kbps"
@@ -356,4 +369,3 @@ export interface ColumnVisibility {
   catalogNumber: boolean;
   duration: boolean;
 }
-

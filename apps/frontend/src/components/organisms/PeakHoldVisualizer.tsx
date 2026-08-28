@@ -1,16 +1,20 @@
 import React, { useEffect, useRef, useState } from 'react';
+import {
+  DEFAULT_VISUALIZER_STYLE,
+  type FillSpec,
+  type VisualizerStyle,
+} from '@/services/visualizerStyle';
 
 interface PeakHoldVisualizerProps {
   isPlaying: boolean;
   barCount?: number;
   height?: number;
-  barWidth?: number;
-  barGap?: number;
-  /** Bar and cap colour. Defaults to white; themes override it. */
-  color?: string;
-  /** Optional second stop for the bar gradient. Defaults to a fade of `color`. */
-  secondaryColor?: string;
-  glowEffect?: boolean;
+  /**
+   * Bar width, gap, corner radius, fill, cap and glow, read from the active
+   * theme's visualizer tokens. Appearance belongs to the theme; only the motion
+   * below is Bebop's own.
+   */
+  style?: VisualizerStyle;
   className?: string;
   intensity?: number;
   autoFillWidth?: boolean;
@@ -41,11 +45,7 @@ export const PeakHoldVisualizer: React.FC<PeakHoldVisualizerProps> = ({
   isPlaying,
   barCount = 63,
   height = 56,
-  barWidth = 4,
-  barGap = 3,
-  color = '#ffffff',
-  secondaryColor,
-  glowEffect = true,
+  style = DEFAULT_VISUALIZER_STYLE,
   className = '',
   intensity = 1.0,
   autoFillWidth = true,
@@ -60,11 +60,18 @@ export const PeakHoldVisualizer: React.FC<PeakHoldVisualizerProps> = ({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const [computedBarCount, setComputedBarCount] = useState<number>(barCount);
+  const { barWidth, barGap } = style;
 
   // Values the animation loop reads but must not restart for. Rebuilding the loop
   // on every prop identity change was itself a source of stutter.
-  const liveRef = useRef({ isPlaying, frequencyDataProvider, getSpectrumBins, spectrumBins, color });
-  liveRef.current = { isPlaying, frequencyDataProvider, getSpectrumBins, spectrumBins, color };
+  const liveRef = useRef({
+    isPlaying,
+    frequencyDataProvider,
+    getSpectrumBins,
+    spectrumBins,
+    style,
+  });
+  liveRef.current = { isPlaying, frequencyDataProvider, getSpectrumBins, spectrumBins, style };
   const usesNativeSpectrum = getSpectrumBins !== undefined || spectrumBins !== undefined;
 
   useEffect(() => {
@@ -138,7 +145,8 @@ export const PeakHoldVisualizer: React.FC<PeakHoldVisualizerProps> = ({
         return;
       }
 
-      const step = autoFillWidth && numBars > 1 ? (w - barWidth) / (numBars - 1) : barWidth + barGap;
+      const step =
+        autoFillWidth && numBars > 1 ? (w - barWidth) / (numBars - 1) : barWidth + barGap;
       const startX = autoFillWidth
         ? 0
         : Math.max(0, (w - (numBars * (barWidth + barGap) - barGap)) / 2);
@@ -170,7 +178,10 @@ export const PeakHoldVisualizer: React.FC<PeakHoldVisualizerProps> = ({
         } else {
           const fLow = minFreq * Math.pow(maxFreq / minFreq, i / numBars);
           const fHigh = minFreq * Math.pow(maxFreq / minFreq, (i + 1) / numBars);
-          const binLow = Math.max(0, Math.min(fftBinCount - 1, Math.floor((fLow * 2048) / sampleRate)));
+          const binLow = Math.max(
+            0,
+            Math.min(fftBinCount - 1, Math.floor((fLow * 2048) / sampleRate)),
+          );
           const binHigh = Math.max(
             binLow + 1,
             Math.min(fftBinCount, Math.ceil((fHigh * 2048) / sampleRate)),
@@ -224,40 +235,74 @@ export const PeakHoldVisualizer: React.FC<PeakHoldVisualizerProps> = ({
         }
       }
 
-      const drawColor = live.color;
-      const gradient = ctx.createLinearGradient(0, h, 0, 0);
-      gradient.addColorStop(0, secondaryColor ?? withAlpha(drawColor, 0.08));
-      gradient.addColorStop(0.55, withAlpha(drawColor, 0.55));
-      gradient.addColorStop(1, drawColor);
+      const drawStyle = live.style;
+      const drawWidth = Math.max(1, drawStyle.barWidth);
+      const radius = Math.min(drawStyle.barRadius, drawWidth / 2);
 
-      const drawWidth = Math.max(2, barWidth);
-      const capHeight = Math.max(2, Math.round(barWidth * 0.75));
+      // In the design source each bar's gradient runs over that bar's own
+      // height, so a short bar still shows its bright top stop. Creating one
+      // gradient per bar would mean one fill per bar; instead the bars are
+      // bucketed by height and each bucket fills in a single pass.
+      const addBar = (i: number, top: number, barH: number) => {
+        const x = startX + i * step;
+        if (radius > 0) roundedTop(ctx, x, top, drawWidth, barH, radius);
+        else ctx.rect(x, top, drawWidth, barH);
+      };
 
-      // One path for every bar and one for every cap. Filling per bar — especially
-      // with a shadow set — was costing more than the physics and the audio combined.
-      ctx.beginPath();
-      for (let i = 0; i < numBars; i++) {
-        const barH = state.heights[i];
-        ctx.rect(startX + i * step, h - barH, drawWidth, barH);
+      if (drawStyle.fill.kind === 'linear') {
+        const stops = drawStyle.fill.stops;
+        const buckets: number[][] = [];
+        for (let i = 0; i < numBars; i++) {
+          const b = Math.min(
+            HEIGHT_BUCKETS - 1,
+            Math.max(0, Math.floor((state.heights[i] / h) * HEIGHT_BUCKETS)),
+          );
+          (buckets[b] ??= []).push(i);
+        }
+        for (let b = 0; b < buckets.length; b++) {
+          const members = buckets[b];
+          if (!members || members.length === 0) continue;
+          const bucketH = Math.max(1, ((b + 0.5) / HEIGHT_BUCKETS) * h);
+          const gradient = ctx.createLinearGradient(0, h, 0, h - bucketH);
+          for (const stop of stops) gradient.addColorStop(clamp01(stop.offset), stop.color);
+          ctx.beginPath();
+          for (const i of members) addBar(i, h - state.heights[i], state.heights[i]);
+          ctx.fillStyle = gradient;
+          ctx.fill();
+        }
+      } else {
+        // Solid and repeating fills are height-independent, so every bar goes
+        // into one path — the repeating pattern is anchored to the bars' feet.
+        ctx.beginPath();
+        for (let i = 0; i < numBars; i++) addBar(i, h - state.heights[i], state.heights[i]);
+        ctx.fillStyle =
+          drawStyle.fill.kind === 'solid'
+            ? drawStyle.fill.color
+            : (patternFor(ctx, drawStyle.fill, h) ?? drawStyle.fill.bands[0].color);
+        ctx.fill();
       }
-      ctx.fillStyle = gradient;
-      ctx.fill();
 
-      ctx.beginPath();
-      for (let i = 0; i < numBars; i++) {
-        const capY = Math.max(0, h - state.peaks[i] - capHeight - 1);
-        ctx.rect(startX + i * step, capY, drawWidth, capHeight);
+      if (drawStyle.capColor && drawStyle.capHeight > 0) {
+        const capHeight = drawStyle.capHeight;
+        ctx.beginPath();
+        for (let i = 0; i < numBars; i++) {
+          const capY = Math.max(0, h - state.peaks[i] - capHeight - 1);
+          if (radius > 0) roundedTop(ctx, startX + i * step, capY, drawWidth, capHeight, radius);
+          else ctx.rect(startX + i * step, capY, drawWidth, capHeight);
+        }
+        ctx.fillStyle = drawStyle.capColor;
+        // One shadowed fill for every cap. Per-element shadows are the single
+        // most expensive thing this canvas can do on WebKitGTK.
+        if (drawStyle.glowColor) {
+          ctx.shadowColor = drawStyle.glowColor;
+          ctx.shadowBlur = drawStyle.glowBlur;
+        }
+        ctx.fill();
+        ctx.shadowBlur = 0;
       }
-      ctx.fillStyle = drawColor;
-      if (glowEffect) {
-        ctx.shadowColor = withAlpha(drawColor, 0.55);
-        ctx.shadowBlur = 6;
-      }
-      ctx.fill();
-      ctx.shadowBlur = 0;
 
       if (particles) {
-        drawParticles(ctx, state, w, h, numBars, step, drawColor, deltaSeconds);
+        drawParticles(ctx, state, w, h, numBars, step, particleColor(drawStyle), deltaSeconds);
       }
 
       ctx.restore();
@@ -273,9 +318,6 @@ export const PeakHoldVisualizer: React.FC<PeakHoldVisualizerProps> = ({
     height,
     barWidth,
     barGap,
-    color,
-    secondaryColor,
-    glowEffect,
     intensity,
     autoFillWidth,
     holdMs,
@@ -289,6 +331,80 @@ export const PeakHoldVisualizer: React.FC<PeakHoldVisualizerProps> = ({
     </div>
   );
 };
+
+/** Height buckets used to share one gradient between bars of similar height. */
+const HEIGHT_BUCKETS = 12;
+
+function clamp01(value: number): number {
+  return value < 0 ? 0 : value > 1 ? 1 : value;
+}
+
+/**
+ * A bar with its top corners rounded and its feet square, which is how a CSS
+ * `border-radius` reads once the bar is clipped to the meter's floor.
+ */
+function roundedTop(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  radius: number,
+): void {
+  const r = Math.min(radius, width / 2, Math.max(0, height));
+  ctx.moveTo(x, y + height);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.lineTo(x + width - r, y);
+  ctx.quadraticCurveTo(x + width, y, x + width, y + r);
+  ctx.lineTo(x + width, y + height);
+  ctx.closePath();
+}
+
+/**
+ * Builds the tile for a repeating fill — Black Dog's segmented meter. The bands
+ * are measured up from the bar's foot, so the tile is drawn upside down and the
+ * pattern is then shifted to put a band boundary exactly on the meter's floor.
+ */
+const patternCache = new WeakMap<FillSpec & { kind: 'repeating' }, CanvasPattern | null>();
+
+function patternFor(
+  ctx: CanvasRenderingContext2D,
+  fill: FillSpec & { kind: 'repeating' },
+  floorY: number,
+): CanvasPattern | null {
+  let pattern = patternCache.get(fill);
+  if (pattern === undefined) {
+    const period = Math.max(1, Math.round(fill.period));
+    const tile = document.createElement('canvas');
+    tile.width = 1;
+    tile.height = period;
+    const tileCtx = tile.getContext('2d');
+    if (!tileCtx) {
+      patternCache.set(fill, null);
+      return null;
+    }
+    for (const band of fill.bands) {
+      tileCtx.fillStyle = band.color;
+      tileCtx.fillRect(0, period - band.to, 1, Math.max(0, band.to - band.from));
+    }
+    pattern = ctx.createPattern(tile, 'repeat');
+    patternCache.set(fill, pattern);
+  }
+  if (pattern && typeof pattern.setTransform === 'function' && typeof DOMMatrix === 'function') {
+    const period = Math.max(1, Math.round(fill.period));
+    pattern.setTransform(new DOMMatrix().translateSelf(0, floorY % period));
+  }
+  return pattern;
+}
+
+/** Sparks take the cap colour, or the fill's brightest stop when there is no cap. */
+function particleColor(style: VisualizerStyle): string {
+  if (style.capColor) return style.capColor;
+  if (style.fill.kind === 'solid') return style.fill.color;
+  if (style.fill.kind === 'linear') return style.fill.stops.at(-1)?.color ?? '#ffffff';
+  return style.fill.bands[0]?.color ?? '#ffffff';
+}
 
 interface Particle {
   x: number;
@@ -347,17 +463,4 @@ function drawParticles(
     ctx.fill();
   }
   ctx.globalAlpha = 1;
-}
-
-/** Accepts #rgb, #rrggbb, or any CSS colour; falls back to a plain rgba mix. */
-function withAlpha(color: string, alpha: number): string {
-  const hex = color.trim();
-  const match = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(hex);
-  if (!match) return color;
-  let value = match[1];
-  if (value.length === 3) value = value[0] + value[0] + value[1] + value[1] + value[2] + value[2];
-  const r = parseInt(value.slice(0, 2), 16);
-  const g = parseInt(value.slice(2, 4), 16);
-  const b = parseInt(value.slice(4, 6), 16);
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }

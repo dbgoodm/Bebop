@@ -52,7 +52,7 @@ export const NowPlayingQueueModal: React.FC<NowPlayingQueueModalProps> = ({
   return (
     <div
       id="now-playing-queue-backdrop"
-      className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex justify-end transition-opacity font-sans"
+      className="win-round fixed inset-0 z-50 overflow-hidden bg-black/70 backdrop-blur-sm flex justify-end transition-opacity font-sans"
       onClick={onClose}
     >
       <div
@@ -63,7 +63,7 @@ export const NowPlayingQueueModal: React.FC<NowPlayingQueueModalProps> = ({
         {/* Header */}
         <div className="p-4 sm:p-5 border-b border-neutral-800 bg-[#0c1019] flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
+            <div className="w-9 h-9 t-sm bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
               <ListMusic className="w-5 h-5" />
             </div>
             <div>
@@ -71,7 +71,7 @@ export const NowPlayingQueueModal: React.FC<NowPlayingQueueModalProps> = ({
                 <h3 className="text-sm font-bold text-white tracking-wide uppercase">
                   Playback Queue
                 </h3>
-                <span className="px-1.5 py-0.5 rounded bg-amber-500/15 border border-amber-500/30 text-[10px] font-mono text-amber-400 font-semibold">
+                <span className="px-1.5 py-0.5 t-sm bg-amber-500/15 border border-amber-500/30 text-[10px] font-mono text-amber-400 font-semibold">
                   {queue.length} Tracks
                 </span>
               </div>
@@ -84,7 +84,7 @@ export const NowPlayingQueueModal: React.FC<NowPlayingQueueModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors cursor-pointer"
+            className="p-1.5 t-control text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors cursor-pointer"
             aria-label="Close Queue"
           >
             <X className="w-5 h-5" />
@@ -98,7 +98,7 @@ export const NowPlayingQueueModal: React.FC<NowPlayingQueueModalProps> = ({
               <button
                 type="button"
                 onClick={onShuffleQueue}
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#151c2a] border border-neutral-800 hover:border-amber-500/40 text-neutral-300 hover:text-amber-300 transition-colors cursor-pointer"
+                className="flex items-center gap-1.5 px-2.5 py-1 t-control bg-[#151c2a] border border-neutral-800 hover:border-amber-500/40 text-neutral-300 hover:text-amber-300 transition-colors cursor-pointer"
               >
                 <Shuffle className="w-3 h-3 text-amber-400" />
                 <span>Shuffle</span>
@@ -108,7 +108,7 @@ export const NowPlayingQueueModal: React.FC<NowPlayingQueueModalProps> = ({
               <button
                 type="button"
                 onClick={onClearQueue}
-                className="flex items-center gap-1 px-2 py-1 rounded text-neutral-400 hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
+                className="flex items-center gap-1 px-2 py-1 t-control text-neutral-400 hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
               >
                 <Trash2 className="w-3 h-3" />
                 <span>Clear Up Next</span>
@@ -128,11 +128,11 @@ export const NowPlayingQueueModal: React.FC<NowPlayingQueueModalProps> = ({
                 Now Playing
               </span>
 
-              <div className="bg-[#131926] border border-amber-500/40 rounded-xl p-3.5 flex items-center gap-3 shadow-lg relative overflow-hidden">
+              <div className="bg-[#131926] border border-amber-500/40 t-card t-stroke p-3.5 flex items-center gap-3 shadow-lg relative overflow-hidden">
                 {/* Visualizer glow background */}
                 <div className="absolute inset-0 bg-gradient-to-r from-amber-500/5 to-transparent pointer-events-none" />
 
-                <div className="w-12 h-12 rounded-lg bg-neutral-900 overflow-hidden shrink-0 border border-amber-500/40 relative group">
+                <div className="w-12 h-12 t-sm bg-neutral-900 overflow-hidden shrink-0 border border-amber-500/40 relative group">
                   {currentTrack.coverUrl ? (
                     <img
                       src={currentTrack.coverUrl}
@@ -148,9 +148,9 @@ export const NowPlayingQueueModal: React.FC<NowPlayingQueueModalProps> = ({
                   {isPlaying && (
                     <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
                       <div className="flex items-end gap-0.5 h-4">
-                        <span className="w-1 bg-amber-400 animate-pulse h-full rounded-full" />
-                        <span className="w-1 bg-amber-400 animate-pulse h-2/3 rounded-full" />
-                        <span className="w-1 bg-amber-400 animate-pulse h-4/5 rounded-full" />
+                        <span className="w-1 bg-amber-400 animate-pulse h-full t-bar" />
+                        <span className="w-1 bg-amber-400 animate-pulse h-2/3 t-bar" />
+                        <span className="w-1 bg-amber-400 animate-pulse h-4/5 t-bar" />
                       </div>
                     </div>
                   )}
@@ -162,7 +162,7 @@ export const NowPlayingQueueModal: React.FC<NowPlayingQueueModalProps> = ({
                     {currentTrack.artist} • {currentTrack.album}
                   </p>
                   <div className="flex items-center gap-2 mt-1 font-mono text-[10px]">
-                    <span className="px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                    <span className="px-1.5 py-0.2 t-sm bg-amber-500/20 text-amber-300 border border-amber-500/30">
                       {currentTrack.codec} {currentTrack.sampleRate}
                     </span>
                     <span className="text-neutral-400">{currentTrack.duration}</span>
@@ -194,7 +194,7 @@ export const NowPlayingQueueModal: React.FC<NowPlayingQueueModalProps> = ({
                   return (
                     <div
                       key={`${track.id}-${idx}`}
-                      className={`group rounded-lg p-2.5 flex items-center gap-3 transition-colors border ${
+                      className={`group t-card t-stroke p-2.5 flex items-center gap-3 transition-colors border ${
                         isCurrent
                           ? 'bg-amber-500/10 border-amber-500/30 text-amber-200'
                           : 'bg-[#0e131d] border-neutral-800/80 hover:bg-[#131a27] hover:border-neutral-700 text-neutral-300'
@@ -208,7 +208,7 @@ export const NowPlayingQueueModal: React.FC<NowPlayingQueueModalProps> = ({
                         <button
                           type="button"
                           onClick={() => onPlayTrack(track)}
-                          className="hidden group-hover:flex items-center justify-center w-6 h-6 rounded-full bg-amber-500 text-black hover:scale-105 cursor-pointer mx-auto transition-transform"
+                          className="hidden group-hover:flex items-center justify-center w-6 h-6 t-btn bg-amber-500 text-black hover:scale-105 cursor-pointer mx-auto transition-transform"
                           title="Play Track"
                         >
                           <Play className="w-3 h-3 fill-black ml-0.5" />
@@ -216,7 +216,7 @@ export const NowPlayingQueueModal: React.FC<NowPlayingQueueModalProps> = ({
                       </div>
 
                       {/* Cover art */}
-                      <div className="w-9 h-9 rounded bg-neutral-900 overflow-hidden shrink-0 border border-neutral-800">
+                      <div className="w-9 h-9 t-sm bg-neutral-900 overflow-hidden shrink-0 border border-neutral-800">
                         {track.coverUrl ? (
                           <img
                             src={track.coverUrl}
@@ -252,7 +252,7 @@ export const NowPlayingQueueModal: React.FC<NowPlayingQueueModalProps> = ({
                           <button
                             type="button"
                             onClick={() => onMoveTrack(idx, idx - 1)}
-                            className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-neutral-800 text-neutral-400 hover:text-white transition-opacity cursor-pointer"
+                            className="opacity-0 group-hover:opacity-100 p-1 t-control hover:bg-neutral-800 text-neutral-400 hover:text-white transition-opacity cursor-pointer"
                             title="Move Up"
                           >
                             <ArrowUp className="w-3 h-3" />
@@ -262,7 +262,7 @@ export const NowPlayingQueueModal: React.FC<NowPlayingQueueModalProps> = ({
                           <button
                             type="button"
                             onClick={() => onMoveTrack(idx, idx + 1)}
-                            className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-neutral-800 text-neutral-400 hover:text-white transition-opacity cursor-pointer"
+                            className="opacity-0 group-hover:opacity-100 p-1 t-control hover:bg-neutral-800 text-neutral-400 hover:text-white transition-opacity cursor-pointer"
                             title="Move Down"
                           >
                             <ArrowDown className="w-3 h-3" />
@@ -272,7 +272,7 @@ export const NowPlayingQueueModal: React.FC<NowPlayingQueueModalProps> = ({
                         <button
                           type="button"
                           onClick={() => onRemoveTrack(idx)}
-                          className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-red-500/20 text-neutral-400 hover:text-red-400 transition-opacity cursor-pointer"
+                          className="opacity-0 group-hover:opacity-100 p-1 t-control hover:bg-red-500/20 text-neutral-400 hover:text-red-400 transition-opacity cursor-pointer"
                           title="Remove from Queue"
                         >
                           <Trash2 className="w-3.5 h-3.5" />

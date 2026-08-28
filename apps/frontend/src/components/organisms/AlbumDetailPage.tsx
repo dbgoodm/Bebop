@@ -276,7 +276,7 @@ export const AlbumDetailPage: React.FC<AlbumDetailPageProps> = ({
             backgroundColor: currentTheme.bgCard,
             borderColor: currentTheme.borderColor,
           }}
-          className="inline-flex items-center gap-2 px-3 py-1.5 rounded text-xs font-mono text-neutral-300 hover:text-white border transition-colors cursor-pointer hover:brightness-125"
+          className="inline-flex items-center gap-2 px-3 py-1.5 t-control text-xs font-mono text-neutral-300 hover:text-white border transition-colors cursor-pointer hover:brightness-125"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
           <span>{backLabel}</span>
@@ -289,7 +289,7 @@ export const AlbumDetailPage: React.FC<AlbumDetailPageProps> = ({
               color: currentTheme.primary,
               borderColor: `${currentTheme.primary}50`,
             }}
-            className="text-xs font-mono border px-2 py-0.5 rounded"
+            className="text-xs font-mono border px-2 py-0.5 t-sm"
           >
             {album.format}
           </span>
@@ -298,7 +298,7 @@ export const AlbumDetailPage: React.FC<AlbumDetailPageProps> = ({
               backgroundColor: currentTheme.bgCard,
               borderColor: currentTheme.borderColor,
             }}
-            className="text-xs font-mono text-neutral-400 border px-2 py-0.5 rounded"
+            className="text-xs font-mono text-neutral-400 border px-2 py-0.5 t-sm"
           >
             {album.dynamicRange}
           </span>
@@ -313,7 +313,7 @@ export const AlbumDetailPage: React.FC<AlbumDetailPageProps> = ({
           borderColor: currentTheme.borderColor,
           background: currentTheme.cardGradient || currentTheme.bgCard,
         }}
-        className="relative w-full rounded-xl overflow-hidden border min-h-[260px] md:min-h-[290px] flex flex-col justify-between p-6 sm:p-7 shadow-2xl"
+        className="relative w-full t-card t-stroke overflow-hidden border min-h-[260px] md:min-h-[290px] flex flex-col justify-between p-6 sm:p-7 shadow-2xl"
       >
         {/* Full-bleed ambient background artwork on right with seamless gradient fade */}
         <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none">
@@ -341,7 +341,7 @@ export const AlbumDetailPage: React.FC<AlbumDetailPageProps> = ({
           {/* Left: Album Cover & Metadata */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5 sm:gap-6 flex-1">
             {/* Album Cover Artwork */}
-            <div className="flex-shrink-0 relative w-36 h-36 sm:w-44 sm:h-44 md:w-48 md:h-48 rounded-lg overflow-hidden bg-neutral-900 border border-neutral-700/80 shadow-2xl group">
+            <div className="flex-shrink-0 relative w-36 h-36 sm:w-44 sm:h-44 md:w-48 md:h-48 t-card t-stroke overflow-hidden bg-neutral-900 border border-neutral-700/80 shadow-2xl group">
               {album.coverUrl ? (
                 <img
                   src={album.coverUrl}
@@ -356,7 +356,7 @@ export const AlbumDetailPage: React.FC<AlbumDetailPageProps> = ({
               )}
 
               {/* Format tag badge on cover */}
-              <div className="absolute bottom-2 right-2 px-1.5 py-0.5 rounded bg-black/85 text-[10px] font-mono text-amber-400 border border-amber-500/40">
+              <div className="absolute bottom-2 right-2 px-1.5 py-0.5 t-sm bg-black/85 text-[10px] font-mono text-amber-400 border border-amber-500/40">
                 {album.format}
               </div>
 
@@ -371,9 +371,11 @@ export const AlbumDetailPage: React.FC<AlbumDetailPageProps> = ({
                   }
                 }}
                 className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-pointer"
-                aria-label={allMissing ? `Acquire album ${album.title}` : `Play album ${album.title}`}
+                aria-label={
+                  allMissing ? `Acquire album ${album.title}` : `Play album ${album.title}`
+                }
               >
-                <div className="w-12 h-12 rounded-full bg-amber-500 text-black flex items-center justify-center shadow-lg hover:scale-105 transition-transform">
+                <div className="w-12 h-12 t-btn bg-amber-500 text-black flex items-center justify-center shadow-lg hover:scale-105 transition-transform">
                   {allMissing ? (
                     <DownloadCloud className="w-6 h-6 stroke-black stroke-2" />
                   ) : (
@@ -409,12 +411,12 @@ export const AlbumDetailPage: React.FC<AlbumDetailPageProps> = ({
               {/* Genre / Label Badges */}
               <div className="flex flex-wrap gap-2 pt-1">
                 {album.genre && (
-                  <span className="px-3 py-1 rounded-full text-xs font-medium bg-neutral-900/90 text-neutral-200 border border-neutral-700/60 shadow-xs">
+                  <span className="px-3 py-1 t-sm text-xs font-medium bg-neutral-900/90 text-neutral-200 border border-neutral-700/60 shadow-xs">
                     {album.genre}
                   </span>
                 )}
                 {album.label && (
-                  <span className="px-3 py-1 rounded-full text-xs font-mono text-neutral-400 bg-[#121620]/90 border border-neutral-800">
+                  <span className="px-3 py-1 t-sm text-xs font-mono text-neutral-400 bg-[#121620]/90 border border-neutral-800">
                     {album.label}
                   </span>
                 )}
@@ -425,7 +427,7 @@ export const AlbumDetailPage: React.FC<AlbumDetailPageProps> = ({
           {/* Right Bottom: 4 Translucent Stat Cards */}
           <div className="w-full md:w-auto self-end md:self-end mt-4 md:mt-0 flex justify-end">
             <div className="grid grid-cols-4 gap-2 sm:gap-2.5">
-              <div className="bg-[#121620]/80 backdrop-blur-md border border-neutral-700/60 rounded-lg py-2.5 px-3 sm:px-4 flex flex-col items-center justify-center text-center shadow-lg min-w-[68px] sm:min-w-[80px]">
+              <div className="bg-[#121620]/80 backdrop-blur-md border border-neutral-700/60 t-card t-stroke py-2.5 px-3 sm:px-4 flex flex-col items-center justify-center text-center shadow-lg min-w-[68px] sm:min-w-[80px]">
                 <span className="text-base sm:text-lg font-bold text-white font-mono leading-none">
                   {tracks.length || album.trackCount}
                 </span>
@@ -434,7 +436,7 @@ export const AlbumDetailPage: React.FC<AlbumDetailPageProps> = ({
                 </span>
               </div>
 
-              <div className="bg-[#121620]/80 backdrop-blur-md border border-neutral-700/60 rounded-lg py-2.5 px-3 sm:px-4 flex flex-col items-center justify-center text-center shadow-lg min-w-[68px] sm:min-w-[80px]">
+              <div className="bg-[#121620]/80 backdrop-blur-md border border-neutral-700/60 t-card t-stroke py-2.5 px-3 sm:px-4 flex flex-col items-center justify-center text-center shadow-lg min-w-[68px] sm:min-w-[80px]">
                 <span className="text-base sm:text-lg font-bold text-white font-mono leading-none">
                   {album.totalDuration}
                 </span>
@@ -443,7 +445,7 @@ export const AlbumDetailPage: React.FC<AlbumDetailPageProps> = ({
                 </span>
               </div>
 
-              <div className="bg-[#121620]/80 backdrop-blur-md border border-neutral-700/60 rounded-lg py-2.5 px-3 sm:px-4 flex flex-col items-center justify-center text-center shadow-lg min-w-[68px] sm:min-w-[80px]">
+              <div className="bg-[#121620]/80 backdrop-blur-md border border-neutral-700/60 t-card t-stroke py-2.5 px-3 sm:px-4 flex flex-col items-center justify-center text-center shadow-lg min-w-[68px] sm:min-w-[80px]">
                 <span className="text-base sm:text-lg font-bold text-white font-mono leading-none">
                   {album.dynamicRange}
                 </span>
@@ -452,7 +454,7 @@ export const AlbumDetailPage: React.FC<AlbumDetailPageProps> = ({
                 </span>
               </div>
 
-              <div className="bg-[#121620]/80 backdrop-blur-md border border-neutral-700/60 rounded-lg py-2.5 px-3 sm:px-4 flex flex-col items-center justify-center text-center shadow-lg min-w-[74px] sm:min-w-[88px]">
+              <div className="bg-[#121620]/80 backdrop-blur-md border border-neutral-700/60 t-card t-stroke py-2.5 px-3 sm:px-4 flex flex-col items-center justify-center text-center shadow-lg min-w-[74px] sm:min-w-[88px]">
                 <span className="text-base sm:text-lg font-bold text-white font-mono leading-none">
                   {album.fileSize || '—'}
                 </span>
@@ -473,7 +475,8 @@ export const AlbumDetailPage: React.FC<AlbumDetailPageProps> = ({
             <h2 className="text-base font-bold text-white tracking-tight flex items-center gap-2">
               <span>Track Listing</span>
               <span className="text-xs font-mono text-neutral-500 font-normal">
-                ({tracks.length} tracks{localTracks.length < tracks.length ? ` · ${localTracks.length} local` : ''})
+                ({tracks.length} tracks
+                {localTracks.length < tracks.length ? ` · ${localTracks.length} local` : ''})
               </span>
             </h2>
 
@@ -483,7 +486,7 @@ export const AlbumDetailPage: React.FC<AlbumDetailPageProps> = ({
                   type="button"
                   onClick={handleAcquireMissing}
                   disabled={isAcquiringAll}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded bg-amber-500 hover:bg-amber-400 text-black font-semibold text-xs transition-colors cursor-pointer disabled:opacity-50 shadow-md"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 t-control bg-amber-500 hover:bg-amber-400 text-black font-semibold text-xs transition-colors cursor-pointer disabled:opacity-50 shadow-md"
                 >
                   {isAcquiringAll ? (
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -497,7 +500,7 @@ export const AlbumDetailPage: React.FC<AlbumDetailPageProps> = ({
                   <button
                     type="button"
                     onClick={handlePlayAvailable}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-amber-500 hover:bg-amber-400 text-black font-semibold text-xs transition-colors cursor-pointer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 t-control bg-amber-500 hover:bg-amber-400 text-black font-semibold text-xs transition-colors cursor-pointer"
                   >
                     <Play className="w-3.5 h-3.5 fill-black" />
                     <span>Play Available ({localTracks.length})</span>
@@ -506,7 +509,7 @@ export const AlbumDetailPage: React.FC<AlbumDetailPageProps> = ({
                     type="button"
                     onClick={handleAcquireMissing}
                     disabled={isAcquiringAll}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 border border-amber-500/40 font-semibold text-xs transition-colors cursor-pointer disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 t-control bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 border border-amber-500/40 font-semibold text-xs transition-colors cursor-pointer disabled:opacity-50"
                   >
                     {isAcquiringAll ? (
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -521,7 +524,7 @@ export const AlbumDetailPage: React.FC<AlbumDetailPageProps> = ({
                   <button
                     type="button"
                     onClick={handlePlayAvailable}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-amber-500 hover:bg-amber-400 text-black font-semibold text-xs transition-colors cursor-pointer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 t-control bg-amber-500 hover:bg-amber-400 text-black font-semibold text-xs transition-colors cursor-pointer"
                   >
                     <Play className="w-3.5 h-3.5 fill-black" />
                     <span>Play Album</span>
@@ -529,7 +532,7 @@ export const AlbumDetailPage: React.FC<AlbumDetailPageProps> = ({
                   <button
                     type="button"
                     onClick={handleShuffleAlbum}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-300 border border-neutral-700 font-semibold text-xs transition-colors cursor-pointer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 t-control bg-neutral-800 hover:bg-neutral-700 text-neutral-300 border border-neutral-700 font-semibold text-xs transition-colors cursor-pointer"
                   >
                     <Shuffle className="w-3.5 h-3.5" />
                     <span>Shuffle</span>
@@ -539,15 +542,13 @@ export const AlbumDetailPage: React.FC<AlbumDetailPageProps> = ({
                 <button
                   type="button"
                   onClick={() => onPlayAlbum?.(album)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded bg-amber-500 hover:bg-amber-400 text-black font-semibold text-xs transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1 t-control bg-amber-500 hover:bg-amber-400 text-black font-semibold text-xs transition-colors cursor-pointer"
                 >
                   <Play className="w-3.5 h-3.5 fill-black" />
                   <span>Play All</span>
                 </button>
               ) : (
-                <span className="text-xs font-mono text-neutral-500">
-                  Not in local library
-                </span>
+                <span className="text-xs font-mono text-neutral-500">Not in local library</span>
               )}
             </div>
           </div>
@@ -581,7 +582,7 @@ export const AlbumDetailPage: React.FC<AlbumDetailPageProps> = ({
                 backgroundColor: currentTheme.bgCard,
                 borderColor: currentTheme.borderColor,
               }}
-              className="rounded-lg border p-8 flex flex-col items-center justify-center text-center gap-3 text-neutral-400"
+              className="t-card t-stroke border p-8 flex flex-col items-center justify-center text-center gap-3 text-neutral-400"
             >
               <Disc className="w-12 h-12 text-neutral-600" />
               <div className="flex flex-col gap-1">
@@ -589,7 +590,8 @@ export const AlbumDetailPage: React.FC<AlbumDetailPageProps> = ({
                   Remote Discography Release
                 </span>
                 <span className="text-xs text-neutral-400 max-w-sm">
-                  This release was cataloged from MusicBrainz. Audio tracks will be available when local audio files for this album are added to your library.
+                  This release was cataloged from MusicBrainz. Audio tracks will be available when
+                  local audio files for this album are added to your library.
                 </span>
               </div>
             </div>
@@ -613,7 +615,7 @@ export const AlbumDetailPage: React.FC<AlbumDetailPageProps> = ({
               borderColor: currentTheme.borderColor,
               background: currentTheme.cardGradient || currentTheme.bgCard,
             }}
-            className="border rounded-lg p-4 flex flex-col gap-3 font-mono text-xs shadow-md"
+            className="border t-card t-stroke p-4 flex flex-col gap-3 font-mono text-xs shadow-md"
           >
             <div className="flex justify-between items-center py-1.5 border-b border-neutral-800/50">
               <span className="text-neutral-500">Master Source</span>
@@ -665,7 +667,7 @@ export const AlbumDetailPage: React.FC<AlbumDetailPageProps> = ({
               backgroundColor: currentTheme.bgCard,
               borderColor: currentTheme.borderColor,
             }}
-            className="group border rounded-lg p-3.5 flex items-center justify-between transition-all cursor-pointer shadow-md hover:brightness-110"
+            className="group border t-card t-stroke p-3.5 flex items-center justify-between transition-all cursor-pointer shadow-md hover:brightness-110"
           >
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full overflow-hidden bg-neutral-900 border border-neutral-700 flex-shrink-0">

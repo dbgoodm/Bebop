@@ -84,7 +84,7 @@ function CoverMosaic({
     ...tracks.flatMap((track) => (track.coverUrl ? [track.coverUrl] : [])),
   ].slice(0, 4);
   return (
-    <div className="grid aspect-square grid-cols-2 overflow-hidden rounded border border-neutral-800 bg-neutral-900">
+    <div className="grid aspect-square grid-cols-2 overflow-hidden t-sm border border-neutral-800 bg-neutral-900">
       {covers.length > 0 ? (
         Array.from({ length: 4 }, (_, index) => (
           <div key={index} className="bg-neutral-900">
@@ -215,7 +215,7 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
                 <div className="flex items-center gap-2">
                   <h2 className="text-2xl font-semibold text-white">{selected.name}</h2>
                   {selected.generated ? (
-                    <span className="rounded bg-violet-500/15 px-2 py-1 text-[10px] font-bold uppercase text-violet-300">
+                    <span className="t-sm bg-violet-500/15 px-2 py-1 text-[10px] font-bold uppercase text-violet-300">
                       Song DNA snapshot
                     </span>
                   ) : null}
@@ -232,14 +232,14 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
                     onReplaceQueue(selected.tracks);
                     if (selected.tracks[0]) onPlayTrack(selected.tracks[0]);
                   }}
-                  className="flex items-center gap-2 rounded bg-amber-400 px-3 py-2 text-xs font-bold text-black disabled:opacity-40"
+                  className="flex items-center gap-2 t-control bg-amber-400 px-3 py-2 text-xs font-bold text-black disabled:opacity-40"
                 >
                   <Play className="h-3.5 w-3.5 fill-current" /> Play
                 </button>
                 <button
                   type="button"
                   onClick={() => onAppendQueue(selected.tracks)}
-                  className="rounded border border-neutral-700 px-3 py-2 text-xs text-neutral-200"
+                  className="t-control border border-neutral-700 px-3 py-2 text-xs text-neutral-200"
                 >
                   Add to queue
                 </button>
@@ -252,7 +252,7 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
                       await openPlaylist(copy.id);
                     })
                   }
-                  className="rounded border border-neutral-700 p-2 text-neutral-300"
+                  className="t-control border border-neutral-700 p-2 text-neutral-300"
                   aria-label="Duplicate playlist"
                 >
                   <Copy className="h-4 w-4" />
@@ -267,7 +267,7 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
                       await refresh();
                     })
                   }
-                  className="rounded border border-red-500/30 p-2 text-red-300"
+                  className="t-control border border-red-500/30 p-2 text-red-300"
                   aria-label="Delete playlist"
                 >
                   <Trash2 className="h-4 w-4" />
@@ -290,11 +290,11 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
                 name="name"
                 defaultValue={selected.name}
                 aria-label="Playlist name"
-                className="min-w-0 flex-1 rounded border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white"
+                className="min-w-0 flex-1 t-sm border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white"
               />
               <button
                 type="submit"
-                className="rounded border border-neutral-700 px-3 text-xs text-neutral-200"
+                className="t-control border border-neutral-700 px-3 text-xs text-neutral-200"
               >
                 Rename
               </button>
@@ -302,7 +302,7 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
           </div>
         </div>
 
-        <div className="rounded border border-neutral-800">
+        <div className="t-sm border border-neutral-800">
           {selected.tracks.length === 0 ? (
             <p className="p-5 text-sm text-neutral-500">This playlist is empty.</p>
           ) : (
@@ -374,7 +374,7 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
                 if (track) void saveTracks([...selected.tracks, track]);
                 event.currentTarget.value = '';
               }}
-              className="min-w-0 flex-1 rounded border border-neutral-700 bg-neutral-950 px-3 py-2 text-neutral-200"
+              className="min-w-0 flex-1 t-sm border border-neutral-700 bg-neutral-950 px-3 py-2 text-neutral-200"
             >
               <option value="" disabled>
                 Choose a library track…
@@ -415,20 +415,20 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
 
   return (
     <div className="space-y-6">
-      <section className="rounded border border-neutral-800 bg-neutral-950/50 p-4">
+      <section className="t-sm border border-neutral-800 bg-neutral-950/50 p-4">
         <h2 className="text-sm font-semibold text-white">Create a playlist</h2>
         <div className="mt-3 flex flex-wrap gap-2">
           <input
             value={name}
             onChange={(event) => setName(event.target.value)}
             placeholder="Playlist name"
-            className="min-w-[14rem] flex-1 rounded border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white"
+            className="min-w-[14rem] flex-1 t-sm border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white"
           />
           <button
             type="button"
             disabled={!name.trim() || busy}
             onClick={() => void create([])}
-            className="flex items-center gap-2 rounded border border-neutral-700 px-3 py-2 text-xs text-neutral-200 disabled:opacity-40"
+            className="flex items-center gap-2 t-control border border-neutral-700 px-3 py-2 text-xs text-neutral-200 disabled:opacity-40"
           >
             <Plus className="h-4 w-4" /> Empty
           </button>
@@ -436,7 +436,7 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
             type="button"
             disabled={!name.trim() || queue.length === 0 || busy}
             onClick={() => void create(queue.map((track) => track.id))}
-            className="flex items-center gap-2 rounded border border-amber-500/50 px-3 py-2 text-xs font-semibold text-amber-300 disabled:opacity-40"
+            className="flex items-center gap-2 t-control border border-amber-500/50 px-3 py-2 text-xs font-semibold text-amber-300 disabled:opacity-40"
           >
             <Save className="h-4 w-4" /> Save queue ({queue.length})
           </button>
@@ -452,7 +452,7 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
           {busy ? <LoaderCircle className="h-4 w-4 animate-spin text-amber-300" /> : null}
         </div>
         {playlists.length === 0 ? (
-          <p className="rounded border border-dashed border-neutral-800 p-6 text-sm text-neutral-500">
+          <p className="t-sm border border-dashed border-neutral-800 p-6 text-sm text-neutral-500">
             No playlists yet. Save the queue or build one with Song DNA.
           </p>
         ) : (
@@ -462,7 +462,7 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
                 key={playlist.id}
                 type="button"
                 onClick={() => void openPlaylist(playlist.id)}
-                className="rounded border border-neutral-800 bg-neutral-950 p-3 text-left transition hover:border-amber-500/40"
+                className="t-control border border-neutral-800 bg-neutral-950 p-3 text-left transition hover:border-amber-500/40"
               >
                 <CoverMosaic coverUrls={playlist.coverUrls} />
                 <span className="mt-3 block truncate text-sm font-semibold text-white">
@@ -475,7 +475,7 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
         )}
       </section>
 
-      <section className="rounded border border-violet-500/20 bg-violet-500/5 p-4">
+      <section className="t-sm border border-violet-500/20 bg-violet-500/5 p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 className="flex items-center gap-2 text-sm font-semibold text-violet-200">
@@ -499,18 +499,16 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
                 setAnalysisProgress(null);
               })
             }
-            className="rounded border border-violet-500/30 px-3 py-2 text-xs text-violet-200 disabled:opacity-40"
+            className="t-control border border-violet-500/30 px-3 py-2 text-xs text-violet-200 disabled:opacity-40"
           >
             {analysisProgress ? `Analyzing ${analysisProgress}` : 'Analyze library'}
           </button>
         </div>
         <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)]">
-
           {/* Controls */}
           <div className="flex flex-col gap-3">
-
             {/* Seed */}
-            <div className="rounded-lg border border-neutral-800 bg-neutral-950/60 p-4">
+            <div className="t-card t-stroke border border-neutral-800 bg-neutral-950/60 p-4">
               <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-neutral-500">
                 Seed
               </p>
@@ -523,7 +521,7 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
                     seedTrackIds: event.target.value ? [event.target.value] : [],
                   })
                 }
-                className="mt-2 w-full rounded border border-neutral-700 bg-black/40 px-3 py-2 text-sm text-neutral-100"
+                className="mt-2 w-full t-sm border border-neutral-700 bg-black/40 px-3 py-2 text-sm text-neutral-100"
               >
                 <option value="">Start from my whole library</option>
                 {tracks.map((track) => (
@@ -540,7 +538,7 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
             </div>
 
             {/* Shape */}
-            <div className="rounded-lg border border-neutral-800 bg-neutral-950/60 p-4">
+            <div className="t-card t-stroke border border-neutral-800 bg-neutral-950/60 p-4">
               <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-neutral-500">
                 Shape
               </p>
@@ -596,7 +594,7 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
                             mood: (option.value || null) as PlaylistGenerationRequest['mood'],
                           })
                         }
-                        className={`rounded border px-2.5 py-1 text-[11px] transition-colors cursor-pointer ${
+                        className={`t-control border px-2.5 py-1 text-[11px] transition-colors cursor-pointer ${
                           active
                             ? 'border-violet-400 bg-violet-400/15 text-violet-200'
                             : 'border-neutral-700 text-neutral-400 hover:text-neutral-200'
@@ -611,7 +609,7 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
             </div>
 
             {/* Limits */}
-            <div className="rounded-lg border border-neutral-800 bg-neutral-950/60 p-4">
+            <div className="t-card t-stroke border border-neutral-800 bg-neutral-950/60 p-4">
               <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-neutral-500">
                 Limits
               </p>
@@ -633,7 +631,7 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
                             targetTrackCount: active ? 25 : null,
                           })
                         }
-                        className={`rounded border px-2.5 py-1 font-mono text-[11px] transition-colors cursor-pointer ${
+                        className={`t-control border px-2.5 py-1 font-mono text-[11px] transition-colors cursor-pointer ${
                           active
                             ? 'border-violet-400 bg-violet-400/15 text-violet-200'
                             : 'border-neutral-700 text-neutral-400 hover:text-neutral-200'
@@ -661,7 +659,7 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
                         maxTracksPerArtist: Math.max(1, (request.maxTracksPerArtist ?? 2) - 1),
                       })
                     }
-                    className="h-6 w-6 rounded border border-neutral-700 text-neutral-300 cursor-pointer"
+                    className="h-6 w-6 t-control border border-neutral-700 text-neutral-300 cursor-pointer"
                   >
                     −
                   </button>
@@ -677,7 +675,7 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
                         maxTracksPerArtist: Math.min(9, (request.maxTracksPerArtist ?? 2) + 1),
                       })
                     }
-                    className="h-6 w-6 rounded border border-neutral-700 text-neutral-300 cursor-pointer"
+                    className="h-6 w-6 t-control border border-neutral-700 text-neutral-300 cursor-pointer"
                   >
                     +
                   </button>
@@ -690,14 +688,14 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
                   value={genres}
                   onChange={(event) => setGenres(event.target.value)}
                   placeholder="jazz, ambient"
-                  className="mt-1.5 w-full rounded border border-neutral-700 bg-black/40 px-3 py-2 text-neutral-100 placeholder:text-neutral-600"
+                  className="mt-1.5 w-full t-sm border border-neutral-700 bg-black/40 px-3 py-2 text-neutral-100 placeholder:text-neutral-600"
                 />
               </label>
             </div>
           </div>
 
           {/* Preview */}
-          <div className="flex min-h-[420px] flex-col overflow-hidden rounded-lg border border-neutral-800 bg-neutral-950/60">
+          <div className="flex min-h-[420px] flex-col overflow-hidden t-card t-stroke border border-neutral-800 bg-neutral-950/60">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-neutral-800 px-4 py-3">
               <input
                 value={name}
@@ -713,7 +711,7 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
                   onClick={() =>
                     void run(async () => setPreview(await generatePlaylist(generationRequest)))
                   }
-                  className="rounded bg-violet-300 px-3 py-1.5 text-xs font-bold text-violet-950 disabled:opacity-40 cursor-pointer"
+                  className="t-control bg-violet-300 px-3 py-1.5 text-xs font-bold text-violet-950 disabled:opacity-40 cursor-pointer"
                 >
                   {preview ? 'Regenerate' : 'Generate'}
                 </button>
@@ -729,7 +727,7 @@ export const PlaylistsView: React.FC<PlaylistsViewProps> = ({
                       await openPlaylist(saved.id);
                     })
                   }
-                  className="rounded border border-violet-400/50 px-3 py-1.5 text-xs font-bold text-violet-200 disabled:opacity-40 cursor-pointer"
+                  className="t-control border border-violet-400/50 px-3 py-1.5 text-xs font-bold text-violet-200 disabled:opacity-40 cursor-pointer"
                 >
                   Save
                 </button>

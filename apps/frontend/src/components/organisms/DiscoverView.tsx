@@ -52,7 +52,7 @@ export const DiscoverView: React.FC<DiscoverViewProps> = ({
           borderColor: currentTheme.borderColor,
           background: currentTheme.cardGradient || currentTheme.bgCard,
         }}
-        className="p-6 sm:p-8 rounded-2xl border flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative overflow-hidden shadow-xl"
+        className="p-6 sm:p-8 t-card t-stroke border flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative overflow-hidden shadow-xl"
       >
         <div className="flex flex-col gap-2 max-w-2xl relative z-10">
           <div className="flex items-center gap-2">
@@ -62,7 +62,7 @@ export const DiscoverView: React.FC<DiscoverViewProps> = ({
                 color: currentTheme.primary,
                 borderColor: `${currentTheme.primary}50`,
               }}
-              className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-full border"
+              className="text-xs font-mono font-bold px-2.5 py-0.5 t-sm border"
             >
               DISCOVER LOSSLESS
             </span>
@@ -89,7 +89,7 @@ export const DiscoverView: React.FC<DiscoverViewProps> = ({
               backgroundColor: currentTheme.primary,
               boxShadow: `0 0 16px ${currentTheme.accentGlow}`,
             }}
-            className="px-5 py-2.5 rounded-xl font-bold text-sm text-black flex items-center gap-2 cursor-pointer hover:brightness-110 transition-all hover:scale-105"
+            className="px-5 py-2.5 t-control font-bold text-sm text-black flex items-center gap-2 cursor-pointer hover:brightness-110 transition-all hover:scale-105"
           >
             <Play className="w-4 h-4 fill-black" />
             <span>Play Featured Master</span>
@@ -118,18 +118,18 @@ export const DiscoverView: React.FC<DiscoverViewProps> = ({
                 backgroundColor: currentTheme.bgCard,
                 borderColor: currentTheme.borderColor,
               }}
-              className="p-5 rounded-xl border flex flex-col justify-between gap-4 group hover:-translate-y-1 transition-all duration-200 shadow-md cursor-pointer"
+              className="p-5 t-card t-stroke border flex flex-col justify-between gap-4 group t-lift transition-all duration-200 shadow-md cursor-pointer"
               onClick={() => onSelectAlbum(curation.album.title)}
             >
               <div className="flex flex-col gap-3">
-                <div className="relative w-full aspect-video rounded-lg overflow-hidden bg-neutral-900 border border-neutral-800">
+                <div className="relative w-full aspect-video t-card t-stroke overflow-hidden bg-neutral-900 border border-neutral-800">
                   <img
                     src={curation.album.coverUrl}
                     alt={curation.album.title}
                     referrerPolicy="no-referrer"
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />
-                  <div className="absolute top-2 left-2 px-2 py-0.5 rounded bg-black/80 backdrop-blur-sm text-[10px] font-mono font-bold text-white border border-white/20">
+                  <div className="absolute top-2 left-2 px-2 py-0.5 t-sm bg-black/80 backdrop-blur-sm text-[10px] font-mono font-bold text-white border border-white/20">
                     {curation.tag}
                   </div>
                   <div
@@ -138,7 +138,7 @@ export const DiscoverView: React.FC<DiscoverViewProps> = ({
                       onPlayAlbum(curation.album);
                     }}
                     style={{ backgroundColor: currentTheme.primary }}
-                    className="absolute bottom-2 right-2 w-9 h-9 rounded-full text-black flex items-center justify-center shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="absolute bottom-2 right-2 w-9 h-9 t-btn text-black flex items-center justify-center shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
                   >
                     <Play className="w-4 h-4 fill-black ml-0.5" />
                   </div>
@@ -181,9 +181,9 @@ export const DiscoverView: React.FC<DiscoverViewProps> = ({
                 backgroundColor: currentTheme.bgCard,
                 borderColor: currentTheme.borderColor,
               }}
-              className="p-3 rounded-xl border flex flex-col gap-2.5 group hover:-translate-y-1 transition-all duration-200 cursor-pointer shadow-md"
+              className="p-3 t-card t-stroke border flex flex-col gap-2.5 group t-lift transition-all duration-200 cursor-pointer shadow-md"
             >
-              <div className="relative aspect-square rounded-lg overflow-hidden bg-neutral-900 border border-neutral-800">
+              <div className="relative aspect-square t-card t-stroke overflow-hidden bg-neutral-900 border border-neutral-800">
                 <img
                   src={album.coverUrl}
                   alt={album.title}
@@ -196,7 +196,7 @@ export const DiscoverView: React.FC<DiscoverViewProps> = ({
                     onPlayAlbum(album);
                   }}
                   style={{ backgroundColor: currentTheme.primary }}
-                  className="absolute bottom-2 right-2 w-8 h-8 rounded-full text-black flex items-center justify-center shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="absolute bottom-2 right-2 w-8 h-8 t-btn text-black flex items-center justify-center shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
                 >
                   <Play className="w-3.5 h-3.5 fill-black ml-0.5" />
                 </div>

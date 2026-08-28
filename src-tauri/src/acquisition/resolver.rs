@@ -474,40 +474,42 @@ impl MetadataResolver {
         })
     }
 
-fn clean_search_title(album_title: &str, artist: &str) -> String {
-    let mut t = album_title.trim();
-    // 1. Remove leading "Artist - " or "Artist : "
-    if !artist.is_empty() && t.to_lowercase().starts_with(&artist.to_lowercase()) {
-        t = t[artist.len()..].trim_start_matches(|c: char| c == ' ' || c == '-' || c == ':' || c == '_');
-    }
-    // 2. Remove leading year pattern: 19xx or 20xx e.g. "2008 - " or "[2008] - " or "(2008) - "
-    if let Some(pos) = t.find(|c: char| c == '-' || c == ':' || c == '_') {
-        let prefix = t[..pos]
-            .trim()
-            .trim_matches(|c: char| c == '[' || c == ']' || c == '(' || c == ')');
-        if prefix.len() == 4 && prefix.chars().all(|c| c.is_ascii_digit()) {
-            t = t[pos + 1..].trim();
+    fn clean_search_title(album_title: &str, artist: &str) -> String {
+        let mut t = album_title.trim();
+        // 1. Remove leading "Artist - " or "Artist : "
+        if !artist.is_empty() && t.to_lowercase().starts_with(&artist.to_lowercase()) {
+            t = t[artist.len()..]
+                .trim_start_matches(|c: char| c == ' ' || c == '-' || c == ':' || c == '_');
+        }
+        // 2. Remove leading year pattern: 19xx or 20xx e.g. "2008 - " or "[2008] - " or "(2008) - "
+        if let Some(pos) = t.find(|c: char| c == '-' || c == ':' || c == '_') {
+            let prefix = t[..pos]
+                .trim()
+                .trim_matches(|c: char| c == '[' || c == ']' || c == '(' || c == ')');
+            if prefix.len() == 4 && prefix.chars().all(|c| c.is_ascii_digit()) {
+                t = t[pos + 1..].trim();
+            }
+        }
+        // 3. Remove repeating artist if after year
+        if !artist.is_empty() && t.to_lowercase().starts_with(&artist.to_lowercase()) {
+            t = t[artist.len()..]
+                .trim_start_matches(|c: char| c == ' ' || c == '-' || c == ':' || c == '_');
+        }
+        // 4. Split off parenthesis/brackets
+        let clean = t
+            .split('(')
+            .next()
+            .unwrap_or(t)
+            .split('[')
+            .next()
+            .unwrap_or(t)
+            .trim();
+        if !clean.is_empty() {
+            clean.to_string()
+        } else {
+            t.to_string()
         }
     }
-    // 3. Remove repeating artist if after year
-    if !artist.is_empty() && t.to_lowercase().starts_with(&artist.to_lowercase()) {
-        t = t[artist.len()..].trim_start_matches(|c: char| c == ' ' || c == '-' || c == ':' || c == '_');
-    }
-    // 4. Split off parenthesis/brackets
-    let clean = t
-        .split('(')
-        .next()
-        .unwrap_or(t)
-        .split('[')
-        .next()
-        .unwrap_or(t)
-        .trim();
-    if !clean.is_empty() {
-        clean.to_string()
-    } else {
-        t.to_string()
-    }
-}
 
     pub fn search_deezer_album(
         &self,
@@ -593,9 +595,7 @@ fn clean_search_title(album_title: &str, artist: &str) -> String {
                 if let Some(items) = json["data"].as_array() {
                     if let Some(first) = items.first() {
                         if let Some(album_id) = first["album"]["id"].as_i64() {
-                            if let Ok(res) =
-                                self.fetch_deezer_album_by_id(&album_id.to_string())
-                            {
+                            if let Ok(res) = self.fetch_deezer_album_by_id(&album_id.to_string()) {
                                 return Ok(res);
                             }
                         }

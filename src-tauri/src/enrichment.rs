@@ -174,7 +174,11 @@ pub(crate) struct MusicBrainzClient {
 impl Default for MusicBrainzClient {
     fn default() -> Self {
         Self {
-            enabled: AtomicBool::new(false),
+            // Album pages depend on MusicBrainz tracklists to show tracks that
+            // are not in the local library. Keep catalog enrichment available
+            // from startup so opening a remote release can populate and cache
+            // its tracklist without a separate, unreachable opt-in step.
+            enabled: AtomicBool::new(true),
             client: Client::builder()
                 .user_agent(format!(
                     "Bebop/{} (https://github.com/dbgoodm/Bebop)",
@@ -1380,6 +1384,11 @@ pub(crate) mod tests {
         .expect("MusicBrainz fixture");
         assert_eq!(musicbrainz.releases[0].id, "release");
         assert_eq!(musicbrainz.artist_credit[0].name, "Miles Davis");
+    }
+
+    #[test]
+    fn musicbrainz_catalog_enrichment_is_enabled_by_default() {
+        assert!(MusicBrainzClient::default().enabled());
     }
 
     #[test]

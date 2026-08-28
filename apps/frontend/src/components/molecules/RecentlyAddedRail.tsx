@@ -32,7 +32,7 @@ export const RecentlyAddedRail: React.FC<RecentlyAddedRailProps> = ({
             color: currentTheme.primary,
             borderColor: `${currentTheme.primary}60`,
           }}
-          className="px-1.5 py-0.5 rounded text-[10px] font-bold border tracking-wider"
+          className="px-1.5 py-0.5 t-sm text-[10px] font-bold border tracking-wider"
         >
           {format}
         </span>
@@ -46,14 +46,14 @@ export const RecentlyAddedRail: React.FC<RecentlyAddedRailProps> = ({
             color: currentTheme.secondary,
             borderColor: `${currentTheme.secondary}60`,
           }}
-          className="px-1.5 py-0.5 rounded text-[10px] font-bold border tracking-wider"
+          className="px-1.5 py-0.5 t-sm text-[10px] font-bold border tracking-wider"
         >
           {format}
         </span>
       );
     }
     return (
-      <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-neutral-800 text-neutral-300 border border-neutral-700 tracking-wider">
+      <span className="px-1.5 py-0.5 t-sm text-[10px] font-bold bg-neutral-800 text-neutral-300 border border-neutral-700 tracking-wider">
         {format}
       </span>
     );
@@ -64,10 +64,8 @@ export const RecentlyAddedRail: React.FC<RecentlyAddedRailProps> = ({
       {/* Section Header */}
       <div id="recently-added-header" className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="w-1.5 h-4 rounded-sm" style={{ backgroundColor: currentTheme.primary }} />
-          <h2 className="text-sm font-bold tracking-wider text-neutral-200 uppercase font-serif">
-            Recently Added
-          </h2>
+          <div className="w-1.5 h-4 t-sm" style={{ backgroundColor: currentTheme.primary }} />
+          <h2 className="text-sm text-neutral-200 t-heading">Recently Added</h2>
           <span className="text-xs text-neutral-500 font-normal">(Local Library Scans)</span>
         </div>
 
@@ -81,7 +79,7 @@ export const RecentlyAddedRail: React.FC<RecentlyAddedRailProps> = ({
               backgroundColor: currentTheme.bgCard,
               borderColor: currentTheme.borderColor,
             }}
-            className="w-8 h-8 rounded border text-neutral-300 hover:text-white transition-colors flex items-center justify-center cursor-pointer hover:brightness-125"
+            className="w-8 h-8 t-control border text-neutral-300 hover:text-white transition-colors flex items-center justify-center cursor-pointer hover:brightness-125"
             aria-label="Scroll Left"
           >
             <ChevronLeft className="w-4 h-4" />
@@ -94,7 +92,7 @@ export const RecentlyAddedRail: React.FC<RecentlyAddedRailProps> = ({
               backgroundColor: currentTheme.bgCard,
               borderColor: currentTheme.borderColor,
             }}
-            className="w-8 h-8 rounded border text-neutral-300 hover:text-white transition-colors flex items-center justify-center cursor-pointer hover:brightness-125"
+            className="w-8 h-8 t-control border text-neutral-300 hover:text-white transition-colors flex items-center justify-center cursor-pointer hover:brightness-125"
             aria-label="Scroll Right"
           >
             <ChevronRight className="w-4 h-4" />
@@ -117,10 +115,10 @@ export const RecentlyAddedRail: React.FC<RecentlyAddedRailProps> = ({
               backgroundColor: currentTheme.bgCard,
               borderColor: currentTheme.borderColor,
             }}
-            className="group relative flex-none w-52 sm:w-56 border rounded-xl p-3 flex flex-col justify-between transition-all duration-200 hover:-translate-y-1 hover:shadow-xl cursor-pointer snap-start"
+            className="group relative flex-none w-52 sm:w-56 border t-card t-stroke p-3 flex flex-col justify-between transition-all duration-200 t-lift hover:shadow-xl cursor-pointer snap-start"
           >
             {/* Album Cover Art */}
-            <div className="relative aspect-square w-full rounded-lg overflow-hidden bg-neutral-900 mb-3 shadow-inner">
+            <div className="relative aspect-square w-full t-card overflow-hidden bg-neutral-900 mb-3 shadow-inner">
               {item.coverUrl ? (
                 <img
                   src={item.coverUrl}
@@ -149,7 +147,7 @@ export const RecentlyAddedRail: React.FC<RecentlyAddedRailProps> = ({
                   backgroundColor: currentTheme.primary,
                   boxShadow: `0 4px 16px ${currentTheme.accentGlow}`,
                 }}
-                className="absolute right-2.5 bottom-2.5 w-10 h-10 rounded-full text-black flex items-center justify-center shadow-lg opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200 cursor-pointer hover:scale-105 hover:brightness-110"
+                className="absolute right-2.5 bottom-2.5 w-10 h-10 t-btn text-black flex items-center justify-center shadow-lg opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200 cursor-pointer hover:scale-105 hover:brightness-110"
                 aria-label={`Play ${item.title}`}
               >
                 <Play className="w-4 h-4 fill-black ml-0.5" />

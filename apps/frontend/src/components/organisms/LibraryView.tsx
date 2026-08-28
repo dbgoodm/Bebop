@@ -65,7 +65,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
   };
 
   const showDiscoveryEmptyState = () => (
-    <div className="rounded border border-neutral-800 bg-neutral-950/50 p-6 text-sm text-neutral-400">
+    <div className="t-sm border border-neutral-800 bg-neutral-950/50 p-6 text-sm text-neutral-400">
       No matching tagged entities were found. Untagged files remain available under Tracks with
       explicit Unknown Artist and Unknown Album fallbacks.
     </div>
@@ -85,7 +85,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
                 id={`subtab-${tab}`}
                 type="button"
                 onClick={() => setActiveSubTab(tab)}
-                className={`rounded border px-3 py-1 capitalize transition-colors ${
+                className={`t-control border px-3 py-1 capitalize transition-colors ${
                   activeSubTab === tab
                     ? 'border-amber-500/60 bg-amber-500/20 font-bold text-amber-400'
                     : 'border-neutral-800 bg-neutral-900 text-neutral-400 hover:text-neutral-200'

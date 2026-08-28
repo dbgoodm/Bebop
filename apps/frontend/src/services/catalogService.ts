@@ -310,8 +310,12 @@ export async function loadAlbumDetail(albumId: string): Promise<AlbumItem> {
       return {
         ...item,
         format: (localTrack?.codec ?? item.format) as AudioFormat,
-        codec: localTrack?.codec ?? (data.album.availability === 'not-local' ? 'Remote Stream' : item.codec),
-        sampleRate: localTrack?.sampleRate ?? (data.album.availability === 'not-local' ? 'Lossless Stream' : item.sampleRate),
+        codec:
+          localTrack?.codec ??
+          (data.album.availability === 'not-local' ? 'Remote Stream' : item.codec),
+        sampleRate:
+          localTrack?.sampleRate ??
+          (data.album.availability === 'not-local' ? 'Lossless Stream' : item.sampleRate),
         tracks,
       };
     }
@@ -332,4 +336,3 @@ export async function loadAlbumDetail(albumId: string): Promise<AlbumItem> {
     tracks,
   };
 }
-

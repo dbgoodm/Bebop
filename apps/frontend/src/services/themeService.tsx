@@ -1,4 +1,7 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import { CREW_THEMES } from './crewThemes';
+import { POSTER_THEMES } from './posterThemes';
+import { THEME_VAR_OVERRIDES } from './themeOverrides';
 import { isDemoMode } from '@/demo/mode';
 import {
   loadPersistentPlayerState,
@@ -65,8 +68,6 @@ export interface ThemeConfig {
     | 'synth-neon'
     | 'oled-minimal'
     | 'arctic-glacier';
-  cardRadius: string; // e.g. 'rounded-xl', 'rounded-2xl', 'rounded-lg'
-  badgeRadius: string; // e.g. 'rounded-full', 'rounded-md', 'rounded'
   borderStyleType?: 'solid' | 'cyber-bracket' | 'neon-glow' | 'industrial-groove' | 'double';
   patternOverlay?: 'none' | 'scanlines' | 'cyber-grid' | 'dots' | 'starfield' | 'subtle-grain';
 
@@ -88,6 +89,14 @@ export interface ThemeConfig {
   waveformUnplayedTop: string;
   waveformUnplayedBot: string;
   waveformGlow: boolean;
+
+  /**
+   * Full design token set, applied verbatim as CSS custom properties on the
+   * document root. This is what lets a theme change geometry, typography,
+   * texture and motion rather than only colour — components read the vars they
+   * care about instead of hardcoding values.
+   */
+  vars?: Record<string, string>;
 }
 
 export const THEME_PRESETS: ThemeConfig[] = [
@@ -134,8 +143,6 @@ export const THEME_PRESETS: ThemeConfig[] = [
     textSecondary: '#cbd5e1',
     textMuted: '#7c94b8',
     fontVibe: 'retro-noir',
-    cardRadius: 'rounded-xl',
-    badgeRadius: 'rounded-full',
     borderStyleType: 'neon-glow',
     patternOverlay: 'starfield',
     statsColors: {
@@ -227,8 +234,6 @@ export const THEME_PRESETS: ThemeConfig[] = [
     textSecondary: '#fed7aa',
     textMuted: '#c084fc',
     fontVibe: 'casino-luxury',
-    cardRadius: 'rounded-2xl',
-    badgeRadius: 'rounded-full',
     borderStyleType: 'double',
     patternOverlay: 'dots',
     statsColors: {
@@ -321,8 +326,6 @@ export const THEME_PRESETS: ThemeConfig[] = [
     textSecondary: '#d1fae5',
     textMuted: '#6ee7b7',
     fontVibe: 'cyber-terminal',
-    cardRadius: 'rounded-md',
-    badgeRadius: 'rounded-sm',
     borderStyleType: 'cyber-bracket',
     patternOverlay: 'scanlines',
     statsColors: {
@@ -415,8 +418,6 @@ export const THEME_PRESETS: ThemeConfig[] = [
     textSecondary: '#e2e8f0',
     textMuted: '#94a3b8',
     fontVibe: 'industrial-heavy',
-    cardRadius: 'rounded-lg',
-    badgeRadius: 'rounded',
     borderStyleType: 'industrial-groove',
     patternOverlay: 'cyber-grid',
     statsColors: {
@@ -486,8 +487,6 @@ export const THEME_PRESETS: ThemeConfig[] = [
     textSecondary: '#cbd5e1',
     textMuted: '#94a3b8',
     fontVibe: 'modern-clean',
-    cardRadius: 'rounded-xl',
-    badgeRadius: 'rounded-full',
     cardGradient:
       'linear-gradient(145deg, rgba(245, 158, 11, 0.14) 0%, rgba(41, 27, 9, 0.95) 100%)',
     ambientOrbs: [
@@ -570,8 +569,6 @@ export const THEME_PRESETS: ThemeConfig[] = [
     textSecondary: '#fed7aa',
     textMuted: '#a8a29e',
     fontVibe: 'modern-clean',
-    cardRadius: 'rounded-xl',
-    badgeRadius: 'rounded-md',
     cardGradient: 'linear-gradient(145deg, rgba(255, 85, 0, 0.15) 0%, rgba(41, 18, 9, 0.95) 100%)',
     ambientOrbs: [
       {
@@ -653,8 +650,6 @@ export const THEME_PRESETS: ThemeConfig[] = [
     textSecondary: '#e0e7ff',
     textMuted: '#a5b4fc',
     fontVibe: 'synth-neon',
-    cardRadius: 'rounded-xl',
-    badgeRadius: 'rounded-sm',
     patternOverlay: 'cyber-grid',
     cardGradient: 'linear-gradient(145deg, rgba(255, 0, 127, 0.16) 0%, rgba(37, 8, 63, 0.95) 100%)',
     ambientOrbs: [
@@ -737,8 +732,6 @@ export const THEME_PRESETS: ThemeConfig[] = [
     textSecondary: '#d1fae5',
     textMuted: '#6ee7b7',
     fontVibe: 'modern-clean',
-    cardRadius: 'rounded-xl',
-    badgeRadius: 'rounded-full',
     cardGradient:
       'linear-gradient(145deg, rgba(29, 185, 84, 0.14) 0%, rgba(16, 46, 28, 0.95) 100%)',
     ambientOrbs: [
@@ -822,8 +815,6 @@ export const THEME_PRESETS: ThemeConfig[] = [
     textSecondary: '#cbd5e1',
     textMuted: '#94a3b8',
     fontVibe: 'retro-noir',
-    cardRadius: 'rounded-xl',
-    badgeRadius: 'rounded-md',
     cardGradient:
       'linear-gradient(145deg, rgba(56, 189, 248, 0.14) 0%, rgba(15, 39, 79, 0.95) 100%)',
     ambientOrbs: [
@@ -906,8 +897,6 @@ export const THEME_PRESETS: ThemeConfig[] = [
     textSecondary: '#d4d4d8',
     textMuted: '#94a3b8',
     fontVibe: 'oled-minimal',
-    cardRadius: 'rounded-lg',
-    badgeRadius: 'rounded-sm',
     cardGradient:
       'linear-gradient(145deg, rgba(255, 255, 255, 0.08) 0%, rgba(29, 35, 49, 0.95) 100%)',
     ambientOrbs: [
@@ -986,6 +975,20 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
+/** Stock presets plus the four crew themes imported from the design project. */
+/** Applies local token deltas to imported themes without editing generated files. */
+function withOverrides(theme: ThemeConfig): ThemeConfig {
+  const overrides = THEME_VAR_OVERRIDES[theme.id];
+  if (!overrides) return theme;
+  return { ...theme, vars: { ...(theme.vars ?? {}), ...overrides } };
+}
+
+export const ALL_THEMES: ThemeConfig[] = [
+  ...CREW_THEMES.map(withOverrides),
+  ...POSTER_THEMES.map(withOverrides),
+  ...THEME_PRESETS.map(withOverrides),
+];
+
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [customThemes, setCustomThemes] = useState<ThemeConfig[]>(() => {
     if (!isDemoMode) return [];
@@ -997,7 +1000,10 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   });
 
-  const allThemes = [...THEME_PRESETS, ...customThemes];
+  const allThemes = [...ALL_THEMES, ...customThemes];
+  // Tracks which design-token properties the last theme set, so they can be
+  // cleared before the next theme applies its own.
+  const appliedVarsRef = useRef<string[]>([]);
 
   const [activeThemeId, setActiveThemeId] = useState<string>(() => {
     if (!isDemoMode) return 'space-cowboy';
@@ -1011,7 +1017,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
   const [preferencesLoaded, setPreferencesLoaded] = useState(isDemoMode);
 
-  const currentTheme = allThemes.find((t) => t.id === activeThemeId) || THEME_PRESETS[0];
+  const currentTheme = allThemes.find((t) => t.id === activeThemeId) || ALL_THEMES[0];
 
   useEffect(() => {
     if (isDemoMode) return;
@@ -1048,6 +1054,17 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     root.style.setProperty('--theme-text-primary', currentTheme.textPrimary);
     root.style.setProperty('--theme-text-secondary', currentTheme.textSecondary);
     root.style.setProperty('--theme-text-muted', currentTheme.textMuted);
+
+    // Design tokens from the theme file. Tracked so switching to a theme that
+    // omits a token clears the previous theme's value instead of inheriting it.
+    for (const name of appliedVarsRef.current) root.style.removeProperty(name);
+    const applied: string[] = [];
+    const vars: Record<string, string> = currentTheme.vars ?? {};
+    for (const name of Object.keys(vars)) {
+      root.style.setProperty(name, vars[name]);
+      applied.push(name);
+    }
+    appliedVarsRef.current = applied;
 
     if (isDemoMode) {
       try {

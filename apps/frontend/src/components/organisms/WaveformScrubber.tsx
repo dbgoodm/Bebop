@@ -147,7 +147,7 @@ export const WaveformScrubber: React.FC<WaveformScrubberProps> = ({
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
-        className="w-full relative cursor-pointer group rounded-xl px-3 py-2 flex flex-col justify-center shadow-lg transition-colors border overflow-visible"
+        className="w-full relative cursor-pointer group t-card t-stroke px-3 py-2 flex flex-col justify-center shadow-lg transition-colors border overflow-visible"
         style={{
           height: `${height + 16}px`,
           backgroundColor: currentTheme.bgSurface,
@@ -257,7 +257,7 @@ export const WaveformScrubber: React.FC<WaveformScrubberProps> = ({
           >
             {/* SoundCloud-style floating time tag badge */}
             <div
-              className="absolute -top-7 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded text-[11px] font-mono font-bold shadow-2xl whitespace-nowrap border"
+              className="absolute -top-7 left-1/2 -translate-x-1/2 px-2 py-0.5 t-sm text-[11px] font-mono font-bold shadow-2xl whitespace-nowrap border"
               style={{
                 backgroundColor: currentTheme.bgCanvas,
                 borderColor: currentTheme.primary,
@@ -279,7 +279,7 @@ export const WaveformScrubber: React.FC<WaveformScrubberProps> = ({
         >
           {/* Top handle pill */}
           <div
-            className="absolute -top-1 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full border-2 border-white shadow-md"
+            className="absolute -top-1 left-1/2 -translate-x-1/2 w-3 h-3 t-btn border-2 border-white shadow-md"
             style={{ backgroundColor: currentTheme.primary }}
           />
         </div>

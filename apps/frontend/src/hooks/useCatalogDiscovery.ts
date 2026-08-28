@@ -52,7 +52,11 @@ export function useArtistCatalog(search: string) {
       if (id === requestId.current) {
         setPage(next);
         markPerformance('artist-first-visible');
-        measurePerformance('artist-first-visible', 'artist-navigation-start', 'artist-first-visible');
+        measurePerformance(
+          'artist-first-visible',
+          'artist-navigation-start',
+          'artist-first-visible',
+        );
       }
     } finally {
       if (id === requestId.current) setLoading(false);
