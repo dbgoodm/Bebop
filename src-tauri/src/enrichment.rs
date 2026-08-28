@@ -22,6 +22,15 @@ use crate::{
 
 const ACOUSTID_CREDENTIAL_USER: &str = "acoustid-client-key";
 
+/// Application-level AcoustID client key supplied by the release build.
+fn built_in_acoustid_key() -> Option<String> {
+    option_env!("BEBOP_ACOUSTID_CLIENT_KEY")
+        .map(str::to_owned)
+        .or_else(|| std::env::var("BEBOP_ACOUSTID_CLIENT_KEY").ok())
+        .map(|value| value.trim().to_owned())
+        .filter(|value| !value.is_empty())
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct EnrichmentCandidate {
@@ -333,9 +342,9 @@ impl MusicBrainzClient {
         let body: MbArtistSearchResponse = response
             .json()
             .map_err(|error| AppError::new("musicbrainz-response-invalid", error.to_string()))?;
-        let normalized = artist_name.trim().to_lowercase();
+        let normalized = normalize_artist_name(artist_name);
         for artist in body.artists {
-            if artist.name.trim().to_lowercase() == normalized {
+            if normalize_artist_name(&artist.name) == normalized {
                 return Ok(Some(artist.id));
             }
         }
@@ -402,9 +411,18 @@ impl MusicBrainzClient {
     }
 
     fn acoustid_key(&self) -> Result<String, AppError> {
-        Entry::new("Bebop", ACOUSTID_CREDENTIAL_USER)
-            .and_then(|entry| entry.get_password())
-            .map_err(credential_error("read-acoustid-credential"))
+        if let Some(value) = built_in_acoustid_key() {
+            return Ok(value);
+        }
+        let entry = Entry::new("Bebop", ACOUSTID_CREDENTIAL_USER)
+            .map_err(credential_error("open-acoustid-credential"))?;
+        match entry.get_password() {
+            Ok(value) if !value.trim().is_empty() => Ok(value),
+            Ok(_) | Err(_) => Err(AppError::new(
+                "read-acoustid-credential",
+                "no AcoustID client key is configured",
+            )),
+        }
     }
 
     pub(crate) fn set_enabled(&self, enabled: bool) {
@@ -494,6 +512,36 @@ impl MusicBrainzClient {
         response
             .json()
             .map_err(|error| AppError::new("musicbrainz-response-invalid", error.to_string()))
+    }
+
+    /// Top genres/tags for a confirmed recording — a dedicated lookup rather
+    /// than folding `inc=genres+tags` onto `recording()` above, so tag
+    /// fetching stays decoupled from the identity-matching path that
+    /// `evaluate_candidates` depends on. Rate-limited and cached the same as
+    /// every other MusicBrainz call.
+    pub(crate) fn recording_tags(&self, recording_id: &str) -> Result<Vec<String>, AppError> {
+        self.wait_for_rate_limit()?;
+        let response = self
+            .client
+            .get(format!(
+                "https://musicbrainz.org/ws/2/recording/{recording_id}"
+            ))
+            .query(&[("inc", "genres+tags"), ("fmt", "json")])
+            .send()
+            .map_err(|error| AppError::new("musicbrainz-request-failed", error.to_string()))?;
+        if !response.status().is_success() {
+            return Err(AppError::new(
+                "musicbrainz-request-failed",
+                format!("MusicBrainz returned HTTP {}.", response.status()),
+            ));
+        }
+        let body: MbRecordingTagsResponse = response
+            .json()
+            .map_err(|error| AppError::new("musicbrainz-response-invalid", error.to_string()))?;
+        Ok(top_named_counts(
+            body.genres.into_iter().chain(body.tags),
+            8,
+        ))
     }
 
     fn acoustid_recordings(
@@ -688,6 +736,13 @@ impl MusicBrainzClient {
     }
 }
 
+fn normalize_artist_name(name: &str) -> String {
+    name.chars()
+        .flat_map(char::to_lowercase)
+        .filter(|character| character.is_alphanumeric())
+        .collect()
+}
+
 pub(crate) fn refresh_artist_discography(
     database: &DatabaseWorker,
     musicbrainz: &MusicBrainzClient,
@@ -849,6 +904,18 @@ pub(crate) fn enrich_track(
         let mut patch = patch_from_candidate(&track, candidate);
         preserve_local_only_fields(&track, &mut patch);
         database.save_metadata_draft(track_id.clone(), patch, "musicbrainz-auto".into())?;
+        // Best-effort: a failed tag lookup shouldn't fail metadata enrichment.
+        if let Ok(names) = client.recording_tags(&candidate.recording_id) {
+            let tags = names
+                .into_iter()
+                .map(|name| (name, crate::song_dna::TAG_CATEGORY_GENRE.to_string(), 1.0))
+                .collect();
+            let _ = database.upsert_track_tags(
+                track_id.clone(),
+                crate::song_dna::TAG_SOURCE_MUSICBRAINZ.to_string(),
+                tags,
+            );
+        }
     }
     Ok(EnrichmentJob {
         track_id,
@@ -1167,6 +1234,37 @@ struct SearchRecording {
 }
 
 #[derive(Deserialize)]
+struct MbRecordingTagsResponse {
+    #[serde(default)]
+    genres: Vec<MbNamedCount>,
+    #[serde(default)]
+    tags: Vec<MbNamedCount>,
+}
+
+#[derive(Deserialize)]
+struct MbNamedCount {
+    name: String,
+    #[serde(default)]
+    count: u32,
+}
+
+/// Highest-voted names first, deduplicated, capped at `limit` — MusicBrainz
+/// returns every genre/tag ever applied, most with a handful of votes; this
+/// keeps only what the community actually agrees on.
+fn top_named_counts(entries: impl Iterator<Item = MbNamedCount>, limit: usize) -> Vec<String> {
+    let mut seen = std::collections::HashSet::new();
+    let mut ranked: Vec<MbNamedCount> = entries
+        .filter(|entry| seen.insert(entry.name.to_lowercase()))
+        .collect();
+    ranked.sort_by_key(|entry| std::cmp::Reverse(entry.count));
+    ranked
+        .into_iter()
+        .take(limit)
+        .map(|entry| entry.name)
+        .collect()
+}
+
+#[derive(Deserialize)]
 struct AcoustIdResponse {
     status: String,
     #[serde(default)]
@@ -1215,6 +1313,30 @@ struct SearchMedium {
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
+
+    #[test]
+    fn top_named_counts_ranks_by_votes_dedupes_and_caps() {
+        let entries = vec![
+            MbNamedCount {
+                name: "bebop".into(),
+                count: 3,
+            },
+            MbNamedCount {
+                name: "jazz".into(),
+                count: 10,
+            },
+            MbNamedCount {
+                name: "Jazz".into(),
+                count: 4,
+            },
+            MbNamedCount {
+                name: "cool jazz".into(),
+                count: 1,
+            },
+        ];
+        let top = top_named_counts(entries.into_iter(), 2);
+        assert_eq!(top, vec!["jazz".to_string(), "bebop".to_string()]);
+    }
 
     pub(crate) fn track_fixture() -> TrackSummary {
         TrackSummary {
@@ -1389,6 +1511,11 @@ pub(crate) mod tests {
     #[test]
     fn musicbrainz_catalog_enrichment_is_enabled_by_default() {
         assert!(MusicBrainzClient::default().enabled());
+    }
+
+    #[test]
+    fn artist_name_matching_ignores_unicode_punctuation_variants() {
+        assert_eq!(normalize_artist_name("a-ha"), normalize_artist_name("a‐ha"));
     }
 
     #[test]

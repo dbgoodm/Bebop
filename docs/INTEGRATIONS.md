@@ -9,6 +9,12 @@ Official application registrations must be created outside the repository. Relea
 
 - `BEBOP_LASTFM_API_KEY` and `BEBOP_LASTFM_API_SECRET`
 - `BEBOP_DISCORD_APPLICATION_ID`
+- `BEBOP_ACOUSTID_CLIENT_KEY` (optional build-time application client key)
+
+The AcoustID application client key may be baked into release builds by
+setting `BEBOP_ACOUSTID_CLIENT_KEY` before compiling the Tauri backend. The
+compiled value is authoritative in packaged builds; a key saved from Settings
+is used only by builds without a compiled application key.
 
 Do not commit the Last.fm secret. The identifiers may be supplied at compile time by CI; runtime
 environment variables are supported for local integration testing.
