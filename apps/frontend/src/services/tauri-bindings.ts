@@ -742,6 +742,8 @@ export type UnifiedAlbumDetail = {
 
 export type UnifiedTrackSummary = {
 	id: string | null,
+	/**  Canonical filesystem path for an available local track; absent for remote-only entries. */
+	path: string | null,
 	remoteId: string,
 	trackNumber: number,
 	discNumber: number,

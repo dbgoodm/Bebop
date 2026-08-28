@@ -28,6 +28,7 @@ const mockUnifiedDetail: UnifiedAlbumDetail = {
   tracks: [
     {
       id: 'local-track-1',
+      path: '/music/Daft Punk/Discovery/01 One More Time.flac',
       remoteId: 'remote:rec-one-more-time',
       trackNumber: 1,
       discNumber: 1,
@@ -48,6 +49,7 @@ const mockUnifiedDetail: UnifiedAlbumDetail = {
     },
     {
       id: null,
+      path: null,
       remoteId: 'remote:rec-aerodynamic',
       trackNumber: 2,
       discNumber: 1,
@@ -82,6 +84,7 @@ describe('catalogService - unified album details', () => {
     expect(localTrack.sampleRate).toBe('24-bit/96kHz');
     expect(localTrack.codec).toBe('FLAC');
     expect(localTrack.isrc).toBe('GBAYE0000624');
+    expect(localTrack.audioUrl).toBe('/music/Daft Punk/Discovery/01 One More Time.flac');
 
     const remoteTrack = toUnifiedTrackItem(mockUnifiedDetail.tracks[1], mockUnifiedDetail.album, 1);
     expect(remoteTrack.isLocal).toBe(false);
@@ -89,6 +92,7 @@ describe('catalogService - unified album details', () => {
     expect(remoteTrack.sampleRate).toBe('Remote Track');
     expect(remoteTrack.codec).toBe('—');
     expect(remoteTrack.remoteId).toBe('remote:rec-aerodynamic');
+    expect(remoteTrack.audioUrl).toBeUndefined();
   });
 
   it('loads unified album detail and exposes local vs remote track status', async () => {

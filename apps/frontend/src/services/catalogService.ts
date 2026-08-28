@@ -87,7 +87,7 @@ export function toUnifiedTrackItem(
     duration: formatTrackDuration(track.durationMs),
     durationSeconds: Math.floor((track.durationMs ?? 0) / 1_000),
     coverUrl: toArtworkUrl(album.artworkPath),
-    audioUrl: undefined,
+    audioUrl: track.path ?? undefined,
     artistIds: track.artists.map((a) => a.id),
     albumId: album.id,
     isLocal: track.isLocal,

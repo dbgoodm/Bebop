@@ -300,6 +300,8 @@ pub struct AudioSpecs {
 #[serde(rename_all = "camelCase")]
 pub struct UnifiedTrackSummary {
     pub id: Option<String>,
+    /// Canonical filesystem path for an available local track; absent for remote-only entries.
+    pub path: Option<String>,
     pub remote_id: String,
     pub track_number: u32,
     pub disc_number: u32,

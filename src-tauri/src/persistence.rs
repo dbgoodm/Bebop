@@ -3153,6 +3153,7 @@ fn match_and_unify_tracks(
             .iter()
             .map(|t| UnifiedTrackSummary {
                 id: Some(t.id.clone()),
+                path: Some(t.path.clone()),
                 remote_id: t
                     .musicbrainz_recording_id
                     .clone()
@@ -3306,6 +3307,7 @@ fn match_and_unify_tracks(
 
             unified_tracks.push(UnifiedTrackSummary {
                 id: Some(l.id.clone()),
+                path: Some(l.path.clone()),
                 remote_id: r.id.clone(),
                 track_number: r.track_number,
                 disc_number: r.disc_number,
@@ -3373,6 +3375,7 @@ fn match_and_unify_tracks(
 
             unified_tracks.push(UnifiedTrackSummary {
                 id: None,
+                path: None,
                 remote_id: r.id.clone(),
                 track_number: r.track_number,
                 disc_number: r.disc_number,
@@ -3395,6 +3398,7 @@ fn match_and_unify_tracks(
             combined_tracks.push(l.clone());
             unified_tracks.push(UnifiedTrackSummary {
                 id: Some(l.id.clone()),
+                path: Some(l.path.clone()),
                 remote_id: l
                     .musicbrainz_recording_id
                     .clone()
@@ -6624,6 +6628,7 @@ mod tests {
             .unwrap();
         assert!(u1.is_local);
         assert_eq!(u1.id, Some("track-1".into()));
+        assert_eq!(u1.path.as_deref(), Some("/music/tank.flac"));
         assert_eq!(u1.remote_id, "rtrack-1");
         assert!(u1.audio_specs.is_some());
 
@@ -6634,6 +6639,7 @@ mod tests {
             .unwrap();
         assert!(!u5.is_local);
         assert_eq!(u5.id, None);
+        assert_eq!(u5.path, None);
         assert_eq!(u5.remote_id, "rtrack-5");
         assert!(u5.audio_specs.is_none());
 
