@@ -1,19 +1,20 @@
-import { useState, useEffect, type ReactNode } from 'react';
+import { useState, useEffect, type MouseEvent, type ReactNode } from 'react';
 import {
   FolderPlus,
   Palette,
   RefreshCw,
   RotateCcw,
   Trash2,
+  Copy,
+  Check,
   DownloadCloud,
   HardDrive,
   KeyRound,
   Sliders,
-  Check,
   Music,
 } from 'lucide-react';
 import type { LibraryRoot } from '@/services/tauri-bindings';
-import { useTheme } from '@/services/themeService';
+import { ALL_THEMES, useTheme } from '@/services/themeService';
 import { MetadataJobsPanel } from './MetadataJobsPanel';
 import type { AcquisitionSettings } from '@/types';
 import { getAcquisitionSettings, saveAcquisitionSettings } from '@/services/acquisitionService';
@@ -57,7 +58,8 @@ export function SettingsView({
   updatesSlot,
   children,
 }: SettingsViewProps) {
-  const { allThemes, currentTheme, setThemeById } = useTheme();
+  const { allThemes, currentTheme, setThemeById, deleteCustomTheme } = useTheme();
+  const [copiedThemeId, setCopiedThemeId] = useState<string | null>(null);
   const [category, setCategory] = useState<SettingsCategory>('audio');
 
   const [acquisitionSettings, setAcquisitionSettings] = useState<AcquisitionSettings>({
@@ -424,23 +426,79 @@ export function SettingsView({
               <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
                 {allThemes.map((theme) => {
                   const selected = currentTheme.id === theme.id;
+                  const isCustom = !ALL_THEMES.some((preset) => preset.id === theme.id);
+
+                  const copyThemeJson = (event: MouseEvent) => {
+                    event.stopPropagation();
+                    void navigator.clipboard.writeText(JSON.stringify(theme, null, 2));
+                    setCopiedThemeId(theme.id);
+                    window.setTimeout(
+                      () => setCopiedThemeId((id) => (id === theme.id ? null : id)),
+                      1800,
+                    );
+                  };
+
+                  const selectTheme = () => setThemeById(theme.id);
+
                   return (
-                    <button
+                    <div
                       key={theme.id}
-                      type="button"
-                      onClick={() => setThemeById(theme.id)}
+                      role="button"
+                      tabIndex={0}
+                      onClick={selectTheme}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault();
+                          selectTheme();
+                        }
+                      }}
                       style={{
                         borderColor: selected ? theme.primary : theme.borderColor,
                         background: theme.cardGradient || theme.bgCard,
                       }}
-                      className="t-control border p-3 text-left transition hover:brightness-110 cursor-pointer"
+                      className="group relative t-control border p-3 text-left transition hover:brightness-110 cursor-pointer"
                       aria-pressed={selected}
                     >
+                      <div
+                        className={`absolute right-2 top-2 flex items-center gap-1 transition-opacity ${
+                          isCustom
+                            ? 'opacity-100'
+                            : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'
+                        }`}
+                      >
+                        <button
+                          type="button"
+                          onClick={copyThemeJson}
+                          className="rounded p-1 text-neutral-400 hover:bg-black/30 hover:text-white"
+                          aria-label={`Copy ${theme.name} theme JSON`}
+                          title="Copy theme JSON to clipboard"
+                        >
+                          {copiedThemeId === theme.id ? (
+                            <Check className="h-3.5 w-3.5 text-emerald-400" />
+                          ) : (
+                            <Copy className="h-3.5 w-3.5" />
+                          )}
+                        </button>
+                        {isCustom && (
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              deleteCustomTheme(theme.id);
+                            }}
+                            className="rounded p-1 text-red-300/80 hover:bg-black/30 hover:text-red-300"
+                            aria-label={`Delete ${theme.name} theme`}
+                            title="Delete custom theme"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </div>
                       <span className="block text-sm font-semibold text-white">{theme.name}</span>
                       <span className="mt-1 block text-xs text-neutral-400">
                         {theme.description}
                       </span>
-                    </button>
+                    </div>
                   );
                 })}
               </div>
