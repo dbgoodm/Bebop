@@ -3,10 +3,14 @@ fn main() {
         // Suppress tauri_build's own default manifest embed for this
         // invocation -- it already reaches the "bebop-desktop" bin's own
         // test harness, and adding ours on top of it collides ("duplicate
-        // resource... type:MANIFEST"). Our own manifest below is applied to
-        // every `tests`-kind target instead, which covers both that bin
-        // test harness and the separate `--lib` test harness that
-        // tauri_build's manifest never reaches.
+        // resource... type:MANIFEST"). Our own manifest below is applied
+        // unqualified instead (cargo:rustc-link-arg-tests is a dead end: it
+        // requires an actual `tests/` integration-test target and hard-fails
+        // with "does not have a test target" on a unit-test-only crate like
+        // ours), which covers both that bin test harness and the separate
+        // `--lib` test harness that tauri_build's manifest never reaches.
+        // Safe now because tauri_build's own is off for this invocation, so
+        // there is only one manifest source -- no duplicate possible.
         tauri_build::try_build(
             tauri_build::Attributes::new()
                 .windows_attributes(tauri_build::WindowsAttributes::new_without_app_manifest()),
@@ -27,10 +31,10 @@ fn main() {
 /// runs. This is a known, unresolved-upstream Tauri limitation:
 /// https://github.com/tauri-apps/tauri/issues/11028
 ///
-/// Returns true (and emits the linker args to embed our own manifest into
-/// every `tests`-kind target) only when `BEBOP_EMBED_TEST_MANIFEST` is set,
-/// which the CI `cargo test` step sets explicitly -- so this never touches
-/// the real app binary's own manifest.
+/// Returns true (and emits the linker args to embed our own manifest) only
+/// when `BEBOP_EMBED_TEST_MANIFEST` is set, which the CI `cargo test` step
+/// sets explicitly -- so this never touches the real app binary's own
+/// manifest.
 fn embed_test_manifest() -> bool {
     println!("cargo:rerun-if-env-changed=BEBOP_EMBED_TEST_MANIFEST");
     if std::env::var_os("BEBOP_EMBED_TEST_MANIFEST").is_none() {
@@ -46,10 +50,7 @@ fn embed_test_manifest() -> bool {
         .expect("build script has no current dir")
         .join("windows-app-manifest.xml");
     println!("cargo:rerun-if-changed={}", manifest.display());
-    println!("cargo:rustc-link-arg-tests=/MANIFEST:EMBED");
-    println!(
-        "cargo:rustc-link-arg-tests=/MANIFESTINPUT:{}",
-        manifest.display()
-    );
+    println!("cargo:rustc-link-arg=/MANIFEST:EMBED");
+    println!("cargo:rustc-link-arg=/MANIFESTINPUT:{}", manifest.display());
     true
 }
