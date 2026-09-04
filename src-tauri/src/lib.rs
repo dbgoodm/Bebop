@@ -23,6 +23,7 @@ mod metrics;
 mod persistence;
 mod song_dna;
 mod spectrum;
+mod theme_bundles;
 mod updates;
 mod user_state;
 mod watcher;
@@ -71,9 +72,10 @@ pub use metadata_jobs::{
 };
 use persistence::DatabaseWorker;
 pub use song_dna::{
-    AudioAnalysisProgress, AudioFeatures, GeneratedPlaylist, Playlist, PlaylistGenerationRequest,
-    PlaylistMood, PlaylistSelection,
+    AudioAnalysisProgress, AudioFeatures, AvailableTag, GeneratedPlaylist, Playlist,
+    PlaylistGenerationRequest, PlaylistMood, PlaylistSelection, StarterPlaylistPreview,
 };
+pub use theme_bundles::{ImportedThemeBundle, ThemeAssetReference};
 pub use updates::{UpdateProgress, UpdateStatus};
 pub use user_state::{
     FavoriteReference, HomeSnapshot, PersistentPlayerState, PlayerPreferences, PlaylistSummary,
@@ -778,6 +780,42 @@ async fn generate_playlist(
     .map_err(|error| AppError::new("background-task-failed", error.to_string()))?
 }
 
+fn list_matching_tracks_from_database(
+    database: &DatabaseWorker,
+    request: &PlaylistGenerationRequest,
+) -> Result<Vec<PlaylistSelection>, AppError> {
+    let candidates = database.list_generation_candidates()?;
+    let matches = song_dna::matching_candidates(&candidates, request);
+    let mut selections = Vec::with_capacity(matches.len());
+    for selection in matches {
+        let track = database.get_track(selection.track_id)?;
+        selections.push(PlaylistSelection {
+            track,
+            score: selection.score,
+            explanation: selection.explanation,
+        });
+    }
+    Ok(selections)
+}
+
+/// The full pool of tracks matching a Song DNA filter set, scored and sorted
+/// best-first with no diversity/count/duration capping — backs the playlist
+/// creator's "browse matches" view, where a person hand-picks tracks rather
+/// than accepting `generate_playlist`'s auto-curated selection.
+#[tauri::command]
+#[specta::specta]
+async fn list_matching_tracks(
+    state: State<'_, AppState>,
+    request: PlaylistGenerationRequest,
+) -> Result<Vec<PlaylistSelection>, AppError> {
+    let database = state.database.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        list_matching_tracks_from_database(&database, &request)
+    })
+    .await
+    .map_err(|error| AppError::new("background-task-failed", error.to_string()))?
+}
+
 #[tauri::command]
 #[specta::specta]
 async fn create_generated_playlist(
@@ -800,6 +838,37 @@ async fn create_generated_playlist(
                 .collect(),
         )?;
         database.get_playlist(summary.id)
+    })
+    .await
+    .map_err(|error| AppError::new("background-task-failed", error.to_string()))?
+}
+
+#[tauri::command]
+#[specta::specta]
+fn list_available_tags(state: State<'_, AppState>) -> Result<Vec<AvailableTag>, AppError> {
+    state.database.list_available_tags()
+}
+
+#[tauri::command]
+#[specta::specta]
+async fn list_starter_playlists(
+    state: State<'_, AppState>,
+) -> Result<Vec<StarterPlaylistPreview>, AppError> {
+    let database = state.database.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        song_dna::starter_vibes()
+            .into_iter()
+            .map(|(vibe, request)| {
+                let playlist = generate_playlist_from_database(&database, &request)?;
+                Ok(StarterPlaylistPreview {
+                    key: vibe.key.to_string(),
+                    name: vibe.name.to_string(),
+                    description: vibe.description.to_string(),
+                    playlist,
+                    request,
+                })
+            })
+            .collect::<Result<Vec<_>, AppError>>()
     })
     .await
     .map_err(|error| AppError::new("background-task-failed", error.to_string()))?
@@ -848,7 +917,29 @@ async fn analyze_audio_features(
                         })
                 };
                 match result {
-                    Ok(features) => analyzed.push(features),
+                    Ok(features) => {
+                        // Best-effort — descriptor tags aren't required for
+                        // analysis itself to be considered successful, and
+                        // this also backfills tags for tracks analyzed
+                        // before this existed (cached features included).
+                        let names = song_dna::song_dna_descriptor_tags(&features);
+                        let tags = names
+                            .into_iter()
+                            .map(|name| {
+                                (
+                                    name.to_string(),
+                                    song_dna::TAG_CATEGORY_MOOD.to_string(),
+                                    1.0,
+                                )
+                            })
+                            .collect();
+                        let _ = database.upsert_track_tags(
+                            track_id.clone(),
+                            song_dna::TAG_SOURCE_SONG_DNA.to_string(),
+                            tags,
+                        );
+                        analyzed.push(features);
+                    }
                     Err(_) => failed_track_ids.push(track_id.clone()),
                 }
                 let _ = app.emit(
@@ -1198,30 +1289,64 @@ async fn get_unified_album_detail(
     // No cached remote tracks yet: fetch this release's tracklist from MusicBrainz
     // once, store it, and serve every later visit from the local cache.
     if detail.tracks.iter().all(|t| t.is_local) || detail.tracks.is_empty() {
-        let Some(release) = database.resolve_album_release_group(album_id.clone())? else {
-            return Ok(detail);
-        };
         if !state.musicbrainz.enabled() {
             return Ok(detail);
         }
 
         let musicbrainz = Arc::clone(&state.musicbrainz);
         let album_id_clone = album_id.clone();
+        let album_artists = detail.album.artists.clone();
 
         let updated_detail = tauri::async_runtime::spawn_blocking(move || {
-            let _ = enrichment::sync_release_tracklist(
+            let mut release = database.resolve_album_release_group(album_id_clone.clone())?;
+
+            // A scanned album may have neither embedded MusicBrainz IDs nor a
+            // cached remote release yet. Resolve each local album artist through
+            // MusicBrainz and cache their discography, then retry the album match.
+            // This makes opening an incomplete album sufficient to discover its
+            // full tracklist without requiring a prior artist-page refresh.
+            if release.is_none() && !album_id_clone.starts_with("remote:") {
+                for artist in &album_artists {
+                    if let Err(error) = enrichment::refresh_artist_discography(
+                        &database,
+                        musicbrainz.as_ref(),
+                        &artist.id,
+                    ) {
+                        eprintln!(
+                            "bebop.catalog album_id={} artist={} discography_error={:?}",
+                            album_id_clone, artist.name, error
+                        );
+                    }
+                    release = database.resolve_album_release_group(album_id_clone.clone())?;
+                    if release.is_some() {
+                        break;
+                    }
+                }
+            }
+
+            let Some(release) = release else {
+                return database.get_unified_album_detail(album_id_clone);
+            };
+
+            if let Err(error) = enrichment::sync_release_tracklist(
                 &database,
                 musicbrainz.as_ref(),
                 &release.id,
                 &release.musicbrainz_release_group_id,
-            );
+            ) {
+                eprintln!(
+                    "bebop.catalog album_id={} release_id={} tracklist_error={:?}",
+                    album_id_clone, release.id, error
+                );
+                return Err(error);
+            }
             if !album_id_clone.starts_with("remote:") {
-                let _ = database.record_entity_merge(
+                database.record_entity_merge(
                     "album".into(),
                     album_id_clone.clone(),
                     release.id,
                     true,
-                );
+                )?;
             }
             database.get_unified_album_detail(album_id_clone)
         })
@@ -1587,6 +1712,25 @@ fn spawn_metadata_job(
 
             if !wait_for_track_release(&app, &database, &playback, &job_id, &track_id) {
                 return;
+            }
+
+            // Independent of MusicBrainz matching below — Last.fm's
+            // track.getTopTags needs only artist/title text, so it runs
+            // even for tracks with no confirmed recording match.
+            if integrations::lastfm_tag_lookup_enabled(&database)
+                && let Ok(track) = database.get_track(track_id.clone())
+                && let Ok(names) = integrations::fetch_lastfm_top_tags(&track)
+                && !names.is_empty()
+            {
+                let tags = names
+                    .into_iter()
+                    .map(|name| (name, song_dna::TAG_CATEGORY_MOOD.to_string(), 1.0))
+                    .collect();
+                let _ = database.upsert_track_tags(
+                    track_id.clone(),
+                    song_dna::TAG_SOURCE_LASTFM.to_string(),
+                    tags,
+                );
             }
 
             let result = enrich_track(&database, &client, track_id.clone());
@@ -2379,6 +2523,59 @@ fn shutdown_playback(state: &AppState) {
     }
 }
 
+#[tauri::command]
+#[specta::specta]
+fn stage_theme_asset(
+    app: AppHandle,
+    staging_key: String,
+    source_path: String,
+) -> Result<ThemeAssetReference, AppError> {
+    theme_bundles::stage_theme_asset(app, staging_key, source_path)
+}
+
+#[tauri::command]
+#[specta::specta]
+fn cancel_theme_asset_staging(app: AppHandle, staging_key: String) -> Result<(), AppError> {
+    theme_bundles::cancel_theme_asset_staging(app, staging_key)
+}
+
+#[tauri::command]
+#[specta::specta]
+fn promote_theme_assets(
+    app: AppHandle,
+    staging_key: String,
+    theme_id: String,
+    overwrite: bool,
+) -> Result<(), AppError> {
+    theme_bundles::promote_theme_assets(app, staging_key, theme_id, overwrite)
+}
+
+#[tauri::command]
+#[specta::specta]
+fn delete_theme_assets(app: AppHandle, theme_id: String) -> Result<(), AppError> {
+    theme_bundles::delete_theme_assets(app, theme_id)
+}
+
+#[tauri::command]
+#[specta::specta]
+fn export_theme_bundle(
+    app: AppHandle,
+    theme_id: String,
+    manifest_json: String,
+    destination_path: String,
+) -> Result<(), AppError> {
+    theme_bundles::export_theme_bundle(app, theme_id, manifest_json, destination_path)
+}
+
+#[tauri::command]
+#[specta::specta]
+fn import_theme_bundle(
+    app: AppHandle,
+    bundle_path: String,
+) -> Result<ImportedThemeBundle, AppError> {
+    theme_bundles::import_theme_bundle(app, bundle_path)
+}
+
 fn ipc_bindings() -> Builder<tauri::Wry> {
     Builder::<tauri::Wry>::new()
         .commands(collect_commands![
@@ -2389,6 +2586,7 @@ fn ipc_bindings() -> Builder<tauri::Wry> {
             apply_musicbrainz_candidate,
             cancel_acquisition,
             cancel_metadata_job,
+            cancel_theme_asset_staging,
             check_for_updates,
             cleanup_missing_tracks,
             configure_lastfm_session,
@@ -2396,6 +2594,7 @@ fn ipc_bindings() -> Builder<tauri::Wry> {
             create_playlist,
             create_generated_playlist,
             delete_playlist,
+            delete_theme_assets,
             disconnect_lastfm,
             get_acquisition_queue,
             get_acquisition_settings,
@@ -2419,12 +2618,17 @@ fn ipc_bindings() -> Builder<tauri::Wry> {
             get_track_metadata,
             get_track_lyrics,
             get_ui_preference,
+            export_theme_bundle,
+            import_theme_bundle,
             install_update,
             list_metadata_jobs,
             list_library_roots,
             list_favorites,
             list_playlists,
             list_audio_output_devices,
+            list_available_tags,
+            list_starter_playlists,
+            list_matching_tracks,
             generate_playlist,
             pause_metadata_job,
             pause_playback,
@@ -2451,6 +2655,8 @@ fn ipc_bindings() -> Builder<tauri::Wry> {
             save_metadata_drafts,
             save_player_preferences,
             save_player_queue,
+            stage_theme_asset,
+            promote_theme_assets,
             scan_library,
             select_audio_output_device,
             seek_playback,
@@ -2532,6 +2738,8 @@ fn ipc_bindings() -> Builder<tauri::Wry> {
         .typ::<TrackPage>()
         .typ::<TrackSort>()
         .typ::<TrackSummary>()
+        .typ::<ThemeAssetReference>()
+        .typ::<ImportedThemeBundle>()
         .typ::<UnifiedAlbumDetail>()
         .typ::<UnifiedTrackSummary>()
         .typ::<UpdateProgress>()

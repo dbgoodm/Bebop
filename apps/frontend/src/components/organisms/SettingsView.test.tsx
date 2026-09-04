@@ -5,6 +5,8 @@ import { SettingsView } from './SettingsView';
 const mocks = vi.hoisted(() => ({ setThemeById: vi.fn() }));
 
 vi.mock('@/services/themeService', () => ({
+  UI_SCALE_MIN: 0.85,
+  UI_SCALE_MAX: 1.3,
   useTheme: () => ({
     currentTheme: { id: 'night' },
     allThemes: [
@@ -26,6 +28,8 @@ vi.mock('@/services/themeService', () => ({
       },
     ],
     setThemeById: mocks.setThemeById,
+    uiScale: 1,
+    setUiScale: vi.fn(),
   }),
 }));
 

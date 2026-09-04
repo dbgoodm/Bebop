@@ -28,8 +28,10 @@ import { LOCAL_TRACKS, LOCAL_ALBUMS, LOCAL_ARTISTS } from '@/demo/catalog';
 import { loadArtistDetail, loadAlbumDetail } from '@/services/catalogService';
 
 import { WindowControls } from '@/components/molecules/WindowControls';
+import { ContextMenu } from '@/components/molecules/ContextMenu';
+import { useBebopContextMenu } from '@/hooks/useBebopContextMenu';
 import { ThemeProvider, useTheme } from '@/services/themeService';
-import { ThemeSelectorModal } from '@/components/organisms/ThemeSelectorModal';
+import { ThemeBuilder } from '@/components/organisms/ThemeBuilder';
 import { useDemoMode } from '@/hooks/useDemoMode';
 import { DesktopLibraryPage } from './DesktopLibraryPage';
 
@@ -75,6 +77,19 @@ function DemoMusicPlayer() {
     defaultTrack,
     ...LOCAL_TRACKS.filter((t) => t.id !== defaultTrack.id).slice(0, 12),
   ]);
+
+  const [favoriteTrackIds, setFavoriteTrackIds] = useState<ReadonlySet<string>>(
+    new Set(['t-1', 't-3']),
+  );
+
+  const handleToggleFavorite = useCallback((trackId: string, favorite: boolean) => {
+    setFavoriteTrackIds((current) => {
+      const next = new Set(current);
+      if (favorite) next.add(trackId);
+      else next.delete(trackId);
+      return next;
+    });
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -298,6 +313,41 @@ function DemoMusicPlayer() {
     }
   };
 
+  const {
+    contextMenu,
+    closeContextMenu,
+    openTrackContextMenu,
+    openQueueTrackContextMenu,
+    openAlbumContextMenu,
+    openArtistContextMenu,
+  } = useBebopContextMenu({
+    onPlayTrack: handlePlayTrack,
+    onPlayNext: (track) => {
+      setPlayQueue((prev) => {
+        const currentIdx = prev.findIndex((t) => t.id === currentTrack?.id);
+        if (currentIdx === -1) return [track, ...prev.filter((t) => t.id !== track.id)];
+        const filtered = prev.filter((t) => t.id !== track.id);
+        const nextIdx = currentIdx + 1;
+        return [...filtered.slice(0, nextIdx), track, ...filtered.slice(nextIdx)];
+      });
+    },
+    onAppendQueue: (tracks) => {
+      setPlayQueue((prev) => [
+        ...prev,
+        ...tracks.filter((t) => !prev.some((item) => item.id === t.id)),
+      ]);
+    },
+    onRemoveQueueTrack: (trackId) => {
+      setPlayQueue((prev) => prev.filter((t) => t.id !== trackId));
+    },
+    isFavoriteTrack: (id) => favoriteTrackIds.has(id),
+    onToggleFavorite: handleToggleFavorite,
+    onSelectArtist: handleSelectArtist,
+    onSelectAlbum: handleSelectAlbum,
+    onPlayAlbum: handlePlayAlbum,
+    onPlayArtist: handlePlayArtist,
+  });
+
   const handleResumeItem = (item: ContinueListeningItem) => {
     if (item.type === 'artist') {
       const matchArtist = LOCAL_ARTISTS.find(
@@ -418,6 +468,7 @@ function DemoMusicPlayer() {
               onPlayAlbum={handlePlayAlbum}
               onSelectArtist={handleSelectArtist}
               onSelectAlbum={handleSelectAlbum}
+              onContextMenu={openTrackContextMenu}
             />
           </div>
         ) : selectedArtist ? (
@@ -429,6 +480,7 @@ function DemoMusicPlayer() {
               onPlayTrack={handlePlayTrack}
               onPlayArtist={handlePlayArtist}
               onSelectAlbum={handleSelectAlbum}
+              onContextMenu={openTrackContextMenu}
             />
           </div>
         ) : (
@@ -451,6 +503,19 @@ function DemoMusicPlayer() {
                       handleSelectAlbum(item.title);
                     }
                   }}
+                  onContextMenu={(item, e) => {
+                    if (item.type === 'artist') {
+                      const artist = LOCAL_ARTISTS.find(
+                        (a) => a.name.toLowerCase() === item.title.toLowerCase(),
+                      );
+                      if (artist) openArtistContextMenu(artist, e);
+                    } else if (item.type === 'album') {
+                      const album = LOCAL_ALBUMS.find(
+                        (a) => a.title.toLowerCase() === item.title.toLowerCase(),
+                      );
+                      if (album) openAlbumContextMenu(album, e);
+                    }
+                  }}
                 />
 
                 {/* Recently Added Rail (Local Library Ingests) */}
@@ -460,6 +525,12 @@ function DemoMusicPlayer() {
                   onSelectAlbum={handleSelectAlbum}
                   onItemClick={(item) => {
                     handleSelectAlbum(item.title);
+                  }}
+                  onContextMenu={(item, e) => {
+                    const album = LOCAL_ALBUMS.find(
+                      (a) => a.title.toLowerCase() === item.title.toLowerCase(),
+                    );
+                    if (album) openAlbumContextMenu(album, e);
                   }}
                 />
 
@@ -473,6 +544,19 @@ function DemoMusicPlayer() {
                       handleSelectArtist(item.title);
                     } else if (item.type === 'album') {
                       handleSelectAlbum(item.title);
+                    }
+                  }}
+                  onContextMenu={(item, e) => {
+                    if (item.type === 'artist') {
+                      const artist = LOCAL_ARTISTS.find(
+                        (a) => a.name.toLowerCase() === item.title.toLowerCase(),
+                      );
+                      if (artist) openArtistContextMenu(artist, e);
+                    } else if (item.type === 'album') {
+                      const album = LOCAL_ALBUMS.find(
+                        (a) => a.title.toLowerCase() === item.title.toLowerCase(),
+                      );
+                      if (album) openAlbumContextMenu(album, e);
                     }
                   }}
                 />
@@ -494,6 +578,11 @@ function DemoMusicPlayer() {
                   onPlayArtist={handlePlayArtist}
                   onSelectArtist={handleSelectArtist}
                   onSelectAlbum={handleSelectAlbum}
+                  favoriteTrackIds={favoriteTrackIds}
+                  onFavoriteChange={handleToggleFavorite}
+                  onContextMenu={openTrackContextMenu}
+                  onAlbumContextMenu={openAlbumContextMenu}
+                  onArtistContextMenu={openArtistContextMenu}
                 />
               </div>
             )}
@@ -557,6 +646,9 @@ function DemoMusicPlayer() {
         repeatMode={repeatMode}
         onToggleRepeat={handleToggleRepeat}
         frequencyDataProvider={audioEngine?.getFrequencyData.bind(audioEngine)}
+        isFavorite={currentTrack ? favoriteTrackIds.has(currentTrack.id) : false}
+        onToggleFavorite={handleToggleFavorite}
+        onContextMenu={openTrackContextMenu}
       />
 
       {/* Now Playing Queue Modal */}
@@ -573,6 +665,7 @@ function DemoMusicPlayer() {
         onShuffleQueue={handleShuffleQueue}
         onSelectArtist={handleSelectArtist}
         onSelectAlbum={handleSelectAlbum}
+        onContextMenu={openQueueTrackContextMenu}
       />
 
       {/* Fullscreen Now Playing Overlay View */}
@@ -595,10 +688,22 @@ function DemoMusicPlayer() {
         onSelectArtist={handleSelectArtist}
         onSelectAlbum={handleSelectAlbum}
         frequencyDataProvider={audioEngine?.getFrequencyData.bind(audioEngine)}
+        isFavorite={currentTrack ? favoriteTrackIds.has(currentTrack.id) : false}
+        onToggleFavorite={handleToggleFavorite}
       />
 
       {/* Theme Studio Palette Customizer Modal */}
-      <ThemeSelectorModal />
+      <ThemeBuilder />
+
+      {/* Bebop Context Menu */}
+      <ContextMenu
+        isOpen={contextMenu.isOpen}
+        x={contextMenu.x}
+        y={contextMenu.y}
+        onClose={closeContextMenu}
+        header={contextMenu.header}
+        items={contextMenu.items}
+      />
     </div>
   );
 }

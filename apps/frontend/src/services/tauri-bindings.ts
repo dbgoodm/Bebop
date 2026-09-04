@@ -11,6 +11,7 @@ export const commands = {
 	applyMusicbrainzCandidate: (trackId: string, candidate: EnrichmentCandidate) => typedError<MetadataPatch, AppError_Serialize>(__TAURI_INVOKE("apply_musicbrainz_candidate", { trackId, candidate })),
 	cancelAcquisition: (jobId: string) => typedError<null, AppError_Serialize>(__TAURI_INVOKE("cancel_acquisition", { jobId })),
 	cancelMetadataJob: (jobId: string) => typedError<MetadataJob, AppError_Serialize>(__TAURI_INVOKE("cancel_metadata_job", { jobId })),
+	cancelThemeAssetStaging: (stagingKey: string) => typedError<null, AppError_Serialize>(__TAURI_INVOKE("cancel_theme_asset_staging", { stagingKey })),
 	checkForUpdates: () => typedError<UpdateStatus_Serialize, AppError_Serialize>(__TAURI_INVOKE("check_for_updates")),
 	cleanupMissingTracks: (rootId: string | null, confirmed: boolean) => typedError<number, AppError_Serialize>(__TAURI_INVOKE("cleanup_missing_tracks", { rootId, confirmed })),
 	configureLastfmSession: (sessionKey: string) => typedError<IntegrationStatus_Serialize[], AppError_Serialize>(__TAURI_INVOKE("configure_lastfm_session", { sessionKey })),
@@ -18,6 +19,7 @@ export const commands = {
 	createPlaylist: (name: string) => typedError<PlaylistSummary, AppError_Serialize>(__TAURI_INVOKE("create_playlist", { name })),
 	createGeneratedPlaylist: (name: string, request: PlaylistGenerationRequest) => typedError<Playlist, AppError_Serialize>(__TAURI_INVOKE("create_generated_playlist", { name, request })),
 	deletePlaylist: (playlistId: string) => typedError<null, AppError_Serialize>(__TAURI_INVOKE("delete_playlist", { playlistId })),
+	deleteThemeAssets: (themeId: string) => typedError<null, AppError_Serialize>(__TAURI_INVOKE("delete_theme_assets", { themeId })),
 	disconnectLastfm: () => typedError<IntegrationStatus_Serialize[], AppError_Serialize>(__TAURI_INVOKE("disconnect_lastfm")),
 	getAcquisitionQueue: () => typedError<AcquisitionJobDto[], AppError_Serialize>(__TAURI_INVOKE("get_acquisition_queue")),
 	getAcquisitionSettings: () => typedError<AcquisitionSettings, AppError_Serialize>(__TAURI_INVOKE("get_acquisition_settings")),
@@ -63,12 +65,23 @@ export const commands = {
 	getTrackMetadata: (trackId: string) => typedError<TrackSummary, AppError_Serialize>(__TAURI_INVOKE("get_track_metadata", { trackId })),
 	getTrackLyrics: (trackId: string) => typedError<LyricsDocument, AppError_Serialize>(__TAURI_INVOKE("get_track_lyrics", { trackId })),
 	getUiPreference: (key: string) => typedError<string | null, AppError_Serialize>(__TAURI_INVOKE("get_ui_preference", { key })),
+	exportThemeBundle: (themeId: string, manifestJson: string, destinationPath: string) => typedError<null, AppError_Serialize>(__TAURI_INVOKE("export_theme_bundle", { themeId, manifestJson, destinationPath })),
+	importThemeBundle: (bundlePath: string) => typedError<ImportedThemeBundle, AppError_Serialize>(__TAURI_INVOKE("import_theme_bundle", { bundlePath })),
 	installUpdate: (confirmed: boolean) => typedError<null, AppError_Serialize>(__TAURI_INVOKE("install_update", { confirmed })),
 	listMetadataJobs: () => typedError<MetadataJob[], AppError_Serialize>(__TAURI_INVOKE("list_metadata_jobs")),
 	listLibraryRoots: () => typedError<LibraryRoot[], AppError_Serialize>(__TAURI_INVOKE("list_library_roots")),
 	listFavorites: () => typedError<FavoriteReference[], AppError_Serialize>(__TAURI_INVOKE("list_favorites")),
 	listPlaylists: () => typedError<PlaylistSummary[], AppError_Serialize>(__TAURI_INVOKE("list_playlists")),
 	listAudioOutputDevices: () => typedError<AudioOutputDevice[], AppError_Serialize>(__TAURI_INVOKE("list_audio_output_devices")),
+	listAvailableTags: () => typedError<AvailableTag[], AppError_Serialize>(__TAURI_INVOKE("list_available_tags")),
+	listStarterPlaylists: () => typedError<StarterPlaylistPreview[], AppError_Serialize>(__TAURI_INVOKE("list_starter_playlists")),
+	/**
+	 *  The full pool of tracks matching a Song DNA filter set, scored and sorted
+	 *  best-first with no diversity/count/duration capping — backs the playlist
+	 *  creator's "browse matches" view, where a person hand-picks tracks rather
+	 *  than accepting `generate_playlist`'s auto-curated selection.
+	 */
+	listMatchingTracks: (request: PlaylistGenerationRequest) => typedError<PlaylistSelection[], AppError_Serialize>(__TAURI_INVOKE("list_matching_tracks", { request })),
 	generatePlaylist: (request: PlaylistGenerationRequest) => typedError<GeneratedPlaylist, AppError_Serialize>(__TAURI_INVOKE("generate_playlist", { request })),
 	pauseMetadataJob: (jobId: string) => typedError<MetadataJob, AppError_Serialize>(__TAURI_INVOKE("pause_metadata_job", { jobId })),
 	pausePlayback: () => typedError<PlaybackState, AppError_Serialize>(__TAURI_INVOKE("pause_playback")),
@@ -103,6 +116,8 @@ export const commands = {
 	saveMetadataDrafts: (trackIds: string[], patch: MetadataPatch) => typedError<number, AppError_Serialize>(__TAURI_INVOKE("save_metadata_drafts", { trackIds, patch })),
 	savePlayerPreferences: (preferences: PlayerPreferences) => typedError<PlayerPreferences, AppError_Serialize>(__TAURI_INVOKE("save_player_preferences", { preferences })),
 	savePlayerQueue: (trackIds: string[]) => typedError<null, AppError_Serialize>(__TAURI_INVOKE("save_player_queue", { trackIds })),
+	stageThemeAsset: (stagingKey: string, sourcePath: string) => typedError<ThemeAssetReference, AppError_Serialize>(__TAURI_INVOKE("stage_theme_asset", { stagingKey, sourcePath })),
+	promoteThemeAssets: (stagingKey: string, themeId: string, overwrite: boolean) => typedError<null, AppError_Serialize>(__TAURI_INVOKE("promote_theme_assets", { stagingKey, themeId, overwrite })),
 	scanLibrary: (root: string) => typedError<LibraryScan, AppError_Serialize>(__TAURI_INVOKE("scan_library", { root })),
 	selectAudioOutputDevice: (deviceId: string | null) => typedError<AudioOutputDevice[], AppError_Serialize>(__TAURI_INVOKE("select_audio_output_device", { deviceId })),
 	seekPlayback: (positionMs: number) => typedError<PlaybackState, AppError_Serialize>(__TAURI_INVOKE("seek_playback", { positionMs })),
@@ -341,6 +356,17 @@ export type AudioSpecs = {
 };
 
 /**
+ *  A tag as offered to the playlist tag picker: name plus how many tracks in
+ *  *this* library carry it, so the picker only ever shows options that will
+ *  actually return something.
+ */
+export type AvailableTag = {
+	name: string,
+	category: string,
+	trackCount: number,
+};
+
+/**
  *  A bounded, keyset-paginated catalog response. `next_cursor` is opaque to
  *  callers; passing it back avoids the increasingly expensive OFFSET scans
  *  used by the prototype discovery endpoint.
@@ -456,8 +482,22 @@ export type HomeSnapshot = {
 	rediscover: TrackSummary[],
 };
 
+export type ImportedThemeBundle = {
+	manifestJson: string,
+	themeId: string,
+	stagingKey: string,
+	assets: ThemeAssetReference[],
+};
+
 export type IntegrationSettings = {
 	lastfmEnabled?: boolean,
+	/**
+	 *  Separate from `lastfm_enabled`: a user may want top-tag lookups for
+	 *  the playlist tag picker without scrobbling, or vice versa. Needs only
+	 *  the app's Last.fm API key (`track.getTopTags` is unauthenticated),
+	 *  not a connected session, so it works independently of scrobbling too.
+	 */
+	lastfmTagLookupEnabled?: boolean,
 	discordEnabled?: boolean,
 	discordDetail?: string,
 };
@@ -635,10 +675,31 @@ export type PlaylistGenerationRequest = {
 	mood?: PlaylistMood | null,
 	minimumEnergy?: number | null,
 	maximumEnergy?: number | null,
+	minimumBpm?: number | null,
+	maximumBpm?: number | null,
+	/**
+	 *  Caps how far a track's loudness swings (`AudioFeatures.dynamic_range_db`)
+	 *  — a rough, static proxy for "no big crescendo," since the analyzer
+	 *  doesn't currently track loudness *over time* within a track, only its
+	 *  overall peak-to-average spread.
+	 */
+	maximumDynamicRangeDb?: number | null,
 	familiarity?: number | null,
 	startYear?: number | null,
 	endYear?: number | null,
 	genres?: string[],
+	/**
+	 *  Descriptive tags (mood/instrument/scene, plus any genre tags picked
+	 *  alongside them) — soft-scored via `tag_match_score`, unlike `genres`
+	 *  above which is a hard filter. Lets "piano, classical, somber" style
+	 *  requests narrow results without zeroing out the pool entirely.
+	 */
+	tags?: string[],
+	/**
+	 *  Tags that hard-exclude a candidate outright (e.g. "lo-fi") — unlike
+	 *  `tags` above, there's no soft-scoring case for an exclusion.
+	 */
+	excludedTags?: string[],
 	excludedTrackIds?: string[],
 	excludeExplicit?: boolean,
 	maxTracksPerArtist?: number,
@@ -689,6 +750,27 @@ export type SpectrumFrame = {
 	positionMs: number,
 	bins: number[],
 	peak: number,
+};
+
+/**
+ *  One starter "vibe" playlist as returned to the frontend: the fixed spec
+ *  plus a live-generated preview over the current library.
+ */
+export type StarterPlaylistPreview = {
+	key: string,
+	name: string,
+	description: string,
+	playlist: GeneratedPlaylist,
+	request: PlaylistGenerationRequest,
+};
+
+export type ThemeAssetReference = {
+	path: string,
+	mimeType: string,
+	width: number,
+	height: number,
+	bytes: number,
+	stagedPath: string | null,
 };
 
 export type TrackPage = {

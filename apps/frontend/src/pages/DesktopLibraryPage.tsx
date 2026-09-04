@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Compass, Disc3, Play, Square, TriangleAlert } from 'lucide-react';
+import { Compass, Disc3, Heart, Play, TriangleAlert } from 'lucide-react';
 import { EmptyState } from '@/components/atoms/EmptyState';
 import { ContinueListeningRail } from '@/components/molecules/ContinueListeningRail';
 import { ListeningStats } from '@/components/molecules/ListeningStats';
@@ -21,13 +21,22 @@ import { useArtistCatalog, useCatalogDiscovery } from '@/hooks/useCatalogDiscove
 import { useNativePlayback } from '@/hooks/useNativePlayback';
 import { useTheme } from '@/services/themeService';
 import { SettingsView } from '@/components/organisms/SettingsView';
+import { ThemeBuilder } from '@/components/organisms/ThemeBuilder';
 import {
   loadAlbumDetail,
   loadArtistDetail,
   loadArtistInformation,
 } from '@/services/catalogService';
-import { toTrackItem } from '@/services/libraryService';
+import { toTrackItem, fetchAllLibraryTracks } from '@/services/libraryService';
 import { markPerformance, measurePerformance } from '@/services/performance';
+import { ContextMenu } from '@/components/molecules/ContextMenu';
+import { useBebopContextMenu } from '@/hooks/useBebopContextMenu';
+import {
+  addTrackToPlaylist,
+  createPlaylistWithTrack,
+  deletePlaylist,
+  duplicatePlaylist,
+} from '@/services/playlistService';
 import {
   loadFavoriteTrackIds,
   loadHomeSnapshot,
@@ -87,6 +96,7 @@ export function DesktopLibraryPage() {
   const [playerStateLoaded, setPlayerStateLoaded] = useState(false);
   const [home, setHome] = useState<HomeSnapshot | null>(null);
   const [favoriteTrackIds, setFavoriteTrackIds] = useState<ReadonlySet<string>>(new Set());
+  const [generatorSeedTrackId, setGeneratorSeedTrackId] = useState<string | null>(null);
   const [visualizationEnabled, setVisualizationEnabled] = useState(true);
   const [integrationSettings, setIntegrationSettings] = useState<IntegrationSettings>({
     lastfmEnabled: false,
@@ -95,7 +105,8 @@ export function DesktopLibraryPage() {
   });
   const [integrationStatuses, setIntegrationStatuses] = useState<IntegrationStatus[]>([]);
   const [lastFmSessionKey, setLastFmSessionKey] = useState('');
-  const [librarySubTab, setLibrarySubTab] = useState<LibrarySubTab>('artists');
+  const [librarySubTab, setLibrarySubTab] = useState<LibrarySubTab>('playlists');
+  const [openLikedSongsSignal, setOpenLikedSongsSignal] = useState(0);
   const resumeRef = useRef<{ trackId: string | null; positionMs: number }>({
     trackId: null,
     positionMs: 0,
@@ -208,6 +219,10 @@ export function DesktopLibraryPage() {
     [home],
   );
   const previewTracks = useMemo(() => library.tracks.slice(0, 6), [library.tracks]);
+  const likedTracks = useMemo(
+    () => library.tracks.filter((track) => favoriteTrackIds.has(track.id)),
+    [library.tracks, favoriteTrackIds],
+  );
   const listeningRefreshBucket = Math.floor(nativePlayback.playback.positionMs / 5_000);
 
   useEffect(() => {
@@ -529,9 +544,125 @@ export function DesktopLibraryPage() {
     });
   }, []);
 
+  const handlePlayNext = useCallback(
+    (track: TrackItem) => {
+      setQueue((prevQueue) => {
+        const currentIdx = prevQueue.findIndex((t) => t.id === currentTrack?.id);
+        if (currentIdx === -1) {
+          return [track, ...prevQueue.filter((t) => t.id !== track.id)];
+        }
+        const filtered = prevQueue.filter((t) => t.id !== track.id);
+        const newIdx = currentIdx + 1;
+        return [...filtered.slice(0, newIdx), track, ...filtered.slice(newIdx)];
+      });
+    },
+    [currentTrack?.id],
+  );
+
+  const handleAppendQueue = useCallback((tracks: TrackItem[]) => {
+    setQueue((prevQueue) => {
+      const newTracks = tracks.filter((t) => !prevQueue.some((existing) => existing.id === t.id));
+      return [...prevQueue, ...newTracks];
+    });
+  }, []);
+
+  const handleRemoveQueueTrack = useCallback((trackId: string) => {
+    setQueue((prevQueue) => prevQueue.filter((t) => t.id !== trackId));
+  }, []);
+
+  const handleMoveQueueTrack = useCallback((index: number, direction: 'up' | 'down') => {
+    setQueue((prevQueue) => {
+      const targetIndex = direction === 'up' ? index - 1 : index + 1;
+      if (targetIndex < 0 || targetIndex >= prevQueue.length) return prevQueue;
+      const next = [...prevQueue];
+      [next[index], next[targetIndex]] = [next[targetIndex], next[index]];
+      return next;
+    });
+  }, []);
+
+  const handleMoveQueueTrackToEnds = useCallback((index: number, to: 'top' | 'bottom') => {
+    setQueue((prevQueue) => {
+      if (index < 0 || index >= prevQueue.length) return prevQueue;
+      const item = prevQueue[index];
+      const filtered = prevQueue.filter((_, i) => i !== index);
+      return to === 'top' ? [item, ...filtered] : [...filtered, item];
+    });
+  }, []);
+
   const clearQueue = useCallback(() => {
     setQueue((current) => current.filter((track) => track.id === currentTrack?.id));
   }, [currentTrack?.id]);
+
+  const {
+    contextMenu,
+    closeContextMenu,
+    openTrackContextMenu,
+    openQueueTrackContextMenu,
+    openAlbumContextMenu,
+    openArtistContextMenu,
+    openPlaylistContextMenu,
+  } = useBebopContextMenu({
+    onPlayTrack: (track) => {
+      void playTrack(track);
+    },
+    onPlayNext: handlePlayNext,
+    onAppendQueue: handleAppendQueue,
+    onRemoveQueueTrack: handleRemoveQueueTrack,
+    onMoveQueueTrack: handleMoveQueueTrack,
+    onMoveQueueTrackToEnds: handleMoveQueueTrackToEnds,
+    isFavoriteTrack: (id) => favoriteTrackIds.has(id),
+    onToggleFavorite: (id, fav) => {
+      void changeTrackFavorite(id, fav);
+    },
+    onAddTrackToPlaylist: async (playlistId, trackId) => {
+      await addTrackToPlaylist(playlistId, trackId);
+    },
+    onCreatePlaylistWithTrack: async (name, trackId) => {
+      await createPlaylistWithTrack(name, trackId);
+    },
+    onCreatePlaylistWithSeed: (track) => {
+      setGeneratorSeedTrackId(track.id);
+      setActiveTab('LIBRARY');
+      changeLibrarySubTab('playlists');
+    },
+    onEditTrack: (track) => {
+      setEditingTrack(track);
+    },
+    onSelectArtist: (artistName) => {
+      void selectArtist(artistName);
+    },
+    onSelectAlbum: (albumName) => {
+      void selectAlbum(albumName);
+    },
+    onPlayAlbum: (album) => {
+      const albumTitle = typeof album === 'string' ? album : album.title;
+      const matchingTracks = library.tracks.filter(
+        (t) => t.album.toLowerCase() === albumTitle.toLowerCase(),
+      );
+      if (matchingTracks.length > 0) {
+        setQueue(matchingTracks);
+        void playTrack(matchingTracks[0]);
+      }
+    },
+    onPlayArtist: (artist) => {
+      const artistName = typeof artist === 'string' ? artist : artist.name;
+      const matchingTracks = library.tracks.filter(
+        (t) => t.artist.toLowerCase() === artistName.toLowerCase(),
+      );
+      if (matchingTracks.length > 0) {
+        setQueue(matchingTracks);
+        void playTrack(matchingTracks[0]);
+      }
+    },
+    onDeletePlaylist: async (playlist) => {
+      if (window.confirm(`Delete playlist "${playlist.name}"?`)) {
+        await deletePlaylist(playlist.id);
+      }
+    },
+    onDuplicatePlaylist: async (playlist) => {
+      await duplicatePlaylist(playlist.id, `${playlist.name} (Copy)`);
+    },
+  });
 
   return (
     <AppShell background={currentTheme.bgCanvasGradient || currentTheme.bgCanvas}>
@@ -539,7 +670,7 @@ export function DesktopLibraryPage() {
         activeTab={activeTab}
         onTabChange={(tab) => {
           markPerformance(`navigation-${tab.toLowerCase()}-start`);
-          if (tab === 'LIBRARY') setLibrarySubTab('artists');
+          if (tab === 'LIBRARY') setLibrarySubTab('playlists');
           setActiveTab(tab);
           markPerformance(`navigation-${tab.toLowerCase()}-visible`);
           measurePerformance(
@@ -565,6 +696,10 @@ export function DesktopLibraryPage() {
               items={sessionItems}
               onResumeItem={(item) => playHomeTrack(item.id)}
               onItemClick={(item) => playHomeTrack(item.id)}
+              onContextMenu={(item, e) => {
+                const track = library.tracks.find((t) => t.id === item.id);
+                if (track) void openTrackContextMenu(track, e);
+              }}
               emptyMessage="Start a local track and Bebop will retain its real listening session here."
               emptyActionLabel={library.root ? 'Browse indexed tracks' : 'Manage library folders'}
               onEmptyAction={() => {
@@ -580,6 +715,10 @@ export function DesktopLibraryPage() {
                 onItemClick={(item) => playHomeTrack(item.id)}
                 onSelectArtist={(artist) => void selectArtist(artist)}
                 onSelectAlbum={(album) => void selectAlbum(album)}
+                onContextMenu={(item, e) => {
+                  const track = library.tracks.find((t) => t.id === item.id);
+                  if (track) void openTrackContextMenu(track, e);
+                }}
               />
             )}
 
@@ -590,7 +729,67 @@ export function DesktopLibraryPage() {
                 onItemClick={(item) => playHomeTrack(item.id)}
                 onSelectArtist={(artist) => void selectArtist(artist)}
                 onSelectAlbum={(album) => void selectAlbum(album)}
+                onContextMenu={(item, e) => {
+                  const track = library.tracks.find((t) => t.id === item.id);
+                  if (track) void openTrackContextMenu(track, e);
+                }}
               />
+            )}
+
+            {likedTracks.length > 0 && (
+              <section className="flex flex-col gap-3">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <div className="h-4 w-1.5 t-sm bg-red-500" />
+                    <h2 className="text-sm text-neutral-200 t-heading flex items-center gap-1.5">
+                      <Heart className="w-4 h-4 fill-red-500 text-red-500" />
+                      <span>Liked Songs</span>
+                    </h2>
+                    <span className="text-xs text-neutral-500 font-mono">
+                      {likedTracks.length} favorite track{likedTracks.length === 1 ? '' : 's'}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveTab('LIBRARY');
+                      changeLibrarySubTab('playlists');
+                      setOpenLikedSongsSignal((count) => count + 1);
+                    }}
+                    className="text-xs font-semibold text-red-400 hover:text-red-300 underline cursor-pointer"
+                  >
+                    View all {likedTracks.length} liked tracks →
+                  </button>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {likedTracks.slice(0, 6).map((track) => (
+                    <button
+                      key={track.id}
+                      type="button"
+                      onClick={() => void playTrack(track)}
+                      onContextMenu={(e) => openTrackContextMenu(track, e)}
+                      className="group flex items-center gap-3 t-control border border-neutral-800 bg-neutral-950/50 p-3 text-left transition hover:-translate-y-0.5 hover:border-red-500/50 hover:bg-neutral-900 cursor-pointer"
+                    >
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center t-sm border border-red-500/30 bg-red-500/10 text-red-400">
+                        {currentTrack?.id === track.id && isPlaying ? (
+                          <Play className="h-4 w-4 fill-current" />
+                        ) : (
+                          <Heart className="h-4 w-4 fill-current" />
+                        )}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-semibold text-white">
+                          {track.title}
+                        </span>
+                        <span className="mt-0.5 block truncate text-xs text-neutral-400">
+                          {track.artist} · {track.duration}
+                        </span>
+                      </span>
+                      <Play className="h-4 w-4 shrink-0 text-neutral-500 opacity-0 transition group-hover:opacity-100" />
+                    </button>
+                  ))}
+                </div>
+              </section>
             )}
 
             {previewTracks.length > 0 && (
@@ -615,6 +814,7 @@ export function DesktopLibraryPage() {
                       key={track.id}
                       type="button"
                       onClick={() => void playTrack(track)}
+                      onContextMenu={(e) => openTrackContextMenu(track, e)}
                       className="group flex items-center gap-3 t-control border border-neutral-800 bg-neutral-950/50 p-3 text-left transition hover:-translate-y-0.5 hover:border-amber-400/50 hover:bg-neutral-900"
                     >
                       <span className="flex h-10 w-10 shrink-0 items-center justify-center t-sm border border-amber-400/25 bg-amber-500/10 text-amber-300">
@@ -906,33 +1106,6 @@ export function DesktopLibraryPage() {
               </div>
             )}
 
-            {nativePlayback.playback.output && (
-              <div className="flex flex-wrap items-center justify-between gap-3 t-sm border border-neutral-800 bg-neutral-950/50 px-4 py-3 text-xs text-neutral-300">
-                <p>
-                  {nativePlayback.playback.output.deviceName} ·{' '}
-                  {nativePlayback.playback.output.disclosure}
-                </p>
-                <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    className="text-amber-300 underline"
-                    onClick={() => void nativePlayback.setHifi(!nativePlayback.playback.hifiMode)}
-                  >
-                    {nativePlayback.playback.hifiMode
-                      ? 'Allow software volume'
-                      : 'Enable hi-fi mode'}
-                  </button>
-                  <button
-                    type="button"
-                    className="flex items-center gap-1 text-neutral-300 underline"
-                    onClick={() => void nativePlayback.stop()}
-                  >
-                    <Square className="h-3 w-3 fill-current" /> Stop
-                  </button>
-                </div>
-              </div>
-            )}
-
             {library.phase === 'idle' && (
               <div className="t-sm border border-neutral-800 bg-neutral-950/50 p-6 text-neutral-400">
                 No folder has been selected yet.
@@ -985,6 +1158,7 @@ export function DesktopLibraryPage() {
                 onPlayAlbum={(album) => void playAlbum(album)}
                 onSelectArtist={(artist) => void selectArtist(artist)}
                 onSelectAlbum={(album) => void selectAlbum(album)}
+                onContextMenu={openTrackContextMenu}
               />
             ) : selectedArtist ? (
               <ArtistDetailPage
@@ -994,6 +1168,7 @@ export function DesktopLibraryPage() {
                 onEditTrack={setEditingTrack}
                 onPlayArtist={(artist) => void playArtist(artist)}
                 onSelectAlbum={(album) => void selectAlbum(album)}
+                onContextMenu={openTrackContextMenu}
               />
             ) : (
               (library.phase === 'complete' || library.phase === 'partial-error') && (
@@ -1014,6 +1189,7 @@ export function DesktopLibraryPage() {
                   onFavoriteChange={changeTrackFavorite}
                   selectedSubTab={librarySubTab}
                   onSubTabChange={changeLibrarySubTab}
+                  openLikedSongsSignal={openLikedSongsSignal}
                   artistHasMore={Boolean(artistCatalog.nextCursor)}
                   artistLoading={artistCatalog.loading}
                   onLoadMoreArtists={() => void artistCatalog.loadMore()}
@@ -1025,6 +1201,27 @@ export function DesktopLibraryPage() {
                       ...tracks.filter((track) => !current.some((item) => item.id === track.id)),
                     ])
                   }
+                  initialSeedTrackId={generatorSeedTrackId}
+                  onClearInitialSeedTrackId={() => setGeneratorSeedTrackId(null)}
+                  onContextMenu={openTrackContextMenu}
+                  onAlbumContextMenu={openAlbumContextMenu}
+                  onArtistContextMenu={openArtistContextMenu}
+                  onPlaylistContextMenu={openPlaylistContextMenu}
+                  onPlayAll={async () => {
+                    try {
+                      const allTracks = await fetchAllLibraryTracks();
+                      const tracksToPlay = allTracks.length > 0 ? allTracks : visibleTracks;
+                      if (tracksToPlay.length > 0) {
+                        setQueue(tracksToPlay);
+                        void playTrack(tracksToPlay[0]);
+                      }
+                    } catch {
+                      if (visibleTracks.length > 0) {
+                        setQueue(visibleTracks);
+                        void playTrack(visibleTracks[0]);
+                      }
+                    }
+                  }}
                 />
               )
             )}
@@ -1057,6 +1254,14 @@ export function DesktopLibraryPage() {
         getSpectrumBins={nativePlayback.getSpectrumBins}
         onSelectArtist={(artist) => void selectArtist(artist)}
         onSelectAlbum={(album) => void selectAlbum(album)}
+        isFavorite={currentTrack ? favoriteTrackIds.has(currentTrack.id) : false}
+        onToggleFavorite={changeTrackFavorite}
+        onCreatePlaylistWithSeed={(track) => {
+          setGeneratorSeedTrackId(track.id);
+          setActiveTab('LIBRARY');
+          changeLibrarySubTab('playlists');
+        }}
+        onContextMenu={openTrackContextMenu}
       />
 
       <NowPlayingQueueModal
@@ -1072,6 +1277,7 @@ export function DesktopLibraryPage() {
         onShuffleQueue={shuffleQueue}
         onSelectArtist={(artist) => void selectArtist(artist)}
         onSelectAlbum={(album) => void selectAlbum(album)}
+        onContextMenu={openQueueTrackContextMenu}
       />
 
       <FullscreenNowPlaying
@@ -1100,11 +1306,28 @@ export function DesktopLibraryPage() {
         getSpectrumBins={nativePlayback.getSpectrumBins}
         onSelectArtist={(artist) => void selectArtist(artist)}
         onSelectAlbum={(album) => void selectAlbum(album)}
+        isFavorite={currentTrack ? favoriteTrackIds.has(currentTrack.id) : false}
+        onToggleFavorite={changeTrackFavorite}
+        onCreatePlaylistWithSeed={(track) => {
+          setGeneratorSeedTrackId(track.id);
+          setActiveTab('LIBRARY');
+          changeLibrarySubTab('playlists');
+        }}
       />
       {editingTrack && (
         <MetadataEditor track={editingTrack} onClose={() => setEditingTrack(null)} />
       )}
       <AcquisitionQueueDrawer />
+      <ThemeBuilder />
+
+      <ContextMenu
+        isOpen={contextMenu.isOpen}
+        x={contextMenu.x}
+        y={contextMenu.y}
+        onClose={closeContextMenu}
+        header={contextMenu.header}
+        items={contextMenu.items}
+      />
     </AppShell>
   );
 }

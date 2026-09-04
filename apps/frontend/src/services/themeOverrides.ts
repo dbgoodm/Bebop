@@ -11,17 +11,11 @@ export const THEME_VAR_OVERRIDES: Record<string, Record<string, string>> = {
   // pieces: the Swordfish crossing the frame, and smoke drawn as a curling
   // ribbon instead of a drifting cloud.
   'space-cowboy-v2': {
-    // The old horizontal streak is retired in favour of the corner-to-corner
-    // climb, which crosses in front of content so it is actually seen.
-    '--op-ship': '0',
+    // The corner-to-corner climb is specifically the Swordfish. The streaks
+    // are anonymous background ships — it's space, there's more than one —
+    // so both run at once.
     '--op-ascent': '1',
-    '--ascent-col': '#d33a2c',
-    '--trail-col': 'rgba(236,228,207,.5)',
-    // Angle and distance are measured from the viewport at runtime, so the
-    // crossing stays corner-to-corner at any window size.
-    '--ascent-x': '0%',
-    '--ascent-y': '0%',
-    '--ascent-dur': '15s',
+    '--op-ship': '1',
 
     // Drawn smoke, warm against the navy.
     '--op-smoke': '1',

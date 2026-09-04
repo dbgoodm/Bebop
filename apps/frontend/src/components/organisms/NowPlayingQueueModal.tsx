@@ -27,9 +27,10 @@ interface NowPlayingQueueModalProps {
   onShuffleQueue?: () => void;
   onSelectArtist?: (artistName: string) => void;
   onSelectAlbum?: (albumName: string) => void;
+  onContextMenu?: (track: TrackItem, index: number, event: React.MouseEvent) => void;
 }
 
-export const NowPlayingQueueModal: React.FC<NowPlayingQueueModalProps> = ({
+const NowPlayingQueueModalImpl: React.FC<NowPlayingQueueModalProps> = ({
   isOpen,
   onClose,
   queue,
@@ -42,11 +43,34 @@ export const NowPlayingQueueModal: React.FC<NowPlayingQueueModalProps> = ({
   onShuffleQueue,
   onSelectArtist,
   onSelectAlbum,
+  onContextMenu,
 }) => {
+  // Hooks must run on every render regardless of isOpen — this component is
+  // always mounted (isOpen just hides it), so a hook called only when open
+  // changes the hook count between renders and React throws. The `!isOpen`
+  // gate has to come after every hook, not before.
+  const displayQueue = React.useMemo(() => {
+    if (queue.length <= 100) return queue.map((track, index) => ({ track, index }));
+    const currentIndex = queue.findIndex((t) => t.id === currentTrack?.id);
+    const safeIndex = currentIndex >= 0 ? currentIndex : 0;
+    const start = Math.max(0, safeIndex - 20);
+    const end = Math.min(queue.length, safeIndex + 80);
+    return queue.slice(start, end).map((track, relativeIdx) => ({
+      track,
+      index: start + relativeIdx,
+    }));
+  }, [queue, currentTrack?.id]);
+
+  // Same hooks-before-the-gate rule as displayQueue above — and worth
+  // memoizing on its own, since this reduce runs over the *whole* queue
+  // (unlike the windowed displayQueue) on every re-render otherwise.
+  const totalQueueSeconds = React.useMemo(
+    () => queue.reduce((acc, t) => acc + (t.durationSeconds || 0), 0),
+    [queue],
+  );
+
   if (!isOpen) return null;
 
-  // Calculate total duration in queue
-  const totalQueueSeconds = queue.reduce((acc, t) => acc + (t.durationSeconds || 0), 0);
   const totalMinutes = Math.floor(totalQueueSeconds / 60);
 
   return (
@@ -57,7 +81,7 @@ export const NowPlayingQueueModal: React.FC<NowPlayingQueueModalProps> = ({
     >
       <div
         id="now-playing-queue-drawer"
-        className="w-full max-w-md bg-[#090d15] border-l border-neutral-800 h-full flex flex-col shadow-2xl overflow-hidden"
+        className="w-full max-w-[34rem] bg-[#090d15] border-l border-neutral-800 h-full flex flex-col shadow-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -71,11 +95,11 @@ export const NowPlayingQueueModal: React.FC<NowPlayingQueueModalProps> = ({
                 <h3 className="text-sm font-bold text-white tracking-wide uppercase">
                   Playback Queue
                 </h3>
-                <span className="px-1.5 py-0.5 t-sm bg-amber-500/15 border border-amber-500/30 text-[10px] font-mono text-amber-400 font-semibold">
+                <span className="px-2 py-0.5 t-sm bg-amber-500/15 border border-amber-500/30 text-xs font-mono text-amber-300 font-semibold whitespace-nowrap">
                   {queue.length} Tracks
                 </span>
               </div>
-              <p className="text-xs text-neutral-400 font-mono mt-0.5">
+              <p className="text-sm text-neutral-300 font-mono mt-0.5">
                 {totalMinutes} min total • Native Rust playback
               </p>
             </div>
@@ -92,7 +116,7 @@ export const NowPlayingQueueModal: React.FC<NowPlayingQueueModalProps> = ({
         </div>
 
         {/* Toolbar */}
-        <div className="px-4 py-2.5 bg-[#0e131e] border-b border-neutral-800/80 flex items-center justify-between text-xs font-mono">
+        <div className="px-4 py-3 bg-[#0e131e] border-b border-neutral-800/80 flex items-center justify-between text-sm font-mono">
           <div className="flex items-center gap-2">
             {onShuffleQueue && (
               <button
@@ -100,7 +124,7 @@ export const NowPlayingQueueModal: React.FC<NowPlayingQueueModalProps> = ({
                 onClick={onShuffleQueue}
                 className="flex items-center gap-1.5 px-2.5 py-1 t-control bg-[#151c2a] border border-neutral-800 hover:border-amber-500/40 text-neutral-300 hover:text-amber-300 transition-colors cursor-pointer"
               >
-                <Shuffle className="w-3 h-3 text-amber-400" />
+                <Shuffle className="w-3.5 h-3.5 text-amber-400" />
                 <span>Shuffle</span>
               </button>
             )}
@@ -110,12 +134,12 @@ export const NowPlayingQueueModal: React.FC<NowPlayingQueueModalProps> = ({
                 onClick={onClearQueue}
                 className="flex items-center gap-1 px-2 py-1 t-control text-neutral-400 hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
               >
-                <Trash2 className="w-3 h-3" />
+                <Trash2 className="w-3.5 h-3.5" />
                 <span>Clear Up Next</span>
               </button>
             )}
           </div>
-          <span className="text-neutral-400">OS signal path reported</span>
+          <span className="text-neutral-300 whitespace-nowrap">OS signal path reported</span>
         </div>
 
         {/* Queue List */}
@@ -123,8 +147,8 @@ export const NowPlayingQueueModal: React.FC<NowPlayingQueueModalProps> = ({
           {/* Currently Playing Card */}
           {currentTrack && (
             <div className="flex flex-col gap-2">
-              <span className="text-xs font-bold text-amber-400 uppercase tracking-wider font-mono flex items-center gap-1.5">
-                <Volume2 className="w-3.5 h-3.5" />
+              <span className="text-sm font-bold text-amber-400 uppercase tracking-wider font-mono flex items-center gap-1.5">
+                <Volume2 className="w-4 h-4" />
                 Now Playing
               </span>
 
@@ -157,11 +181,11 @@ export const NowPlayingQueueModal: React.FC<NowPlayingQueueModalProps> = ({
                 </div>
 
                 <div className="flex-1 min-w-0">
-                  <h4 className="text-xs font-bold text-white truncate">{currentTrack.title}</h4>
-                  <p className="text-[11px] text-neutral-300 truncate mt-0.5">
+                  <h4 className="text-sm font-bold text-white truncate">{currentTrack.title}</h4>
+                  <p className="text-xs text-neutral-200 truncate mt-0.5">
                     {currentTrack.artist} • {currentTrack.album}
                   </p>
-                  <div className="flex items-center gap-2 mt-1 font-mono text-[10px]">
+                  <div className="flex items-center gap-2 mt-1 font-mono text-xs">
                     <span className="px-1.5 py-0.2 t-sm bg-amber-500/20 text-amber-300 border border-amber-500/30">
                       {currentTrack.codec} {currentTrack.sampleRate}
                     </span>
@@ -174,9 +198,11 @@ export const NowPlayingQueueModal: React.FC<NowPlayingQueueModalProps> = ({
 
           {/* Up Next List */}
           <div className="flex flex-col gap-2">
-            <span className="text-xs font-bold text-neutral-400 uppercase tracking-wider font-mono flex items-center justify-between">
+            <span className="text-sm font-bold text-neutral-300 uppercase tracking-wider font-mono flex items-center justify-between">
               <span>Up Next</span>
-              <span className="text-[10px] text-neutral-400">{queue.length} in queue</span>
+              <span className="text-xs text-neutral-300 whitespace-nowrap">
+                {queue.length} in queue
+              </span>
             </span>
 
             {queue.length === 0 ? (
@@ -188,13 +214,19 @@ export const NowPlayingQueueModal: React.FC<NowPlayingQueueModalProps> = ({
                 </p>
               </div>
             ) : (
-              <div className="flex flex-col gap-1.5">
-                {queue.map((track, idx) => {
+              <div className="flex flex-col gap-2">
+                {displayQueue.map(({ track, index: idx }) => {
                   const isCurrent = track.id === currentTrack?.id;
                   return (
                     <div
                       key={`${track.id}-${idx}`}
-                      className={`group t-card t-stroke p-2.5 flex items-center gap-3 transition-colors border ${
+                      onContextMenu={(e) => {
+                        if (onContextMenu) {
+                          e.preventDefault();
+                          onContextMenu(track, idx, e);
+                        }
+                      }}
+                      className={`group t-card t-stroke p-3 flex items-center gap-3 transition-colors border ${
                         isCurrent
                           ? 'bg-amber-500/10 border-amber-500/30 text-amber-200'
                           : 'bg-[#0e131d] border-neutral-800/80 hover:bg-[#131a27] hover:border-neutral-700 text-neutral-300'
@@ -202,7 +234,7 @@ export const NowPlayingQueueModal: React.FC<NowPlayingQueueModalProps> = ({
                     >
                       {/* Index / Play action */}
                       <div className="w-6 text-center shrink-0">
-                        <span className="text-xs font-mono text-neutral-500 group-hover:hidden">
+                        <span className="text-sm font-mono text-neutral-400 group-hover:hidden">
                           {idx + 1}
                         </span>
                         <button
@@ -216,7 +248,7 @@ export const NowPlayingQueueModal: React.FC<NowPlayingQueueModalProps> = ({
                       </div>
 
                       {/* Cover art */}
-                      <div className="w-9 h-9 t-sm bg-neutral-900 overflow-hidden shrink-0 border border-neutral-800">
+                      <div className="w-10 h-10 t-sm bg-neutral-900 overflow-hidden shrink-0 border border-neutral-800">
                         {track.coverUrl ? (
                           <img
                             src={track.coverUrl}
@@ -226,7 +258,7 @@ export const NowPlayingQueueModal: React.FC<NowPlayingQueueModalProps> = ({
                           />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center text-neutral-600">
-                            <Disc3 className="w-4 h-4" />
+                            <Disc3 className="w-5 h-5" />
                           </div>
                         )}
                       </div>
@@ -236,17 +268,17 @@ export const NowPlayingQueueModal: React.FC<NowPlayingQueueModalProps> = ({
                         className="flex-1 min-w-0 cursor-pointer"
                         onClick={() => onPlayTrack(track)}
                       >
-                        <h5 className="text-xs font-semibold text-white truncate group-hover:text-amber-300 transition-colors">
+                        <h5 className="text-sm font-semibold text-white truncate group-hover:text-amber-300 transition-colors">
                           {track.title}
                         </h5>
-                        <p className="text-[11px] text-neutral-400 truncate">
+                        <p className="text-xs text-neutral-300 truncate">
                           {track.artist} • {track.album}
                         </p>
                       </div>
 
                       {/* Actions & Duration */}
-                      <div className="flex items-center gap-1.5 shrink-0 font-mono text-xs text-neutral-400">
-                        <span className="text-[11px]">{track.duration}</span>
+                      <div className="flex items-center gap-1.5 shrink-0 font-mono text-sm text-neutral-300">
+                        <span>{track.duration}</span>
 
                         {onMoveTrack && idx > 0 && (
                           <button
@@ -287,7 +319,7 @@ export const NowPlayingQueueModal: React.FC<NowPlayingQueueModalProps> = ({
         </div>
 
         {/* Footer info */}
-        <div className="p-3.5 bg-[#080b11] border-t border-neutral-800 text-[11px] text-neutral-400 font-mono flex items-center justify-between">
+        <div className="p-3.5 bg-[#080b11] border-t border-neutral-800 text-xs text-neutral-300 font-mono flex items-center justify-between">
           <span>Engine: Bit-Perfect ASIO/WASAPI</span>
           <span className="text-amber-400/90">Direct DAC Feed</span>
         </div>
@@ -295,3 +327,6 @@ export const NowPlayingQueueModal: React.FC<NowPlayingQueueModalProps> = ({
     </div>
   );
 };
+
+// See TracksTableView: keeps the (potentially huge) queue list from re-rendering on unrelated playback-state changes.
+export const NowPlayingQueueModal = React.memo(NowPlayingQueueModalImpl);

@@ -1,0 +1,27 @@
+# Normalize line endings so checkouts are identical on Linux, macOS, and
+# Windows. Without this, Windows checkouts get CRLF (via git's autocrlf
+# default) while Linux/macOS stay LF, which makes tooling that's sensitive
+# to line endings (e.g. Prettier's format:check) disagree with itself
+# purely based on platform, not content.
+* text=auto eol=lf
+
+# Windows-only scripts are conventionally CRLF; keep them that way.
+*.ps1 text eol=crlf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Binary assets: never touch line endings.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.icns binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.otf binary
+*.db binary
+*.sqlite binary
+*.sqlite3 binary

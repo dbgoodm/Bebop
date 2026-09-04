@@ -77,12 +77,12 @@ describe('crew themes', () => {
 });
 
 describe('local overrides folded into Space Cowboy', () => {
-  it('flies the Swordfish in front of content instead of the old fly-past', async () => {
+  it('runs both the corner-to-corner Swordfish ascent and the anonymous ship traffic', async () => {
     const { ALL_THEMES } = await import('./themeService');
     const spike = ALL_THEMES.find((theme) => theme.id === 'space-cowboy-v2');
     const vars = spike?.vars ?? {};
     expect(vars['--op-ascent']).toBe('1');
-    expect(vars['--op-ship']).toBe('0');
+    expect(vars['--op-ship']).toBe('1');
   });
 
   it('squares the meter off and gives it a Swordfish-red peak cap', async () => {

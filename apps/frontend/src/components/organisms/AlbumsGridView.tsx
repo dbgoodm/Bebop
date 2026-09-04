@@ -7,13 +7,15 @@ interface AlbumsGridViewProps {
   onPlayAlbum?: (album: AlbumItem) => void;
   onSelectAlbum?: (album: AlbumItem) => void;
   onSelectArtist?: (artist: string | ArtistItem) => void;
+  onContextMenu?: (album: AlbumItem, event: React.MouseEvent) => void;
 }
 
-export const AlbumsGridView: React.FC<AlbumsGridViewProps> = ({
+const AlbumsGridViewImpl: React.FC<AlbumsGridViewProps> = ({
   albums = [],
   onPlayAlbum,
   onSelectAlbum,
   onSelectArtist,
+  onContextMenu,
 }) => {
   return (
     <div id="albums-grid-container" className="w-full flex flex-col gap-4 font-sans">
@@ -23,6 +25,12 @@ export const AlbumsGridView: React.FC<AlbumsGridViewProps> = ({
             key={album.id}
             id={`album-card-${album.id}`}
             onClick={() => onSelectAlbum?.(album)}
+            onContextMenu={(e) => {
+              if (onContextMenu) {
+                e.preventDefault();
+                onContextMenu(album, e);
+              }
+            }}
             className="group bg-[#0c1017] border border-neutral-800 hover:border-amber-600/50 t-card t-stroke p-3 flex flex-col transition-all duration-200 t-lift hover:shadow-lg cursor-pointer relative"
           >
             {/* Album Cover with format badge & hover play button */}
@@ -96,3 +104,6 @@ export const AlbumsGridView: React.FC<AlbumsGridViewProps> = ({
     </div>
   );
 };
+
+// See TracksTableView: keeps large grids from re-rendering on unrelated playback-state changes.
+export const AlbumsGridView = React.memo(AlbumsGridViewImpl);

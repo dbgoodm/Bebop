@@ -10,6 +10,7 @@ export const RecentlyAddedRail: React.FC<RecentlyAddedRailProps> = ({
   onItemClick,
   onSelectArtist,
   onSelectAlbum,
+  onContextMenu,
 }) => {
   const { currentTheme } = useTheme();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -111,6 +112,11 @@ export const RecentlyAddedRail: React.FC<RecentlyAddedRailProps> = ({
             key={item.id}
             id={`recent-card-${item.id}`}
             onClick={() => onItemClick?.(item)}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onContextMenu?.(item, e);
+            }}
             style={{
               backgroundColor: currentTheme.bgCard,
               borderColor: currentTheme.borderColor,

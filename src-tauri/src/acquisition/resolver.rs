@@ -478,11 +478,10 @@ impl MetadataResolver {
         let mut t = album_title.trim();
         // 1. Remove leading "Artist - " or "Artist : "
         if !artist.is_empty() && t.to_lowercase().starts_with(&artist.to_lowercase()) {
-            t = t[artist.len()..]
-                .trim_start_matches(|c: char| c == ' ' || c == '-' || c == ':' || c == '_');
+            t = t[artist.len()..].trim_start_matches([' ', '-', ':', '_']);
         }
         // 2. Remove leading year pattern: 19xx or 20xx e.g. "2008 - " or "[2008] - " or "(2008) - "
-        if let Some(pos) = t.find(|c: char| c == '-' || c == ':' || c == '_') {
+        if let Some(pos) = t.find(['-', ':', '_']) {
             let prefix = t[..pos]
                 .trim()
                 .trim_matches(|c: char| c == '[' || c == ']' || c == '(' || c == ')');
@@ -492,8 +491,7 @@ impl MetadataResolver {
         }
         // 3. Remove repeating artist if after year
         if !artist.is_empty() && t.to_lowercase().starts_with(&artist.to_lowercase()) {
-            t = t[artist.len()..]
-                .trim_start_matches(|c: char| c == ' ' || c == '-' || c == ':' || c == '_');
+            t = t[artist.len()..].trim_start_matches([' ', '-', ':', '_']);
         }
         // 4. Split off parenthesis/brackets
         let clean = t

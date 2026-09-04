@@ -114,6 +114,37 @@ describe('FullscreenNowPlaying', () => {
     expect(screen.getByText('SEE YOU SPACE COWBOY...')).toBeDefined();
   });
 
+  it('renders without a current track and a large queue, even while closed', () => {
+    // Regression: this component is always mounted (isOpen just hides it),
+    // so on cold start — nothing playing yet, a big library queued — it must
+    // not crash. displayQueue's useMemo used to call queue.findIndex(t =>
+    // t.id === currentTrack.id) unconditionally, throwing the moment the
+    // queue passed 60 tracks with no current track, which blanked the whole
+    // app since nothing wraps it in an error boundary.
+    const bigQueue = Array.from({ length: 200 }, (_, index) => ({
+      ...mockTrack,
+      id: `track-${index}`,
+    }));
+
+    expect(() =>
+      render(
+        <FullscreenNowPlaying
+          isOpen={false}
+          onClose={vi.fn()}
+          currentTrack={null}
+          isPlaying={false}
+          currentTimeSeconds={0}
+          onPlayPause={vi.fn()}
+          onPrev={vi.fn()}
+          onNext={vi.fn()}
+          onSeek={vi.fn()}
+          queue={bigQueue}
+          onPlayQueueTrack={vi.fn()}
+        />,
+      ),
+    ).not.toThrow();
+  });
+
   it('toggles turntable RPM speed between 33⅓ and 45 RPM', () => {
     render(
       <FullscreenNowPlaying
@@ -139,6 +170,48 @@ describe('FullscreenNowPlaying', () => {
 
     fireEvent.click(rpmBtn);
     expect(screen.getByTitle('Toggle Turntable Speed (33⅓ vs 45 RPM)').textContent).toBe('33⅓ RPM');
+  });
+
+  it('parks the tonearm while idle and advances the stylus with track progress', () => {
+    const props = {
+      isOpen: true,
+      onClose: vi.fn(),
+      currentTrack: mockTrack,
+      currentTimeSeconds: 0,
+      onPlayPause: vi.fn(),
+      onPrev: vi.fn(),
+      onNext: vi.fn(),
+      onSeek: vi.fn(),
+      queue: [mockTrack],
+      onPlayQueueTrack: vi.fn(),
+    };
+    const { rerender } = render(<FullscreenNowPlaying {...props} isPlaying={true} />);
+
+    const arm = screen.getByTestId('turntable-tonearm-arm');
+    const headshell = screen.getByTestId('turntable-tonearm-headshell');
+    expect(arm.getAttribute('data-tonearm-target')).toBe('playing');
+    expect(arm.getAttribute('transform')).toBe('rotate(-55 95 25)');
+    expect(headshell.getAttribute('transform')).toBe('translate(89, 92)');
+
+    rerender(
+      <FullscreenNowPlaying
+        {...props}
+        isPlaying={false}
+        currentTimeSeconds={mockTrack.durationSeconds! / 2}
+      />,
+    );
+    expect(arm.getAttribute('data-tonearm-target')).toBe('parked');
+    expect(arm.getAttribute('transform')).toBe('rotate(-55 95 25)');
+    expect(headshell.getAttribute('transform')).toBe('translate(89, 92)');
+
+    rerender(
+      <FullscreenNowPlaying
+        {...props}
+        isPlaying={true}
+        currentTimeSeconds={mockTrack.durationSeconds! / 2}
+      />,
+    );
+    expect(arm.getAttribute('data-tonearm-target')).toBe('playing');
   });
 
   it('handles shuffle and repeat button clicks with callbacks and indicators', () => {

@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { listen } from '@tauri-apps/api/event';
-import type { AppError, MetadataJob } from '@/services/tauri-bindings';
+import type { AppError, IntegrationSettings, MetadataJob } from '@/services/tauri-bindings';
 import { describeError } from '@/services/libraryService';
+import { loadIntegrations, saveIntegrationSettings } from '@/services/integrationService';
 import {
   cancelMetadataJob,
   configureAcoustIdClientKey,
@@ -21,16 +22,19 @@ export function MetadataJobsPanel() {
   const [clientKey, setClientKey] = useState('');
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [integrationSettings, setIntegrationSettings] = useState<IntegrationSettings | null>(null);
 
   const refresh = useCallback(async () => {
-    const [musicBrainz, acoustId, currentJobs] = await Promise.all([
+    const [musicBrainz, acoustId, currentJobs, integrations] = await Promise.all([
       getMusicBrainzEnabled(),
       getAcoustIdConfigured(),
       listMetadataJobs(),
+      loadIntegrations(),
     ]);
     setEnabled(musicBrainz);
     setAcoustIdConfigured(acoustId);
     setJobs(currentJobs);
+    setIntegrationSettings(integrations.settings);
   }, []);
 
   useEffect(() => {
@@ -80,24 +84,50 @@ export function MetadataJobsPanel() {
             are backed up, written, reread, and audio-verified; ambiguous matches wait for review.
           </p>
         </div>
-        <button
-          type="button"
-          aria-pressed={enabled}
-          disabled={busy}
-          onClick={() =>
-            void run(
-              async () => {
-                const next = !enabled;
-                await setMusicBrainzEnabled(next);
-                setEnabled(next);
-              },
-              enabled ? 'MusicBrainz disabled.' : 'MusicBrainz enabled.',
-            )
-          }
-          className="t-control border border-neutral-700 px-3 py-2 text-xs font-semibold text-neutral-200 disabled:opacity-40"
-        >
-          MusicBrainz {enabled ? 'on' : 'off'}
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            aria-pressed={enabled}
+            disabled={busy}
+            onClick={() =>
+              void run(
+                async () => {
+                  const next = !enabled;
+                  await setMusicBrainzEnabled(next);
+                  setEnabled(next);
+                },
+                enabled ? 'MusicBrainz disabled.' : 'MusicBrainz enabled.',
+              )
+            }
+            className="t-control border border-neutral-700 px-3 py-2 text-xs font-semibold text-neutral-200 disabled:opacity-40"
+          >
+            MusicBrainz {enabled ? 'on' : 'off'}
+          </button>
+          <button
+            type="button"
+            aria-pressed={integrationSettings?.lastfmTagLookupEnabled ?? false}
+            disabled={busy || !integrationSettings}
+            onClick={() =>
+              void run(
+                async () => {
+                  if (!integrationSettings) return;
+                  const next = !integrationSettings.lastfmTagLookupEnabled;
+                  const saved = await saveIntegrationSettings({
+                    ...integrationSettings,
+                    lastfmTagLookupEnabled: next,
+                  });
+                  setIntegrationSettings(saved);
+                },
+                integrationSettings?.lastfmTagLookupEnabled
+                  ? 'Last.fm tags disabled.'
+                  : 'Last.fm tags enabled.',
+              )
+            }
+            className="t-control border border-neutral-700 px-3 py-2 text-xs font-semibold text-neutral-200 disabled:opacity-40"
+          >
+            Last.fm tags {integrationSettings?.lastfmTagLookupEnabled ? 'on' : 'off'}
+          </button>
+        </div>
       </div>
 
       <p className="mt-3 text-xs text-neutral-500">
@@ -111,6 +141,10 @@ export function MetadataJobsPanel() {
           AcoustID client key
         </a>{' '}
         is free and only required to identify untagged files by their audio fingerprint.
+      </p>
+      <p className="mt-1 text-xs text-neutral-500">
+        Last.fm tags uses the app&apos;s own Last.fm key — no login needed — to fetch descriptive
+        tags (mood, genre, and more) for the playlist tag picker. Independent of scrobbling.
       </p>
 
       <div className="mt-4 flex flex-wrap gap-2">

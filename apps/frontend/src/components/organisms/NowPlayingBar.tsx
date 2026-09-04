@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useRef } from 'react';
+import React, { useMemo, useState, useRef, useEffect, useCallback } from 'react';
 import {
   Play,
   Pause,
@@ -12,11 +12,25 @@ import {
   Disc3,
   ChevronUp,
   Maximize2,
+  Heart,
+  Plus,
+  Dna,
+  Check,
+  ListPlus,
+  Loader2,
+  X,
+  Sparkles,
 } from 'lucide-react';
 import { TrackItem } from '@/types';
 import { PeakHoldVisualizer } from '@/components/organisms/PeakHoldVisualizer';
 import { visualizerStyleFromVars } from '@/services/visualizerStyle';
 import { useTheme } from '@/services/themeService';
+import {
+  listPlaylists,
+  addTrackToPlaylist,
+  createPlaylistWithTrack,
+  type PlaylistSummary,
+} from '@/services/playlistService';
 
 interface NowPlayingBarProps {
   currentTrack?: TrackItem | null;
@@ -45,6 +59,11 @@ interface NowPlayingBarProps {
   spectrumAvailable?: boolean;
   frequencyDataProvider?: (outputArray: Uint8Array) => Uint8Array;
   getSpectrumBins?: () => readonly number[];
+  isFavorite?: boolean;
+  onToggleFavorite?: (trackId: string, favorite: boolean) => void;
+  onCreatePlaylistWithSeed?: (track: TrackItem) => void;
+  onAddTrackToPlaylist?: (playlistId: string, trackId: string) => Promise<boolean | void>;
+  onContextMenu?: (track: TrackItem, event: React.MouseEvent) => void;
 }
 
 export const NowPlayingBar: React.FC<NowPlayingBarProps> = ({
@@ -74,6 +93,11 @@ export const NowPlayingBar: React.FC<NowPlayingBarProps> = ({
   spectrumAvailable = true,
   frequencyDataProvider,
   getSpectrumBins,
+  isFavorite = false,
+  onToggleFavorite,
+  onCreatePlaylistWithSeed,
+  onAddTrackToPlaylist: customAddTrackToPlaylist,
+  onContextMenu,
 }) => {
   const { currentTheme } = useTheme();
   // Bar width, gap, radius, fill, cap and glow all come from the theme's
@@ -89,6 +113,20 @@ export const NowPlayingBar: React.FC<NowPlayingBarProps> = ({
   const [localShuffle, setLocalShuffle] = useState(false);
   const [localRepeat, setLocalRepeat] = useState<'off' | 'all' | 'one'>('off');
 
+  // Playlist Popover Menu state
+  const [isPlaylistMenuOpen, setIsPlaylistMenuOpen] = useState(false);
+  const [playlists, setPlaylists] = useState<PlaylistSummary[]>([]);
+  const [isLoadingPlaylists, setIsLoadingPlaylists] = useState(false);
+  const [newPlaylistName, setNewPlaylistName] = useState('');
+  const [isCreatingPlaylist, setIsCreatingPlaylist] = useState(false);
+  const [addingPlaylistId, setAddingPlaylistId] = useState<string | null>(null);
+  const [addedPlaylistIds, setAddedPlaylistIds] = useState<ReadonlySet<string>>(new Set());
+  const [statusMessage, setStatusMessage] = useState<{
+    text: string;
+    type: 'success' | 'error' | 'info';
+  } | null>(null);
+  const playlistMenuRef = useRef<HTMLDivElement | null>(null);
+
   const isShuffle = controlledShuffle ?? localShuffle;
   const repeatMode = controlledRepeat ?? localRepeat;
 
@@ -102,13 +140,132 @@ export const NowPlayingBar: React.FC<NowPlayingBarProps> = ({
     else setLocalRepeat((prev) => (prev === 'off' ? 'all' : prev === 'all' ? 'one' : 'off'));
   };
 
+  const loadUserPlaylists = useCallback(async () => {
+    setIsLoadingPlaylists(true);
+    try {
+      const list = await listPlaylists();
+      setPlaylists(list);
+    } catch {
+      setPlaylists([]);
+    } finally {
+      setIsLoadingPlaylists(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isPlaylistMenuOpen) {
+      void loadUserPlaylists();
+      setStatusMessage(null);
+    }
+  }, [isPlaylistMenuOpen, loadUserPlaylists]);
+
+  // Click outside to close playlist menu
+  useEffect(() => {
+    if (!isPlaylistMenuOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (playlistMenuRef.current && !playlistMenuRef.current.contains(e.target as Node)) {
+        setIsPlaylistMenuOpen(false);
+      }
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsPlaylistMenuOpen(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isPlaylistMenuOpen]);
+
+  const handleAddTrackToExisting = async (playlist: PlaylistSummary) => {
+    if (!currentTrack) return;
+    setAddingPlaylistId(playlist.id);
+    try {
+      if (customAddTrackToPlaylist) {
+        await customAddTrackToPlaylist(playlist.id, currentTrack.id);
+      } else {
+        const result = await addTrackToPlaylist(playlist.id, currentTrack.id);
+        if (result.alreadyExists) {
+          setStatusMessage({
+            text: `Already in "${playlist.name}"`,
+            type: 'info',
+          });
+        } else {
+          setStatusMessage({
+            text: `Added to "${playlist.name}" ✓`,
+            type: 'success',
+          });
+        }
+      }
+      setAddedPlaylistIds((prev) => new Set([...prev, playlist.id]));
+      await loadUserPlaylists();
+    } catch (err) {
+      setStatusMessage({
+        text: err instanceof Error ? err.message : 'Failed to add to playlist',
+        type: 'error',
+      });
+    } finally {
+      setAddingPlaylistId(null);
+    }
+  };
+
+  const handleCreateNewPlaylist = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!currentTrack || !newPlaylistName.trim() || isCreatingPlaylist) return;
+    const trimmed = newPlaylistName.trim();
+    setIsCreatingPlaylist(true);
+    try {
+      const created = await createPlaylistWithTrack(trimmed, currentTrack.id);
+      setNewPlaylistName('');
+      setStatusMessage({
+        text: `Created "${created.name}" & added track ✓`,
+        type: 'success',
+      });
+      setAddedPlaylistIds((prev) => new Set([...prev, created.id]));
+      await loadUserPlaylists();
+    } catch (err) {
+      setStatusMessage({
+        text: err instanceof Error ? err.message : 'Failed to create playlist',
+        type: 'error',
+      });
+    } finally {
+      setIsCreatingPlaylist(false);
+    }
+  };
+
+  const handleCreateWithGenerator = () => {
+    if (!currentTrack) return;
+    setIsPlaylistMenuOpen(false);
+    onCreatePlaylistWithSeed?.(currentTrack);
+  };
+
   // SoundCloud Mini-Waveform scrubber hover state
   const scrubberRef = useRef<HTMLDivElement | null>(null);
   const [isHoveringSeek, setIsHoveringSeek] = useState(false);
   const [hoverRatio, setHoverRatio] = useState<number | null>(null);
   const [isDraggingSeek, setIsDraggingSeek] = useState(false);
 
-  const volume = controlledVolume === undefined ? localVolume : Math.round(controlledVolume * 100);
+  const committedVolume =
+    controlledVolume === undefined ? localVolume : Math.round(controlledVolume * 100);
+  // Dragging the slider fires onChange continuously — often well over 60
+  // times a second on a fast trackpad — and each commit is an async IPC round
+  // trip that lands as a playback-state update, re-rendering everything
+  // downstream of it (this bar's parent owns that state, so it's the whole
+  // page). Coalescing to once per animation frame still isn't coarse enough:
+  // that's up to 60 full-tree re-renders a second, which is plenty to steal
+  // enough main-thread time to visibly stutter the app's CSS ambience
+  // animations even though nothing about them changed. The position updates
+  // that already happen during ordinary playback land far less often than
+  // that and aren't a problem, so throttling commits to roughly that same
+  // cadence — instead of display refresh rate — is what actually fixes it.
+  // The slider's own visual position is still local state, so it never
+  // waits on any of this.
+  const VOLUME_COMMIT_INTERVAL_MS = 120;
+  const [draggingVolume, setDraggingVolume] = useState<number | null>(null);
+  const pendingVolumeRef = useRef<number | null>(null);
+  const volumeThrottleRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const volume = draggingVolume ?? committedVolume;
   const isMuted = controlledMuted ?? localMuted;
   const changeVolume = async (nextVolume: number) => {
     if (volumeLocked && nextVolume !== 100) await onUnlockVolume?.();
@@ -117,6 +274,36 @@ export const NowPlayingBar: React.FC<NowPlayingBarProps> = ({
     if (onVolumeChange && isMuted) onToggleMute?.();
     else if (!onVolumeChange && isMuted) setLocalMuted(false);
   };
+  const handleVolumeInput = (nextVolume: number) => {
+    setDraggingVolume(nextVolume);
+    pendingVolumeRef.current = nextVolume;
+    if (volumeThrottleRef.current == null) {
+      volumeThrottleRef.current = setTimeout(() => {
+        volumeThrottleRef.current = null;
+        const value = pendingVolumeRef.current;
+        pendingVolumeRef.current = null;
+        if (value != null) void changeVolume(value);
+      }, VOLUME_COMMIT_INTERVAL_MS);
+    }
+  };
+  const commitVolumeImmediately = async () => {
+    if (volumeThrottleRef.current != null) {
+      clearTimeout(volumeThrottleRef.current);
+      volumeThrottleRef.current = null;
+    }
+    const value = pendingVolumeRef.current;
+    pendingVolumeRef.current = null;
+    if (value != null) await changeVolume(value);
+    setDraggingVolume(null);
+  };
+  useEffect(() => {
+    if (draggingVolume != null && committedVolume === draggingVolume) setDraggingVolume(null);
+  }, [committedVolume, draggingVolume]);
+  useEffect(() => {
+    return () => {
+      if (volumeThrottleRef.current != null) clearTimeout(volumeThrottleRef.current);
+    };
+  }, []);
   const toggleMute = async () => {
     if (volumeLocked && !isMuted) await onUnlockVolume?.();
     if (onToggleMute) await onToggleMute();
@@ -299,8 +486,17 @@ export const NowPlayingBar: React.FC<NowPlayingBarProps> = ({
         )}
       </div>
 
-      {/* Left: Track Artwork with Hover Up Chevron & Info */}
-      <div className="relative z-10 flex items-center gap-3.5 min-w-[200px] sm:min-w-[260px] max-w-[28%]">
+      {/* Left: Track Artwork with Hover Up Chevron & Info & Song Actions */}
+      <div
+        className="relative z-10 flex items-center gap-3 min-w-[200px] sm:min-w-[280px] max-w-[32%]"
+        onContextMenu={(e) => {
+          if (currentTrack) {
+            e.preventDefault();
+            e.stopPropagation();
+            onContextMenu?.(currentTrack, e);
+          }
+        }}
+      >
         {/* Album Artwork Container with Hover Up Chevron */}
         <div
           id="now-playing-artwork-container"
@@ -342,7 +538,7 @@ export const NowPlayingBar: React.FC<NowPlayingBarProps> = ({
           </div>
         </div>
 
-        <div className="flex flex-col truncate min-w-0">
+        <div className="flex flex-col truncate min-w-0 flex-1">
           <h4
             className="text-sm font-bold text-white tracking-tight truncate hover:opacity-80 transition-colors cursor-pointer"
             onClick={onExpandFullscreen}
@@ -371,6 +567,219 @@ export const NowPlayingBar: React.FC<NowPlayingBarProps> = ({
                   {currentTrack.album}
                 </button>
               </>
+            )}
+          </div>
+        </div>
+
+        {/* Action Cluster: Favorite (Heart) & Add to Playlist (+) */}
+        <div className="flex items-center gap-1 shrink-0 ml-0.5">
+          <button
+            id="now-playing-like-btn"
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleFavorite?.(currentTrack.id, !isFavorite);
+            }}
+            className={`p-1.5 t-control transition-all cursor-pointer rounded hover:bg-neutral-800/80 ${
+              isFavorite
+                ? 'text-red-500 hover:text-red-400 scale-105'
+                : 'text-neutral-400 hover:text-neutral-200'
+            }`}
+            title={isFavorite ? 'Remove from Liked Songs' : 'Save to Liked Songs (Favorites)'}
+            aria-label={isFavorite ? 'Remove from Liked Songs' : 'Save to Liked Songs (Favorites)'}
+          >
+            <Heart
+              className={`w-4 h-4 transition-all ${
+                isFavorite ? 'fill-red-500 text-red-500' : 'text-neutral-400 hover:text-white'
+              }`}
+            />
+          </button>
+
+          <div className="relative" ref={playlistMenuRef}>
+            <button
+              id="now-playing-add-playlist-btn"
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsPlaylistMenuOpen((prev) => !prev);
+              }}
+              className={`p-1.5 t-control transition-all cursor-pointer rounded hover:bg-neutral-800/80 ${
+                isPlaylistMenuOpen
+                  ? 'text-amber-400 bg-neutral-800 ring-1 ring-amber-400/40'
+                  : 'text-neutral-400 hover:text-white'
+              }`}
+              title="Add to playlist or create playlist"
+              aria-label="Add to playlist or create playlist"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+
+            {/* Playlist Popover Menu */}
+            {isPlaylistMenuOpen && (
+              <div
+                id="now-playing-playlist-popover"
+                className="absolute bottom-full left-0 mb-3 w-80 sm:w-88 t-card t-stroke border border-neutral-700 bg-[#0d121c] p-4 text-xs font-sans text-neutral-200 shadow-[0_16px_40px_rgba(0,0,0,0.95)] z-50 animate-fadeIn"
+                style={{
+                  borderColor: currentTheme.borderColor || '#26334d',
+                }}
+              >
+                {/* Popover Header */}
+                <div className="flex items-center justify-between pb-2.5 mb-2.5 border-b border-neutral-800">
+                  <div className="flex items-center gap-2 min-w-0 pr-2">
+                    <ListPlus className="w-4 h-4 text-amber-400 shrink-0" />
+                    <div className="truncate">
+                      <span className="font-bold text-white block truncate text-[11px] uppercase tracking-wider">
+                        Add to Playlist
+                      </span>
+                      <span className="text-[10px] text-neutral-400 truncate block">
+                        {currentTrack.title}
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsPlaylistMenuOpen(false)}
+                    className="p-1 text-neutral-400 hover:text-white hover:bg-neutral-800 t-control cursor-pointer"
+                    aria-label="Close menu"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                {/* Status Message / Notification inside popover */}
+                {statusMessage && (
+                  <div
+                    role="status"
+                    className={`p-2 mb-2.5 text-[11px] font-medium flex items-center gap-1.5 t-sm animate-fadeIn ${
+                      statusMessage.type === 'success'
+                        ? 'bg-emerald-950/80 border border-emerald-500/50 text-emerald-300'
+                        : statusMessage.type === 'info'
+                          ? 'bg-sky-950/80 border border-sky-500/50 text-sky-300'
+                          : 'bg-red-950/80 border border-red-500/50 text-red-300'
+                    }`}
+                  >
+                    {statusMessage.type === 'success' && (
+                      <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                    )}
+                    <span>{statusMessage.text}</span>
+                  </div>
+                )}
+
+                {/* 1. Song DNA Generator Quick Action */}
+                <button
+                  type="button"
+                  onClick={handleCreateWithGenerator}
+                  className="w-full text-left p-2.5 mb-3 t-control border border-violet-500/40 bg-violet-950/30 hover:bg-violet-900/50 text-violet-200 transition-all cursor-pointer flex items-center justify-between group"
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="w-6 h-6 t-sm bg-violet-500/20 border border-violet-500/40 flex items-center justify-center shrink-0">
+                      <Dna className="w-3.5 h-3.5 text-violet-300" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="font-semibold text-white text-[11px] flex items-center gap-1">
+                        <span>Generate with Song DNA</span>
+                        <Sparkles className="w-3 h-3 text-violet-400" />
+                      </div>
+                      <p className="text-[10px] text-neutral-400 truncate">
+                        Seed generator with this track
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-mono text-violet-400 opacity-80 group-hover:opacity-100">
+                    Open →
+                  </span>
+                </button>
+
+                {/* 2. Create New Playlist Inline Form */}
+                <form onSubmit={handleCreateNewPlaylist} className="mb-3">
+                  <label className="block text-[10px] font-mono uppercase tracking-wider text-neutral-400 mb-1.5">
+                    New Playlist
+                  </label>
+                  <div className="flex gap-1.5">
+                    <input
+                      type="text"
+                      value={newPlaylistName}
+                      onChange={(e) => setNewPlaylistName(e.target.value)}
+                      placeholder="Playlist name..."
+                      disabled={isCreatingPlaylist}
+                      className="min-w-0 flex-1 px-2.5 py-1.5 text-xs bg-neutral-950 border border-neutral-700 text-white t-sm placeholder:text-neutral-600 focus:border-amber-400 focus:outline-none"
+                    />
+                    <button
+                      type="submit"
+                      disabled={!newPlaylistName.trim() || isCreatingPlaylist}
+                      aria-label="Create playlist"
+                      className="px-3 py-1.5 text-xs font-semibold bg-amber-400 text-black t-control hover:brightness-110 disabled:opacity-40 cursor-pointer flex items-center gap-1 shrink-0"
+                    >
+                      {isCreatingPlaylist ? (
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                      ) : (
+                        <Plus className="w-3 h-3" />
+                      )}
+                      <span>Add</span>
+                    </button>
+                  </div>
+                </form>
+
+                {/* 3. Add to Existing Playlists */}
+                <div>
+                  <div className="flex items-center justify-between text-[10px] font-mono uppercase tracking-wider text-neutral-400 mb-1.5">
+                    <span>Your Playlists</span>
+                    {isLoadingPlaylists && (
+                      <Loader2 className="w-3 h-3 animate-spin text-amber-400" />
+                    )}
+                  </div>
+
+                  <div className="max-h-36 overflow-y-auto space-y-1 pr-1 select-none">
+                    {isLoadingPlaylists && playlists.length === 0 ? (
+                      <div className="py-4 text-center text-neutral-500 text-[11px]">
+                        Loading playlists…
+                      </div>
+                    ) : playlists.length === 0 ? (
+                      <div className="py-3 text-center text-neutral-500 text-[11px]">
+                        No playlists found. Type a name above to create one!
+                      </div>
+                    ) : (
+                      playlists.map((playlist) => {
+                        const isAdding = addingPlaylistId === playlist.id;
+                        const wasAdded = addedPlaylistIds.has(playlist.id);
+
+                        return (
+                          <button
+                            key={playlist.id}
+                            type="button"
+                            disabled={isAdding}
+                            onClick={() => void handleAddTrackToExisting(playlist)}
+                            className="w-full text-left p-2 t-control border border-neutral-800/80 bg-neutral-950/60 hover:bg-neutral-900 hover:border-neutral-700 text-neutral-200 transition-colors flex items-center justify-between group cursor-pointer"
+                          >
+                            <div className="min-w-0 pr-2">
+                              <p className="font-semibold text-neutral-200 truncate text-[11px] group-hover:text-white">
+                                {playlist.name}
+                              </p>
+                              <p className="text-[10px] text-neutral-500">
+                                {playlist.trackCount} track{playlist.trackCount === 1 ? '' : 's'}
+                              </p>
+                            </div>
+                            <div className="shrink-0 text-neutral-400">
+                              {isAdding ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-400" />
+                              ) : wasAdded ? (
+                                <span className="inline-flex items-center gap-1 text-[10px] text-emerald-400 font-mono">
+                                  <Check className="w-3 h-3" />
+                                  <span>Added</span>
+                                </span>
+                              ) : (
+                                <span className="text-[10px] font-mono text-neutral-400 group-hover:text-amber-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  + Add
+                                </span>
+                              )}
+                            </div>
+                          </button>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              </div>
             )}
           </div>
         </div>
@@ -515,9 +924,10 @@ export const NowPlayingBar: React.FC<NowPlayingBarProps> = ({
             min="0"
             max="100"
             value={isMuted ? 0 : volume}
-            onChange={(e) => {
-              void changeVolume(Number(e.target.value));
-            }}
+            onChange={(e) => handleVolumeInput(Number(e.target.value))}
+            onMouseUp={() => void commitVolumeImmediately()}
+            onTouchEnd={() => void commitVolumeImmediately()}
+            onBlur={() => void commitVolumeImmediately()}
             title={
               volumeLocked
                 ? 'Adjusting volume switches from hi-fi unity gain to adjustable-volume mode.'

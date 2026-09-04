@@ -1,3 +1,5 @@
+import type React from 'react';
+
 export type NavTab = 'HOME' | 'LIBRARY' | 'DISCOVER' | 'SETTINGS';
 
 export interface TopNavRailProps {
@@ -65,6 +67,7 @@ export interface ContinueListeningRailProps {
   emptyMessage?: string;
   emptyActionLabel?: string;
   onEmptyAction?: () => void;
+  onContextMenu?: (item: ContinueListeningItem, event: React.MouseEvent) => void;
 }
 
 export type AudioFormat =
@@ -101,6 +104,7 @@ export interface RecentlyAddedRailProps {
   onItemClick?: (item: RecentlyAddedItem) => void;
   onSelectArtist?: (artistName: string) => void;
   onSelectAlbum?: (albumName: string) => void;
+  onContextMenu?: (item: RecentlyAddedItem, event: React.MouseEvent) => void;
 }
 
 export type RediscoverType = 'album' | 'artist' | 'playlist';
@@ -125,6 +129,7 @@ export interface RediscoverRailProps {
   onItemClick?: (item: RediscoverItem) => void;
   onSelectArtist?: (artistName: string) => void;
   onSelectAlbum?: (albumName: string) => void;
+  onContextMenu?: (item: RediscoverItem, event: React.MouseEvent) => void;
 }
 
 export type LibrarySubTab = 'artists' | 'albums' | 'genres' | 'tracks' | 'playlists';

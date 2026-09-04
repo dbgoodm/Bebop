@@ -2,10 +2,12 @@ import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import {
   commands,
   type AudioAnalysisProgress,
+  type AvailableTag,
   type GeneratedPlaylist,
   type Playlist,
   type PlaylistGenerationRequest,
   type PlaylistSummary as NativePlaylistSummary,
+  type StarterPlaylistPreview,
 } from './tauri-bindings';
 import { toArtworkUrl, toTrackItem } from './libraryService';
 
@@ -68,6 +70,37 @@ export async function setPlaylistTracks(playlistId: string, trackIds: string[]) 
   unwrap(await commands.setPlaylistTracks(playlistId, trackIds));
 }
 
+export async function addTrackToPlaylist(
+  playlistId: string,
+  trackId: string,
+): Promise<{ added: boolean; alreadyExists?: boolean; playlistName: string; trackCount: number }> {
+  const playlist = await getPlaylist(playlistId);
+  const existingIds = playlist.tracks.map((t) => t.id);
+  if (existingIds.includes(trackId)) {
+    return {
+      added: false,
+      alreadyExists: true,
+      playlistName: playlist.name,
+      trackCount: existingIds.length,
+    };
+  }
+  const nextIds = [...existingIds, trackId];
+  await setPlaylistTracks(playlistId, nextIds);
+  return {
+    added: true,
+    alreadyExists: false,
+    playlistName: playlist.name,
+    trackCount: nextIds.length,
+  };
+}
+
+export async function createPlaylistWithTrack(
+  name: string,
+  trackId: string,
+): Promise<PlaylistSummary> {
+  return createPlaylist(name, [trackId]);
+}
+
 export async function generatePlaylist(
   request: PlaylistGenerationRequest,
 ): Promise<GeneratedPlaylistPreview> {
@@ -81,6 +114,21 @@ export async function generatePlaylist(
   };
 }
 
+export type PlaylistMatch = GeneratedPlaylistPreview['selections'][number];
+
+/** Every track passing a filter set's hard filters, scored and sorted
+ * best-first, with none of `generatePlaylist`'s diversity/count/duration
+ * capping — backs a "browse matches and hand-pick" flow. */
+export async function listMatchingTracks(
+  request: PlaylistGenerationRequest,
+): Promise<PlaylistMatch[]> {
+  const matches = unwrap(await commands.listMatchingTracks(request));
+  return matches.map((selection, index) => ({
+    ...selection,
+    track: toTrackItem(selection.track, index),
+  }));
+}
+
 export async function createGeneratedPlaylist(name: string, request: PlaylistGenerationRequest) {
   const playlist = unwrap(await commands.createGeneratedPlaylist(name, request));
   return { ...playlist, tracks: playlist.tracks.map(toTrackItem) };
@@ -88,6 +136,28 @@ export async function createGeneratedPlaylist(name: string, request: PlaylistGen
 
 export async function analyzeAudioFeatures(trackIds: string[], force = false) {
   return unwrap(await commands.analyzeAudioFeatures(trackIds, force));
+}
+
+export async function listAvailableTags(): Promise<AvailableTag[]> {
+  return unwrap(await commands.listAvailableTags());
+}
+
+export type StarterPlaylistSummary = Omit<StarterPlaylistPreview, 'playlist'> & {
+  playlist: GeneratedPlaylistPreview;
+};
+
+export async function listStarterPlaylists(): Promise<StarterPlaylistSummary[]> {
+  const starters = unwrap(await commands.listStarterPlaylists());
+  return starters.map((starter) => ({
+    ...starter,
+    playlist: {
+      ...starter.playlist,
+      selections: starter.playlist.selections.map((selection, index) => ({
+        ...selection,
+        track: toTrackItem(selection.track, index),
+      })),
+    },
+  }));
 }
 
 export function onAudioAnalysisProgress(

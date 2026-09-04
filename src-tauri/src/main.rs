@@ -12,6 +12,10 @@ fn main() {
 fn configure_linux_webkit_renderer() {
     use std::{env, path::Path};
 
+    if env::var_os("BEBOP_GPU").as_deref() == Some(std::ffi::OsStr::new("1")) {
+        return;
+    }
+
     if !Path::new("/proc/driver/nvidia/version").exists()
         && !Path::new("/sys/module/nvidia").exists()
     {
