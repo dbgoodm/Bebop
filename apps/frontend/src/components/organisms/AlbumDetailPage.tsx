@@ -41,6 +41,7 @@ interface AlbumDetailPageProps {
   onPlayAlbum?: (album: AlbumItem) => void;
   onSelectArtist?: (artist: any) => void;
   onSelectAlbum?: (album: any) => void;
+  onContextMenu?: (track: TrackItem, event: React.MouseEvent) => void;
 }
 
 export const AlbumDetailPage: React.FC<AlbumDetailPageProps> = ({
@@ -54,6 +55,7 @@ export const AlbumDetailPage: React.FC<AlbumDetailPageProps> = ({
   onPlayAlbum,
   onSelectArtist,
   onSelectAlbum,
+  onContextMenu,
 }) => {
   const { currentTheme } = useTheme();
   const [favoriteMap, setFavoriteMap] = useState<Record<string, boolean>>({});
@@ -564,6 +566,7 @@ export const AlbumDetailPage: React.FC<AlbumDetailPageProps> = ({
               onAcquireTrack={handleAcquireTrack}
               onSelectArtist={onSelectArtist}
               onSelectAlbum={onSelectAlbum}
+              onContextMenu={onContextMenu}
               storageKey={`album_${album.id}_columns`}
               defaultVisibleColumns={[
                 'trackNumber',

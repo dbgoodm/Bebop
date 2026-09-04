@@ -14,9 +14,10 @@ interface TracksTableViewProps {
   onFavoriteChange?: (trackId: string, favorite: boolean) => void;
   columnVisibility?: ColumnVisibility;
   onToggleColumn?: (column: keyof ColumnVisibility) => void;
+  onContextMenu?: (track: TrackItem, event: React.MouseEvent) => void;
 }
 
-export const TracksTableView: React.FC<TracksTableViewProps> = ({
+const TracksTableViewImpl: React.FC<TracksTableViewProps> = ({
   tracks,
   currentTrackId,
   isPlaying,
@@ -26,6 +27,7 @@ export const TracksTableView: React.FC<TracksTableViewProps> = ({
   onEditTrack,
   favoriteTrackIds,
   onFavoriteChange,
+  onContextMenu,
 }) => {
   return (
     <UniversalTracklist
@@ -39,6 +41,7 @@ export const TracksTableView: React.FC<TracksTableViewProps> = ({
       onEditTrack={onEditTrack}
       favoriteTrackIds={favoriteTrackIds}
       onFavoriteChange={onFavoriteChange}
+      onContextMenu={onContextMenu}
       storageKey="library_tracks_columns"
       defaultVisibleColumns={[
         'trackNumber',
@@ -56,3 +59,8 @@ export const TracksTableView: React.FC<TracksTableViewProps> = ({
     />
   );
 };
+
+// Playback-state changes (volume, position ticks) re-render everything above
+// this component; memoizing avoids reconciling every row when the actual
+// track list/props have not changed.
+export const TracksTableView = React.memo(TracksTableViewImpl);

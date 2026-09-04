@@ -19,6 +19,7 @@ export const RediscoverRail: React.FC<RediscoverRailProps> = ({
   onItemClick,
   onSelectArtist,
   onSelectAlbum,
+  onContextMenu,
 }) => {
   const { currentTheme } = useTheme();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -126,6 +127,11 @@ export const RediscoverRail: React.FC<RediscoverRailProps> = ({
             key={item.id}
             id={`rediscover-card-${item.id}`}
             onClick={() => onItemClick?.(item)}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onContextMenu?.(item, e);
+            }}
             style={{
               backgroundColor: currentTheme.bgCard,
               borderColor: currentTheme.borderColor,

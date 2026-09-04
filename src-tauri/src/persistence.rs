@@ -25,7 +25,7 @@ use crate::{
     metadata::{CachedArtwork, MetadataPatch},
     metadata_jobs::{MetadataJob, MetadataJobScope, MetadataJobStatus},
     song_dna::{
-        AUDIO_FEATURE_VERSION, AudioFeatures, GenerationCandidate, Playlist,
+        AUDIO_FEATURE_VERSION, AudioFeatures, AvailableTag, GenerationCandidate, Playlist,
         PlaylistGenerationRequest,
     },
     user_state::{
@@ -33,7 +33,7 @@ use crate::{
     },
 };
 
-const SCHEMA_VERSION: i64 = 13;
+const SCHEMA_VERSION: i64 = 14;
 const MIGRATIONS: &[(i64, &str)] = &[
     (1, include_str!("migrations/0001_catalog.sql")),
     (2, include_str!("migrations/0002_live_indexing.sql")),
@@ -51,6 +51,7 @@ const MIGRATIONS: &[(i64, &str)] = &[
         13,
         include_str!("migrations/0013_remote_provenance_cleanup.sql"),
     ),
+    (14, include_str!("migrations/0014_descriptive_tags.sql")),
 ];
 type CatalogSignatures = HashMap<String, (String, u64, Option<i64>, bool)>;
 
@@ -354,6 +355,13 @@ enum Request {
         reply: Sender<Result<(), AppError>>,
     },
     ListGenerationCandidates(Sender<Result<Vec<GenerationCandidate>, AppError>>),
+    UpsertTrackTags {
+        track_id: String,
+        source: String,
+        tags: Vec<(String, String, f32)>,
+        reply: Sender<Result<(), AppError>>,
+    },
+    ListAvailableTags(Sender<Result<Vec<AvailableTag>, AppError>>),
     StartListeningSession {
         id: String,
         track_id: String,
@@ -951,6 +959,27 @@ impl DatabaseWorker {
         self.request(Request::ListGenerationCandidates)
     }
 
+    /// Replaces the tags a given `source` (musicbrainz/lastfm/song-dna) has
+    /// attached to a track. Each other source's rows are left untouched, so
+    /// re-syncing one pipeline never clobbers another's contribution.
+    pub(crate) fn upsert_track_tags(
+        &self,
+        track_id: String,
+        source: String,
+        tags: Vec<(String, String, f32)>,
+    ) -> Result<(), AppError> {
+        self.request(|reply| Request::UpsertTrackTags {
+            track_id,
+            source,
+            tags,
+            reply,
+        })
+    }
+
+    pub(crate) fn list_available_tags(&self) -> Result<Vec<AvailableTag>, AppError> {
+        self.request(Request::ListAvailableTags)
+    }
+
     pub(crate) fn start_listening_session(
         &self,
         id: String,
@@ -1536,6 +1565,18 @@ fn database_loop(mut connection: Connection, receiver: Receiver<Request>) {
             }
             Request::ListGenerationCandidates(reply) => {
                 send(reply, list_generation_candidates(&connection));
+            }
+            Request::UpsertTrackTags {
+                track_id,
+                source,
+                tags,
+                reply,
+            } => send(
+                reply,
+                upsert_track_tags(&mut connection, &track_id, &source, &tags),
+            ),
+            Request::ListAvailableTags(reply) => {
+                send(reply, list_available_tags(&connection));
             }
             Request::StartListeningSession {
                 id,
@@ -2241,7 +2282,7 @@ const TRACK_COLUMNS: &str = "id, root_id, canonical_path, relative_path, title, 
 
 fn query_tracks(connection: &Connection, query: CatalogQuery) -> Result<TrackPage, AppError> {
     let _span = crate::metrics::Span::new("sqlite.query_tracks");
-    let limit = query.limit.clamp(1, 500);
+    let limit = query.limit.clamp(1, 50_000);
     let search = query
         .search
         .as_deref()
@@ -3143,6 +3184,28 @@ fn normalize_title(title: &str) -> String {
         .join(" ")
 }
 
+fn canonical_album_title(title: &str) -> String {
+    let suffix_start = [title.find('('), title.find('['), title.find(" - ")]
+        .into_iter()
+        .flatten()
+        .filter(|position| *position > 0)
+        .min()
+        .unwrap_or(title.len());
+    let canonical = normalize_title(&title[..suffix_start]);
+    if canonical.is_empty() {
+        normalize_title(title)
+    } else {
+        canonical
+    }
+}
+
+fn album_title_match_rank(local: &str, remote: &str) -> Option<u8> {
+    if normalize_title(local) == normalize_title(remote) {
+        return Some(0);
+    }
+    (canonical_album_title(local) == canonical_album_title(remote)).then_some(1)
+}
+
 fn match_and_unify_tracks(
     local_tracks: Vec<TrackSummary>,
     remote_tracks: Vec<RemoteTrackPayload>,
@@ -4033,33 +4096,70 @@ fn resolve_album_release_group(
     }
 
     // Files often lack a MusicBrainz release ID even though their artist's
-    // discography has already been cached. Match the exact release title through
-    // a shared MusicBrainz artist ID so opening that local album can fetch its
-    // remote tracklist. The artist constraint avoids guessing between same-titled
-    // releases from unrelated artists.
-    connection
+    // discography has already been cached. Rank releases belonging to the same
+    // MusicBrainz artist in Rust so punctuation and edition/remaster suffixes do
+    // not prevent the canonical album from matching.
+    let local_album = connection
         .query_row(
-            "SELECT r.id, r.musicbrainz_release_group_id
-             FROM albums a
-             JOIN album_artists aa ON aa.album_id = a.id
+            "SELECT title, year FROM albums WHERE id = ?1",
+            params![album_id],
+            |row| Ok((row.get::<_, String>(0)?, row.get::<_, Option<u32>>(1)?)),
+        )
+        .optional()
+        .map_err(database_error("resolve-local-album-title"))?;
+    let Some((local_title, local_year)) = local_album else {
+        return Ok(None);
+    };
+
+    let mut statement = connection
+        .prepare(
+            "SELECT DISTINCT r.id, r.musicbrainz_release_group_id, r.title, r.year, r.primary_type
+             FROM album_artists aa
              JOIN artists la ON la.id = aa.artist_id
              JOIN remote_release_artists rra
                ON rra.musicbrainz_artist_id = la.musicbrainz_artist_id
              JOIN remote_releases r ON r.id = rra.remote_release_id
-             WHERE a.id = ?1
-               AND r.title = a.title COLLATE NOCASE
-             ORDER BY r.last_refreshed_at DESC
-             LIMIT 1",
-            params![album_id],
-            |row| {
-                Ok(ReleaseSyncRow {
+             WHERE aa.album_id = ?1",
+        )
+        .map_err(database_error("prepare-album-release-candidates"))?;
+    let candidates = statement
+        .query_map(params![album_id], |row| {
+            Ok((
+                ReleaseSyncRow {
                     id: row.get(0)?,
                     musicbrainz_release_group_id: row.get(1)?,
-                })
-            },
-        )
-        .optional()
-        .map_err(database_error("resolve-album-release-group"))
+                },
+                row.get::<_, String>(2)?,
+                row.get::<_, Option<u32>>(3)?,
+                row.get::<_, Option<String>>(4)?,
+            ))
+        })
+        .map_err(database_error("query-album-release-candidates"))?
+        .collect::<rusqlite::Result<Vec<_>>>()
+        .map_err(database_error("read-album-release-candidates"))?;
+
+    Ok(candidates
+        .into_iter()
+        .filter_map(|(release, remote_title, remote_year, primary_type)| {
+            let title_rank = album_title_match_rank(&local_title, &remote_title)?;
+            let type_rank = match primary_type
+                .as_deref()
+                .map(str::to_ascii_lowercase)
+                .as_deref()
+            {
+                Some("album") => 0,
+                Some("ep") => 1,
+                Some("single") => 2,
+                _ => 3,
+            };
+            let year_rank = match (local_year, remote_year) {
+                (Some(local), Some(remote)) => local.abs_diff(remote),
+                _ => u32::MAX,
+            };
+            Some(((title_rank, type_rank, year_rank), release))
+        })
+        .min_by_key(|(rank, _)| *rank)
+        .map(|(_, release)| release))
 }
 
 fn record_entity_merge(
@@ -5212,6 +5312,7 @@ fn list_generation_candidates(
                     (SELECT GROUP_CONCAT(a.id, char(31)) FROM track_artists ta JOIN artists a ON a.id = ta.artist_id WHERE ta.track_id = t.id AND ta.role = 'artist' ORDER BY ta.position),
                     (SELECT GROUP_CONCAT(a.name, char(31)) FROM track_artists ta JOIN artists a ON a.id = ta.artist_id WHERE ta.track_id = t.id AND ta.role = 'artist' ORDER BY ta.position),
                     (SELECT GROUP_CONCAT(g.name, char(31)) FROM track_genres tg JOIN genres g ON g.id = tg.genre_id WHERE tg.track_id = t.id ORDER BY g.name COLLATE NOCASE),
+                    (SELECT GROUP_CONCAT(tags.name, char(31)) FROM track_tags tt JOIN tags ON tags.id = tt.tag_id WHERE tt.track_id = t.id),
                     af.track_id, af.analysis_version, af.bpm, af.musical_key, af.loudness_db, af.energy,
                     af.spectral_centroid_hz, af.spectral_rolloff_hz, af.dynamic_range_db, af.analyzed_at
              FROM tracks t
@@ -5224,18 +5325,18 @@ fn list_generation_candidates(
     statement
         .query_map([AUDIO_FEATURE_VERSION], |row| {
             let features = row
-                .get::<_, Option<String>>(13)?
+                .get::<_, Option<String>>(14)?
                 .map(|track_id| AudioFeatures {
                     track_id,
-                    analysis_version: row.get(14).unwrap_or(AUDIO_FEATURE_VERSION),
-                    bpm: row.get(15).unwrap_or(None),
-                    musical_key: row.get(16).unwrap_or(None),
-                    loudness_db: row.get(17).unwrap_or(-60.0),
-                    energy: row.get(18).unwrap_or(0.0),
-                    spectral_centroid_hz: row.get(19).unwrap_or(0.0),
-                    spectral_rolloff_hz: row.get(20).unwrap_or(0.0),
-                    dynamic_range_db: row.get(21).unwrap_or(0.0),
-                    analyzed_at: row.get(22).unwrap_or_default(),
+                    analysis_version: row.get(15).unwrap_or(AUDIO_FEATURE_VERSION),
+                    bpm: row.get(16).unwrap_or(None),
+                    musical_key: row.get(17).unwrap_or(None),
+                    loudness_db: row.get(18).unwrap_or(-60.0),
+                    energy: row.get(19).unwrap_or(0.0),
+                    spectral_centroid_hz: row.get(20).unwrap_or(0.0),
+                    spectral_rolloff_hz: row.get(21).unwrap_or(0.0),
+                    dynamic_range_db: row.get(22).unwrap_or(0.0),
+                    analyzed_at: row.get(23).unwrap_or_default(),
                 });
             Ok(GenerationCandidate {
                 id: row.get(0)?,
@@ -5251,12 +5352,91 @@ fn list_generation_candidates(
                 artist_ids: split_group(row.get(10)?),
                 artist_names: split_group(row.get(11)?),
                 genres: split_group(row.get(12)?),
+                tags: split_group(row.get(13)?)
+                    .into_iter()
+                    .collect::<std::collections::BTreeSet<_>>()
+                    .into_iter()
+                    .collect(),
                 features,
             })
         })
         .map_err(database_error("query-generation-candidates"))?
         .collect::<rusqlite::Result<Vec<_>>>()
         .map_err(database_error("read-generation-candidates"))
+}
+
+/// Replaces the `(name, category, weight)` tags one `source` has attached to
+/// a track. Scoped delete-then-insert per source, mirroring the genre-upsert
+/// pattern in `attach_track_relationships` — so a MusicBrainz re-sync never
+/// touches Last.fm or Song DNA tags on the same track.
+fn upsert_track_tags(
+    connection: &mut Connection,
+    track_id: &str,
+    source: &str,
+    tags: &[(String, String, f32)],
+) -> Result<(), AppError> {
+    let transaction = connection
+        .transaction()
+        .map_err(database_error("begin-track-tags"))?;
+    transaction
+        .execute(
+            "DELETE FROM track_tags WHERE track_id = ?1 AND source = ?2",
+            params![track_id, source],
+        )
+        .map_err(database_error("clear-track-tags"))?;
+    for (name, category, weight) in tags {
+        let tag_id = Uuid::new_v4().to_string();
+        transaction
+            .execute(
+                "INSERT INTO tags (id, name, category) VALUES (?1, ?2, ?3)
+                 ON CONFLICT(name, category) DO NOTHING",
+                params![tag_id, name, category],
+            )
+            .map_err(database_error("upsert-tag"))?;
+        let tag_id: String = transaction
+            .query_row(
+                "SELECT id FROM tags WHERE name = ?1 COLLATE NOCASE AND category = ?2",
+                params![name, category],
+                |row| row.get(0),
+            )
+            .map_err(database_error("read-tag"))?;
+        transaction
+            .execute(
+                "INSERT INTO track_tags (track_id, tag_id, source, weight) VALUES (?1, ?2, ?3, ?4)
+                 ON CONFLICT(track_id, tag_id, source) DO UPDATE SET weight = excluded.weight",
+                params![track_id, tag_id, source, weight],
+            )
+            .map_err(database_error("attach-track-tag"))?;
+    }
+    transaction
+        .commit()
+        .map_err(database_error("commit-track-tags"))
+}
+
+/// Tags actually present in this library, for the playlist tag picker — so
+/// the picker only ever offers options that can return real tracks, and
+/// naturally differs from user to user.
+fn list_available_tags(connection: &Connection) -> Result<Vec<AvailableTag>, AppError> {
+    let mut statement = connection
+        .prepare(
+            "SELECT tags.name, tags.category, COUNT(DISTINCT track_tags.track_id)
+             FROM tags JOIN track_tags ON track_tags.tag_id = tags.id
+             JOIN tracks t ON t.id = track_tags.track_id AND t.available = 1
+             GROUP BY tags.id
+             ORDER BY tags.category, tags.name COLLATE NOCASE",
+        )
+        .map_err(database_error("prepare-available-tags"))?;
+    statement
+        .query_map([], |row| {
+            Ok(AvailableTag {
+                name: row.get(0)?,
+                category: row.get(1)?,
+                track_count: row.get(2)?,
+            })
+        })
+        .map_err(database_error("query-available-tags"))?
+        .collect::<rusqlite::Result<Vec<_>>>()
+        .map_err(database_error("read-available-tags"))
 }
 
 fn start_listening_session(
@@ -5743,6 +5923,8 @@ mod tests {
                 "remote_release_artists",
                 "entity_merges",
                 "remote_tracks",
+                "tags",
+                "track_tags",
             ] {
                 let exists: bool = connection
                     .query_row(
@@ -5926,7 +6108,7 @@ mod tests {
             [],
         ).expect("artist");
         connection.execute(
-            "INSERT INTO albums (id, title, created_at, updated_at) VALUES ('album-local-1', 'Cowboy Bebop', 'now', 'now')",
+            "INSERT INTO albums (id, title, created_at, updated_at) VALUES ('album-local-1', 'Cowboy Bebop (Deluxe Edition)', 'now', 'now')",
             [],
         ).expect("album");
         connection.execute(
@@ -5938,26 +6120,48 @@ mod tests {
             &mut connection,
             "mb-artist-1",
             "The Seatbelts",
-            &[RemoteReleasePayload {
-                id: "remote:rg-1".into(),
-                musicbrainz_release_group_id: "rg-1".into(),
-                title: "Cowboy Bebop".into(),
-                year: Some(1998),
-                date: None,
-                primary_type: Some("Album".into()),
-                secondary_types: Vec::new(),
-                disambiguation: None,
-                catalog_number: None,
-                label: None,
-                artwork_url: None,
-                artwork_attribution: None,
-                artwork_source: None,
-                artists: vec![crate::ArtistReference {
-                    id: "mb-artist-1".into(),
-                    name: "The Seatbelts".into(),
-                }],
-                raw_json: String::new(),
-            }],
+            &[
+                RemoteReleasePayload {
+                    id: "remote:rg-single".into(),
+                    musicbrainz_release_group_id: "rg-single".into(),
+                    title: "Cowboy Bebop".into(),
+                    year: Some(1999),
+                    date: None,
+                    primary_type: Some("Single".into()),
+                    secondary_types: Vec::new(),
+                    disambiguation: None,
+                    catalog_number: None,
+                    label: None,
+                    artwork_url: None,
+                    artwork_attribution: None,
+                    artwork_source: None,
+                    artists: vec![crate::ArtistReference {
+                        id: "mb-artist-1".into(),
+                        name: "The Seatbelts".into(),
+                    }],
+                    raw_json: String::new(),
+                },
+                RemoteReleasePayload {
+                    id: "remote:rg-1".into(),
+                    musicbrainz_release_group_id: "rg-1".into(),
+                    title: "Cowboy Bebop".into(),
+                    year: Some(1998),
+                    date: None,
+                    primary_type: Some("Album".into()),
+                    secondary_types: Vec::new(),
+                    disambiguation: None,
+                    catalog_number: None,
+                    label: None,
+                    artwork_url: None,
+                    artwork_attribution: None,
+                    artwork_source: None,
+                    artists: vec![crate::ArtistReference {
+                        id: "mb-artist-1".into(),
+                        name: "The Seatbelts".into(),
+                    }],
+                    raw_json: String::new(),
+                },
+            ],
         )
         .expect("save discography");
 
@@ -5968,7 +6172,8 @@ mod tests {
         assert_eq!(direct.musicbrainz_release_group_id, "rg-1");
 
         // A local album with no embedded release ID can resolve through the
-        // exact cached release title and shared MusicBrainz artist ID.
+        // canonical cached release title and shared MusicBrainz artist ID, even
+        // when the local tag includes an edition suffix.
         let title_matched = resolve_album_release_group(&connection, "album-local-1")
             .expect("resolve")
             .expect("artist/title release group");

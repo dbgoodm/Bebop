@@ -12,12 +12,15 @@ import {
   KeyRound,
   Sliders,
   Music,
+  WandSparkles,
+  Pencil,
 } from 'lucide-react';
 import type { LibraryRoot } from '@/services/tauri-bindings';
-import { ALL_THEMES, useTheme } from '@/services/themeService';
+import { UI_SCALE_MAX, UI_SCALE_MIN, useTheme } from '@/services/themeService';
 import { MetadataJobsPanel } from './MetadataJobsPanel';
 import type { AcquisitionSettings } from '@/types';
 import { getAcquisitionSettings, saveAcquisitionSettings } from '@/services/acquisitionService';
+import { ThemeSpecimenCard } from '@/components/molecules/ThemeSpecimenCard';
 
 type SettingsCategory = 'audio' | 'appearance' | 'library' | 'metadata' | 'online' | 'updates';
 
@@ -58,7 +61,16 @@ export function SettingsView({
   updatesSlot,
   children,
 }: SettingsViewProps) {
-  const { allThemes, currentTheme, setThemeById, deleteCustomTheme } = useTheme();
+  const {
+    allThemes,
+    currentTheme,
+    setThemeById,
+    deleteCustomTheme,
+    setIsThemeModalOpen = () => undefined,
+    isBuiltInTheme = () => true,
+    uiScale,
+    setUiScale,
+  } = useTheme();
   const [copiedThemeId, setCopiedThemeId] = useState<string | null>(null);
   const [category, setCategory] = useState<SettingsCategory>('audio');
 
@@ -422,11 +434,43 @@ export function SettingsView({
                     Choose the theme used throughout Bebop.
                   </p>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setIsThemeModalOpen(true)}
+                  className="ml-auto flex items-center gap-2 border border-amber-400/60 bg-amber-400/10 px-4 py-2 text-xs font-semibold text-amber-200 transition hover:bg-amber-400/20"
+                >
+                  <WandSparkles className="h-4 w-4" />
+                  Theme Builder
+                </button>
               </div>
-              <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+
+              <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-neutral-800/80 pt-4">
+                <label htmlFor="ui-scale-slider" className="text-xs font-semibold text-neutral-300">
+                  UI scale
+                </label>
+                <input
+                  id="ui-scale-slider"
+                  type="range"
+                  min={UI_SCALE_MIN}
+                  max={UI_SCALE_MAX}
+                  step={0.05}
+                  value={uiScale}
+                  onChange={(event) => setUiScale(Number(event.target.value))}
+                  className="w-40 accent-amber-400"
+                  aria-label="UI scale"
+                />
+                <span className="w-12 font-mono text-xs text-amber-300">
+                  {Math.round(uiScale * 100)}%
+                </span>
+                <p className="basis-full text-xs text-neutral-500 sm:basis-auto">
+                  Resizes the whole app — text, controls, and spacing.
+                </p>
+              </div>
+
+              <div className="theme-specimen-grid mt-4">
                 {allThemes.map((theme) => {
                   const selected = currentTheme.id === theme.id;
-                  const isCustom = !ALL_THEMES.some((preset) => preset.id === theme.id);
+                  const isCustom = !isBuiltInTheme(theme.id);
 
                   const copyThemeJson = (event: MouseEvent) => {
                     event.stopPropagation();
@@ -441,31 +485,14 @@ export function SettingsView({
                   const selectTheme = () => setThemeById(theme.id);
 
                   return (
-                    <div
+                    <ThemeSpecimenCard
                       key={theme.id}
-                      role="button"
-                      tabIndex={0}
+                      theme={theme}
+                      selected={selected}
+                      compact
                       onClick={selectTheme}
-                      onKeyDown={(event) => {
-                        if (event.key === 'Enter' || event.key === ' ') {
-                          event.preventDefault();
-                          selectTheme();
-                        }
-                      }}
-                      style={{
-                        borderColor: selected ? theme.primary : theme.borderColor,
-                        background: theme.cardGradient || theme.bgCard,
-                      }}
-                      className="group relative t-control border p-3 text-left transition hover:brightness-110 cursor-pointer"
-                      aria-pressed={selected}
-                    >
-                      <div
-                        className={`absolute right-2 top-2 flex items-center gap-1 transition-opacity ${
-                          isCustom
-                            ? 'opacity-100'
-                            : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'
-                        }`}
-                      >
+                      actions={
+                        <>
                         <button
                           type="button"
                           onClick={copyThemeJson}
@@ -479,12 +506,26 @@ export function SettingsView({
                             <Copy className="h-3.5 w-3.5" />
                           )}
                         </button>
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setThemeById(theme.id);
+                            setIsThemeModalOpen(true);
+                          }}
+                          aria-label={`Edit ${theme.name} theme`}
+                          title={isCustom ? 'Edit custom theme' : 'Create an editable fork'}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </button>
                         {isCustom && (
                           <button
                             type="button"
                             onClick={(event) => {
                               event.stopPropagation();
-                              deleteCustomTheme(theme.id);
+                              if (window.confirm(`Delete ${theme.name}? This cannot be undone.`)) {
+                                deleteCustomTheme(theme.id);
+                              }
                             }}
                             className="rounded p-1 text-red-300/80 hover:bg-black/30 hover:text-red-300"
                             aria-label={`Delete ${theme.name} theme`}
@@ -493,12 +534,9 @@ export function SettingsView({
                             <Trash2 className="h-3.5 w-3.5" />
                           </button>
                         )}
-                      </div>
-                      <span className="block text-sm font-semibold text-white">{theme.name}</span>
-                      <span className="mt-1 block text-xs text-neutral-400">
-                        {theme.description}
-                      </span>
-                    </div>
+                        </>
+                      }
+                    />
                   );
                 })}
               </div>

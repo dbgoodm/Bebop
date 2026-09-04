@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties } from 'react';
+import { memo, useEffect, useState, type CSSProperties } from 'react';
 
 /**
  * Ambient texture layers driven entirely by theme tokens.
@@ -12,7 +12,38 @@ import { useEffect, useState, type CSSProperties } from 'react';
  * here re-samples the backdrop — on WebKitGTK a `backdrop-filter` over
  * scrolling content is expensive enough to tear.
  */
-export function ThemeAmbience() {
+/** One streak-of-light ship, its path set by which `bb-ship*` keyframe it runs. */
+function Ship({ animationName, duration }: { animationName: string; duration: string }) {
+  return (
+    <div
+      className="absolute left-0 top-0"
+      style={{ width: 3, height: 3, animation: `${animationName} ${duration} linear infinite` }}
+    >
+      <div
+        className="absolute inset-0"
+        style={{
+          borderRadius: 9999,
+          background: '#ffd9c4',
+          boxShadow: '0 0 6px 1.5px rgba(255,154,108,.85), 0 0 14px 4px rgba(211,58,44,.3)',
+        }}
+      />
+      <div
+        className="absolute"
+        style={{
+          top: 1,
+          right: 3,
+          width: 90,
+          height: 1,
+          borderRadius: 9999,
+          background:
+            'linear-gradient(90deg, rgba(211,58,44,0) 0%, rgba(255,154,108,.4) 82%, rgba(255,217,196,.7) 100%)',
+        }}
+      />
+    </div>
+  );
+}
+
+function ThemeAmbienceImpl() {
   // A fixed angle cannot be corner-to-corner at every window size: too shallow
   // and the craft leaves through the top, too steep and it leaves through the
   // side. Derive the rake and the travel distance from the actual viewport.
@@ -37,25 +68,37 @@ export function ThemeAmbience() {
           style={{ background: 'var(--orb-g, transparent)' }}
         />
 
-        {/* Starfield — slow parallax drift plus a longer twinkle */}
+        {/* Starfield — slow parallax drift plus a longer twinkle. Same fix as
+          the signal tear below: the gating opacity has to live on a wrapper,
+          not on the element bb-twinkle's own opacity keyframes are running
+          on, or the twinkle overrides the gate and stars show up on every
+          theme regardless of --op-stars. */}
         <div
           className="pointer-events-none absolute inset-0"
-          style={{
-            opacity: 'var(--op-stars, 0)',
-            backgroundImage:
-              'radial-gradient(1px 1px at 24px 38px, #ffffff, transparent), radial-gradient(1px 1px at 168px 96px, #cfe0ff, transparent), radial-gradient(1.6px 1.6px at 96px 214px, #ffffff, transparent)',
-            backgroundSize: '300px 300px, 380px 380px, 460px 460px',
-            animation: 'bb-stars 190s linear infinite, bb-twinkle 7s ease-in-out infinite',
-          }}
-        />
+          style={{ opacity: 'var(--op-stars, 0)' }}
+        >
+          <div
+            className="absolute inset-0"
+            style={{
+              backgroundImage:
+                'radial-gradient(1px 1px at 24px 38px, #ffffff, transparent), radial-gradient(1px 1px at 168px 96px, #cfe0ff, transparent), radial-gradient(1.6px 1.6px at 96px 214px, #ffffff, transparent)',
+              backgroundSize: '300px 300px, 380px 380px, 460px 460px',
+              animation: 'bb-stars 190s linear infinite, bb-twinkle 7s ease-in-out infinite',
+            }}
+          />
+        </div>
 
-        {/* Surface grain / dot texture */}
+        {/* Surface grain / dot texture — also doubles as a single positioned
+          watermark shape when a theme sets --tex-repeat to no-repeat, rather
+          than tiling. */}
         <div
           className="pointer-events-none absolute inset-0"
           style={{
             opacity: 'var(--tex-op, 0)',
             backgroundImage: 'var(--tex, none)',
             backgroundSize: 'var(--tex-size, 3px 3px)',
+            backgroundRepeat: 'var(--tex-repeat, repeat)',
+            backgroundPosition: 'var(--tex-position, 0 0)',
           }}
         />
 
@@ -138,37 +181,18 @@ export function ThemeAmbience() {
           />
         </div>
 
-        {/* A ship far enough off to read as a streak of light. Absent for most of
-          its cycle — you catch it once rather than watching it cross. */}
+        {/* Background ships — anonymous traffic, not the Swordfish (that's the
+          corner-to-corner --op-ascent climb below). Each one is far enough off
+          to read as a streak of light, absent for most of its own cycle, and
+          each crosses on its own line at its own pace so they don't read as
+          one ship on a loop. */}
         <div
           className="pointer-events-none absolute inset-0 overflow-hidden"
           style={{ opacity: 'var(--op-ship, 0)' }}
         >
-          <div
-            className="absolute left-0 top-0"
-            style={{ width: 3, height: 3, animation: 'bb-ship 46s linear infinite' }}
-          >
-            <div
-              className="absolute inset-0"
-              style={{
-                borderRadius: 9999,
-                background: '#ffd9c4',
-                boxShadow: '0 0 6px 1.5px rgba(255,154,108,.85), 0 0 14px 4px rgba(211,58,44,.3)',
-              }}
-            />
-            <div
-              className="absolute"
-              style={{
-                top: 1,
-                right: 3,
-                width: 90,
-                height: 1,
-                borderRadius: 9999,
-                background:
-                  'linear-gradient(90deg, rgba(211,58,44,0) 0%, rgba(255,154,108,.4) 82%, rgba(255,217,196,.7) 100%)',
-              }}
-            />
-          </div>
+          <Ship animationName="bb-ship" duration="46s" />
+          <Ship animationName="bb-ship-2" duration="58s" />
+          <Ship animationName="bb-ship-3" duration="63s" />
         </div>
 
         {/* Ringed planet, drawn as flat screen-print shapes. The ring reads only
@@ -266,16 +290,25 @@ export function ThemeAmbience() {
           />
         </div>
 
-        {/* Occasional signal tear */}
+        {/* Occasional signal tear. The gating opacity has to live on a wrapper,
+          not on the animated element itself — bb-glitch's own keyframes set
+          opacity too, and a running animation always wins over a plain style
+          value for whatever property it drives. Gate and animation on the
+          same element meant this ran on every theme regardless of
+          --op-glitch, which is the bug that was reported. */}
         <div
           className="pointer-events-none absolute inset-0"
-          style={{
-            opacity: 'var(--op-glitch, 0)',
-            background:
-              'linear-gradient(180deg, transparent 42%, rgba(255,85,51,.35) 42%, rgba(63,216,232,.35) 45%, transparent 45%)',
-            animation: 'bb-glitch 11s steps(1,end) infinite',
-          }}
-        />
+          style={{ opacity: 'var(--op-glitch, 0)' }}
+        >
+          <div
+            className="absolute inset-0"
+            style={{
+              background:
+                'linear-gradient(180deg, transparent 42%, rgba(255,85,51,.35) 42%, rgba(63,216,232,.35) 45%, transparent 45%)',
+              animation: 'bb-glitch 11s steps(1,end) infinite',
+            }}
+          />
+        </div>
       </div>
 
       {/* The craft sits behind page content, so it reads as something crossing the
@@ -323,6 +356,13 @@ export function ThemeAmbience() {
     </>
   );
 }
+
+// Takes no props, so this guarantees React skips re-rendering it (and diffing
+// its fairly large always-mounted subtree) on every unrelated re-render of
+// whatever it's mounted under — including the frequent playback-state ticks
+// (volume drags, position updates) that would otherwise compete with these
+// CSS animations for main-thread time on every single frame.
+export const ThemeAmbience = memo(ThemeAmbienceImpl);
 
 const RIBBONS = [
   { top: '14%', thickness: '3px', rotate: '-7deg', opacity: 0.55, dur: '19s', delay: '0s' },

@@ -9,15 +9,17 @@ interface ArtistsGridViewProps {
   hasMore?: boolean;
   isLoading?: boolean;
   onLoadMore?: () => void;
+  onContextMenu?: (artist: ArtistItem, event: React.MouseEvent) => void;
 }
 
-export const ArtistsGridView: React.FC<ArtistsGridViewProps> = ({
+const ArtistsGridViewImpl: React.FC<ArtistsGridViewProps> = ({
   artists = [],
   onSelectArtist,
   onPlayArtist,
   hasMore = false,
   isLoading = false,
   onLoadMore,
+  onContextMenu,
 }) => {
   return (
     <div id="artists-grid-container" className="w-full flex flex-col gap-4 font-sans">
@@ -27,6 +29,12 @@ export const ArtistsGridView: React.FC<ArtistsGridViewProps> = ({
             key={artist.id}
             id={`artist-card-${artist.id}`}
             onClick={() => onSelectArtist?.(artist)}
+            onContextMenu={(e) => {
+              if (onContextMenu) {
+                e.preventDefault();
+                onContextMenu(artist, e);
+              }
+            }}
             className="group bg-[#0c1017] border border-neutral-800 hover:border-amber-600/50 t-card t-stroke p-4 flex flex-col items-center text-center transition-all duration-200 t-lift hover:shadow-lg cursor-pointer relative"
           >
             {/* Circular Artist Avatar with hover play overlay */}
@@ -104,3 +112,6 @@ export const ArtistsGridView: React.FC<ArtistsGridViewProps> = ({
     </div>
   );
 };
+
+// See TracksTableView: keeps large grids from re-rendering on unrelated playback-state changes.
+export const ArtistsGridView = React.memo(ArtistsGridViewImpl);

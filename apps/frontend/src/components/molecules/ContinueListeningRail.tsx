@@ -96,6 +96,7 @@ export const ContinueListeningRail: React.FC<ContinueListeningRailProps> = ({
   emptyMessage = 'Start a track from your local library and its current session will appear here.',
   emptyActionLabel,
   onEmptyAction,
+  onContextMenu,
 }) => {
   const { currentTheme } = useTheme();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -226,6 +227,11 @@ export const ContinueListeningRail: React.FC<ContinueListeningRailProps> = ({
               key={item.id}
               id={`continue-card-${item.id}`}
               onClick={() => onItemClick?.(item)}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onContextMenu?.(item, e);
+              }}
               style={{
                 backgroundColor: currentTheme.bgCard,
                 borderColor: currentTheme.borderColor,

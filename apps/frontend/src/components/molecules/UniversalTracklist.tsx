@@ -115,6 +115,7 @@ export interface UniversalTracklistProps {
   storageKey?: string;
   showCustomizerButton?: boolean;
   compact?: boolean;
+  onContextMenu?: (track: TrackItem, event: React.MouseEvent) => void;
 }
 
 export const UniversalTracklist: React.FC<UniversalTracklistProps> = ({
@@ -133,7 +134,11 @@ export const UniversalTracklist: React.FC<UniversalTracklistProps> = ({
   storageKey,
   showCustomizerButton = true,
   compact = false,
+  onContextMenu,
 }) => {
+  const [displayCount, setDisplayCount] = useState(150);
+  const displayTracks = React.useMemo(() => tracks.slice(0, displayCount), [tracks, displayCount]);
+
   // Demo mode uses browser storage; production restores the same preference through SQLite IPC.
   const [columnOrder, setColumnOrder] = useState<ColumnKey[]>(() => {
     if (storageKey && isDemoMode) {
@@ -677,7 +682,7 @@ export const UniversalTracklist: React.FC<UniversalTracklistProps> = ({
           </thead>
 
           <tbody className="divide-y divide-neutral-900/60 font-sans">
-            {tracks.map((track, idx) => {
+            {displayTracks.map((track, idx) => {
               const isCurrent = currentTrackId === track.id;
               const isMissing = track.isLocal === false;
 
@@ -690,6 +695,12 @@ export const UniversalTracklist: React.FC<UniversalTracklistProps> = ({
                       onAcquireTrack?.(track);
                     } else {
                       onPlayTrack?.(track);
+                    }
+                  }}
+                  onContextMenu={(e) => {
+                    if (onContextMenu) {
+                      e.preventDefault();
+                      onContextMenu(track, e);
                     }
                   }}
                   className={`group transition-all duration-300 cursor-pointer ${
@@ -719,6 +730,21 @@ export const UniversalTracklist: React.FC<UniversalTracklistProps> = ({
             })}
           </tbody>
         </table>
+
+        {tracks.length > displayCount && (
+          <div className="flex items-center justify-between p-3 border-t border-neutral-800 bg-[#080b10] text-xs font-mono text-neutral-400">
+            <span>
+              Showing {displayTracks.length} of {tracks.length} tracks
+            </span>
+            <button
+              type="button"
+              onClick={() => setDisplayCount((prev) => prev + 200)}
+              className="px-3 py-1 t-control border border-neutral-700 bg-neutral-900 text-neutral-200 hover:text-white hover:border-amber-500/60 cursor-pointer"
+            >
+              Show next 200 tracks
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

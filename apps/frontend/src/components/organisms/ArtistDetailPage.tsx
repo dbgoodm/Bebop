@@ -25,6 +25,7 @@ interface ArtistDetailPageProps {
   onEditTrack?: (track: TrackItem) => void;
   onPlayArtist?: (artist: ArtistItem) => void;
   onSelectAlbum?: (albumTitleOrId: string) => void;
+  onContextMenu?: (track: TrackItem, event: React.MouseEvent) => void;
 }
 
 export const ArtistDetailPage: React.FC<ArtistDetailPageProps> = ({
@@ -34,6 +35,7 @@ export const ArtistDetailPage: React.FC<ArtistDetailPageProps> = ({
   onEditTrack,
   onPlayArtist,
   onSelectAlbum,
+  onContextMenu,
 }) => {
   const { currentTheme } = useTheme();
   const [currentArtist, setCurrentArtist] = useState<ArtistItem>(artist);
@@ -496,6 +498,7 @@ export const ArtistDetailPage: React.FC<ArtistDetailPageProps> = ({
             onSelectAlbum={(alb) => {
               onSelectAlbum?.(alb);
             }}
+            onContextMenu={onContextMenu}
             storageKey={`artist_${artist.id}_columns`}
             defaultVisibleColumns={[
               'trackNumber',

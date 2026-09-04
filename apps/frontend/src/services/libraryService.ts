@@ -60,8 +60,34 @@ const defaultCatalogQuery: CatalogQuery = {
   sort: 'title',
   direction: 'ascending',
   offset: 0,
-  limit: 200,
+  limit: 500,
 };
+
+export async function fetchAllLibraryTracks(search = ''): Promise<TrackItem[]> {
+  const firstPage = await commands.queryCatalogTracks({
+    ...defaultCatalogQuery,
+    search: search.trim() || null,
+    offset: 0,
+    limit: 50_000,
+  });
+  if (firstPage.status === 'error') throw firstPage.error;
+  let allTracks = firstPage.data.items.map(toTrackItem);
+  const total = firstPage.data.total;
+  let currentOffset = allTracks.length;
+  while (currentOffset < total) {
+    const nextPage = await commands.queryCatalogTracks({
+      ...defaultCatalogQuery,
+      search: search.trim() || null,
+      offset: currentOffset,
+      limit: 50_000,
+    });
+    if (nextPage.status === 'error') break;
+    if (nextPage.data.items.length === 0) break;
+    allTracks = allTracks.concat(nextPage.data.items.map(toTrackItem));
+    currentOffset += nextPage.data.items.length;
+  }
+  return allTracks;
+}
 
 export async function loadLibraryCatalog(search = ''): Promise<LibraryScanSnapshot> {
   const [rootsResult, tracksResult] = await Promise.all([

@@ -22,6 +22,11 @@ const INTEGRATION_STATUS_EVENT: &str = "integration://status";
 #[serde(default, rename_all = "camelCase")]
 pub struct IntegrationSettings {
     pub lastfm_enabled: bool,
+    /// Separate from `lastfm_enabled`: a user may want top-tag lookups for
+    /// the playlist tag picker without scrobbling, or vice versa. Needs only
+    /// the app's Last.fm API key (`track.getTopTags` is unauthenticated),
+    /// not a connected session, so it works independently of scrobbling too.
+    pub lastfm_tag_lookup_enabled: bool,
     pub discord_enabled: bool,
     pub discord_detail: String,
 }
@@ -30,6 +35,7 @@ impl Default for IntegrationSettings {
     fn default() -> Self {
         Self {
             lastfm_enabled: false,
+            lastfm_tag_lookup_enabled: false,
             discord_enabled: false,
             discord_detail: "full".into(),
         }
@@ -493,6 +499,73 @@ fn send_lastfm(client: &Client, mut params: BTreeMap<String, String>) -> Result<
         ));
     }
     Ok(())
+}
+
+/// Reads the persisted integration settings directly, without needing a live
+/// `IntegrationManager` — the metadata job loop only needs this one flag and
+/// shouldn't have to thread the whole manager through its call chain.
+pub(crate) fn lastfm_tag_lookup_enabled(database: &DatabaseWorker) -> bool {
+    database
+        .get_ui_preference(SETTINGS_KEY.into())
+        .ok()
+        .flatten()
+        .and_then(|json| serde_json::from_str::<IntegrationSettings>(&json).ok())
+        .is_some_and(|settings| settings.lastfm_tag_lookup_enabled)
+}
+
+/// `track.getTopTags` needs only the app's API key — no session, no
+/// signature — so this stays a stateless free function independent of
+/// whether scrobbling is connected.
+pub(crate) fn fetch_lastfm_top_tags(track: &TrackSummary) -> Result<Vec<String>, AppError> {
+    if !eligible_for_online_metadata(track) {
+        return Ok(Vec::new());
+    }
+    let (api_key, _) = lastfm_api_credentials().ok_or_else(|| {
+        AppError::new(
+            "lastfm-not-configured",
+            "This build does not include a Last.fm application key.",
+        )
+    })?;
+    let artist = track
+        .artists
+        .first()
+        .map(|artist| artist.name.as_str())
+        .unwrap_or("Unknown Artist");
+    let client = Client::new();
+    let response = client
+        .get("https://ws.audioscrobbler.com/2.0/")
+        .query(&[
+            ("method", "track.gettoptags"),
+            ("artist", artist),
+            ("track", track.title.as_str()),
+            ("api_key", api_key.as_str()),
+            ("format", "json"),
+        ])
+        .send()
+        .map_err(|error| AppError::new("lastfm-offline", error.to_string()))?;
+    if !response.status().is_success() {
+        return Err(AppError::new(
+            "lastfm-request-failed",
+            format!("Last.fm returned HTTP {}.", response.status()),
+        ));
+    }
+    let body: serde_json::Value = response
+        .json()
+        .map_err(|error| AppError::new("lastfm-response-invalid", error.to_string()))?;
+    let tags = body
+        .get("toptags")
+        .and_then(|value| value.get("tag"))
+        .and_then(serde_json::Value::as_array)
+        .map(|entries| {
+            entries
+                .iter()
+                .filter_map(|entry| entry.get("name").and_then(serde_json::Value::as_str))
+                .map(str::to_string)
+                .take(8)
+                .collect()
+        })
+        .unwrap_or_default();
+    Ok(tags)
 }
 
 fn eligible_for_online_metadata(track: &TrackSummary) -> bool {

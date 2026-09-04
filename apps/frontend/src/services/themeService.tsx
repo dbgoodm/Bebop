@@ -4,11 +4,18 @@ import { POSTER_THEMES } from './posterThemes';
 import { THEME_VAR_OVERRIDES } from './themeOverrides';
 import { isDemoMode } from '@/demo/mode';
 import {
+  THEME_FALLBACK_ID,
+  toThemeDocument,
+  validateThemeDocument,
+  type ThemeDocumentV1,
+} from './themeModel';
+import {
   loadPersistentPlayerState,
   loadUiPreference,
   saveThemePreference,
   saveUiPreference,
 } from './playerStateService';
+import { commands } from './tauri-bindings';
 
 export interface StatCardColorConfig {
   borderTop: string;
@@ -98,6 +105,8 @@ export interface ThemeConfig {
    */
   vars?: Record<string, string>;
 }
+
+export type { ThemeAssetReference, ThemeDocumentV1, ThemeImageLayer } from './themeModel';
 
 const THEME_PRESETS_ALL: ThemeConfig[] = [
   // 1. SPACE COWBOY - Deep Galactic Space Navy, Plasma Cyan & Saxophone Brass Gold
@@ -547,6 +556,35 @@ const THEME_PRESETS_ALL: ThemeConfig[] = [
     waveformUnplayedTop: '#63441a',
     waveformUnplayedBot: '#3d280c',
     waveformGlow: true,
+    vars: {
+      '--f-d': "'Space Grotesk', sans-serif",
+      '--f-b': "'Barlow', sans-serif",
+      '--f-m': "'Space Mono', monospace",
+      '--w-d': '700',
+      '--ls-h': '.02em',
+      '--tt-l': 'uppercase',
+      '--r': '10px',
+      '--r-sm': '6px',
+      '--btn-r': '9999px',
+      '--clip': 'none',
+      '--clip-btn': 'none',
+      '--sw': '1',
+      '--bar-r': '2px',
+      '--bar-bg': 'linear-gradient(180deg, #fde047 0%, #f59e0b 100%)',
+      '--bar-cap': '#ffffff',
+      '--bar-cap-h': '2px',
+      '--bar-w': '4px',
+      '--bar-gap': '3px',
+      // A faceted bass-burst gem — an original shape evoking EDM/bass
+      // energy, not a trace of the actual Monstercat mark.
+      '--tex':
+        'url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27360%27%20height%3D%27360%27%3E%3Cpath%20d%3D%27M180%20180%20L180.0%2010.0%20L225.7%2085.0%20Z%27%20fill%3D%27%2523f59e0b%27%20fill-opacity%3D%270.9%27%2F%3E%3Cpath%20d%3D%27M180%20180%20L225.7%2085.0%20L312.9%2074.0%20Z%27%20fill%3D%27%2523fbbf24%27%20fill-opacity%3D%270.9%27%2F%3E%3Cpath%20d%3D%27M180%20180%20L312.9%2074.0%20L282.8%20156.5%20Z%27%20fill%3D%27%2523fde047%27%20fill-opacity%3D%270.9%27%2F%3E%3Cpath%20d%3D%27M180%20180%20L282.8%20156.5%20L345.7%20217.8%20Z%27%20fill%3D%27%2523f59e0b%27%20fill-opacity%3D%270.9%27%2F%3E%3Cpath%20d%3D%27M180%20180%20L345.7%20217.8%20L262.4%20245.7%20Z%27%20fill%3D%27%2523fbbf24%27%20fill-opacity%3D%270.9%27%2F%3E%3Cpath%20d%3D%27M180%20180%20L262.4%20245.7%20L253.8%20333.2%20Z%27%20fill%3D%27%2523fde047%27%20fill-opacity%3D%270.9%27%2F%3E%3Cpath%20d%3D%27M180%20180%20L253.8%20333.2%20L180.0%20285.4%20Z%27%20fill%3D%27%2523f59e0b%27%20fill-opacity%3D%270.9%27%2F%3E%3Cpath%20d%3D%27M180%20180%20L180.0%20285.4%20L106.2%20333.2%20Z%27%20fill%3D%27%2523fbbf24%27%20fill-opacity%3D%270.9%27%2F%3E%3Cpath%20d%3D%27M180%20180%20L106.2%20333.2%20L97.6%20245.7%20Z%27%20fill%3D%27%2523fde047%27%20fill-opacity%3D%270.9%27%2F%3E%3Cpath%20d%3D%27M180%20180%20L97.6%20245.7%20L14.3%20217.8%20Z%27%20fill%3D%27%2523f59e0b%27%20fill-opacity%3D%270.9%27%2F%3E%3Cpath%20d%3D%27M180%20180%20L14.3%20217.8%20L77.2%20156.5%20Z%27%20fill%3D%27%2523fbbf24%27%20fill-opacity%3D%270.9%27%2F%3E%3Cpath%20d%3D%27M180%20180%20L77.2%20156.5%20L47.1%2074.0%20Z%27%20fill%3D%27%2523fde047%27%20fill-opacity%3D%270.9%27%2F%3E%3Cpath%20d%3D%27M180%20180%20L47.1%2074.0%20L134.3%2085.0%20Z%27%20fill%3D%27%2523f59e0b%27%20fill-opacity%3D%270.9%27%2F%3E%3Cpath%20d%3D%27M180%20180%20L134.3%2085.0%20L180.0%2010.0%20Z%27%20fill%3D%27%2523fbbf24%27%20fill-opacity%3D%270.9%27%2F%3E%3C%2Fsvg%3E")',
+      '--tex-size': '360px 360px',
+      '--tex-repeat': 'no-repeat',
+      '--tex-position': 'right -60px bottom 60px',
+      '--tex-op': '.9',
+      '--cursor': 'auto',
+    },
   },
 
   // 6. SOUNDCLOUD SUNSET - Studio Dusk Warm Charcoal & Fire Orange
@@ -628,6 +666,35 @@ const THEME_PRESETS_ALL: ThemeConfig[] = [
     waveformUnplayedTop: '#663219',
     waveformUnplayedBot: '#3d1c0e',
     waveformGlow: true,
+    vars: {
+      '--f-d': "'Barlow', sans-serif",
+      '--f-b': "'Barlow', sans-serif",
+      '--f-m': "'Courier Prime', monospace",
+      '--w-d': '700',
+      '--ls-h': '0em',
+      '--tt-l': 'none',
+      '--r': '8px',
+      '--r-sm': '5px',
+      '--btn-r': '9999px',
+      '--clip': 'none',
+      '--clip-btn': 'none',
+      '--sw': '1',
+      '--bar-r': '1px',
+      '--bar-bg': 'linear-gradient(180deg, #ffaa00 0%, #ff5500 100%)',
+      '--bar-cap': '#ffffff',
+      '--bar-cap-h': '2px',
+      '--bar-w': '3px',
+      '--bar-gap': '2px',
+      // A waveform-bar texture, evoking the scrubber SoundCloud is known
+      // for, rather than their literal cloud mark.
+      '--tex':
+        'url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27598%27%20height%3D%27140%27%3E%3Cg%20fill%3D%27%2523ff5500%27%3E%3Crect%20x%3D%270%27%20y%3D%27118%27%20width%3D%279%27%20height%3D%2722%27%20rx%3D%271.5%27%2F%3E%3Crect%20x%3D%2713%27%20y%3D%2785%27%20width%3D%279%27%20height%3D%2755%27%20rx%3D%271.5%27%2F%3E%3Crect%20x%3D%2726%27%20y%3D%2752%27%20width%3D%279%27%20height%3D%2788%27%20rx%3D%271.5%27%2F%3E%3Crect%20x%3D%2739%27%20y%3D%27100%27%20width%3D%279%27%20height%3D%2740%27%20rx%3D%271.5%27%2F%3E%3Crect%20x%3D%2752%27%20y%3D%2730%27%20width%3D%279%27%20height%3D%27110%27%20rx%3D%271.5%27%2F%3E%3Crect%20x%3D%2765%27%20y%3D%2770%27%20width%3D%279%27%20height%3D%2770%27%20rx%3D%271.5%27%2F%3E%3Crect%20x%3D%2778%27%20y%3D%27110%27%20width%3D%279%27%20height%3D%2730%27%20rx%3D%271.5%27%2F%3E%3Crect%20x%3D%2791%27%20y%3D%2745%27%20width%3D%279%27%20height%3D%2795%27%20rx%3D%271.5%27%2F%3E%3Crect%20x%3D%27104%27%20y%3D%2790%27%20width%3D%279%27%20height%3D%2750%27%20rx%3D%271.5%27%2F%3E%3Crect%20x%3D%27117%27%20y%3D%2720%27%20width%3D%279%27%20height%3D%27120%27%20rx%3D%271.5%27%2F%3E%3Crect%20x%3D%27130%27%20y%3D%2775%27%20width%3D%279%27%20height%3D%2765%27%20rx%3D%271.5%27%2F%3E%3Crect%20x%3D%27143%27%20y%3D%27122%27%20width%3D%279%27%20height%3D%2718%27%20rx%3D%271.5%27%2F%3E%3Crect%20x%3D%27156%27%20y%3D%2765%27%20width%3D%279%27%20height%3D%2775%27%20rx%3D%271.5%27%2F%3E%3Crect%20x%3D%27169%27%20y%3D%2740%27%20width%3D%279%27%20height%3D%27100%27%20rx%3D%271.5%27%2F%3E%3Crect%20x%3D%27182%27%20y%3D%2795%27%20width%3D%279%27%20height%3D%2745%27%20rx%3D%271.5%27%2F%3E%3Crect%20x%3D%27195%27%20y%3D%2780%27%20width%3D%279%27%20height%3D%2760%27%20rx%3D%271.5%27%2F%3E%3Crect%20x%3D%27208%27%20y%3D%2710%27%20width%3D%279%27%20height%3D%27130%27%20rx%3D%271.5%27%2F%3E%3Crect%20x%3D%27221%27%20y%3D%27105%27%20width%3D%279%27%20height%3D%2735%27%20rx%3D%271.5%27%2F%3E%3Crect%20x%3D%27234%27%20y%3D%2755%27%20width%3D%279%27%20height%3D%2785%27%20rx%3D%271.5%27%2F%3E%3Crect%20x%3D%27247%27%20y%3D%2782%27%20width%3D%279%27%20height%3D%2758%27%20rx%3D%271.5%27%2F%3E%3Crect%20x%3D%27260%27%20y%3D%27118%27%20width%3D%279%27%20height%3D%2722%27%20rx%3D%271.5%27%2F%3E%3Crect%20x%3D%27273%27%20y%3D%2785%27%20width%3D%279%27%20height%3D%2755%27%20rx%3D%271.5%27%2F%3E%3Crect%20x%3D%27286%27%20y%3D%2752%27%20width%3D%279%27%20height%3D%2788%27%20rx%3D%271.5%27%2F%3E%3Crect%20x%3D%27299%27%20y%3D%27100%27%20width%3D%279%27%20height%3D%2740%27%20rx%3D%271.5%27%2F%3E%3Crect%20x%3D%27312%27%20y%3D%2730%27%20width%3D%279%27%20height%3D%27110%27%20rx%3D%271.5%27%2F%3E%3Crect%20x%3D%27325%27%20y%3D%2770%27%20width%3D%279%27%20height%3D%2770%27%20rx%3D%271.5%27%2F%3E%3Crect%20x%3D%27338%27%20y%3D%27110%27%20width%3D%279%27%20height%3D%2730%27%20rx%3D%271.5%27%2F%3E%3Crect%20x%3D%27351%27%20y%3D%2745%27%20width%3D%279%27%20height%3D%2795%27%20rx%3D%271.5%27%2F%3E%3Crect%20x%3D%27364%27%20y%3D%2790%27%20width%3D%279%27%20height%3D%2750%27%20rx%3D%271.5%27%2F%3E%3Crect%20x%3D%27377%27%20y%3D%2720%27%20width%3D%279%27%20height%3D%27120%27%20rx%3D%271.5%27%2F%3E%3Crect%20x%3D%27390%27%20y%3D%2775%27%20width%3D%279%27%20height%3D%2765%27%20rx%3D%271.5%27%2F%3E%3Crect%20x%3D%27403%27%20y%3D%27122%27%20width%3D%279%27%20height%3D%2718%27%20rx%3D%271.5%27%2F%3E%3Crect%20x%3D%27416%27%20y%3D%2765%27%20width%3D%279%27%20height%3D%2775%27%20rx%3D%271.5%27%2F%3E%3Crect%20x%3D%27429%27%20y%3D%2740%27%20width%3D%279%27%20height%3D%27100%27%20rx%3D%271.5%27%2F%3E%3Crect%20x%3D%27442%27%20y%3D%2795%27%20width%3D%279%27%20height%3D%2745%27%20rx%3D%271.5%27%2F%3E%3Crect%20x%3D%27455%27%20y%3D%2780%27%20width%3D%279%27%20height%3D%2760%27%20rx%3D%271.5%27%2F%3E%3Crect%20x%3D%27468%27%20y%3D%2710%27%20width%3D%279%27%20height%3D%27130%27%20rx%3D%271.5%27%2F%3E%3Crect%20x%3D%27481%27%20y%3D%27105%27%20width%3D%279%27%20height%3D%2735%27%20rx%3D%271.5%27%2F%3E%3Crect%20x%3D%27494%27%20y%3D%2755%27%20width%3D%279%27%20height%3D%2785%27%20rx%3D%271.5%27%2F%3E%3Crect%20x%3D%27507%27%20y%3D%2782%27%20width%3D%279%27%20height%3D%2758%27%20rx%3D%271.5%27%2F%3E%3Crect%20x%3D%27520%27%20y%3D%27118%27%20width%3D%279%27%20height%3D%2722%27%20rx%3D%271.5%27%2F%3E%3Crect%20x%3D%27533%27%20y%3D%2785%27%20width%3D%279%27%20height%3D%2755%27%20rx%3D%271.5%27%2F%3E%3Crect%20x%3D%27546%27%20y%3D%2752%27%20width%3D%279%27%20height%3D%2788%27%20rx%3D%271.5%27%2F%3E%3Crect%20x%3D%27559%27%20y%3D%27100%27%20width%3D%279%27%20height%3D%2740%27%20rx%3D%271.5%27%2F%3E%3Crect%20x%3D%27572%27%20y%3D%2730%27%20width%3D%279%27%20height%3D%27110%27%20rx%3D%271.5%27%2F%3E%3Crect%20x%3D%27585%27%20y%3D%2770%27%20width%3D%279%27%20height%3D%2770%27%20rx%3D%271.5%27%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E")',
+      '--tex-size': '598px 140px',
+      '--tex-repeat': 'repeat-x',
+      '--tex-position': 'left 0px bottom 100px',
+      '--tex-op': '.55',
+      '--cursor': 'auto',
+    },
   },
 
   // 7. CYBERPUNK NEON MATRIX - Electric Neo-Tokyo Cyber Purple & Holographic Cyan
@@ -710,6 +777,33 @@ const THEME_PRESETS_ALL: ThemeConfig[] = [
     waveformUnplayedTop: '#6820a4',
     waveformUnplayedBot: '#3c1061',
     waveformGlow: true,
+    vars: {
+      '--f-d': "'Rubik Mono One', sans-serif",
+      '--f-b': "'Space Grotesk', sans-serif",
+      '--f-m': "'VT323', monospace",
+      '--w-d': '400',
+      '--ls-h': '.03em',
+      '--tt-l': 'uppercase',
+      '--r': '0px',
+      '--r-sm': '0px',
+      '--btn-r': '2px',
+      '--clip': 'none',
+      '--clip-btn': 'none',
+      '--sw': '1.5',
+      '--bar-r': '0px',
+      '--bar-bg': 'linear-gradient(180deg, #00f0ff 0%, #ff007f 100%)',
+      '--bar-cap': '#ffffff',
+      '--bar-cap-h': '2px',
+      '--bar-w': '3px',
+      '--bar-gap': '3px',
+      '--tex':
+        'linear-gradient(rgba(0,240,255,.05) 1px, transparent 1px), linear-gradient(90deg, rgba(0,240,255,.05) 1px, transparent 1px), url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27220%27%20height%3D%27140%27%3E%3Crect%20x%3D%270%27%20y%3D%2760%27%20width%3D%2740%27%20height%3D%2780%27%20fill%3D%27%2523ff007f%27%20fill-opacity%3D%270.5%27%2F%3E%3Crect%20x%3D%2740%27%20y%3D%2790%27%20width%3D%2730%27%20height%3D%2750%27%20fill%3D%27%252300f0ff%27%20fill-opacity%3D%270.5%27%2F%3E%3Crect%20x%3D%2770%27%20y%3D%2740%27%20width%3D%2726%27%20height%3D%27100%27%20fill%3D%27%2523ff007f%27%20fill-opacity%3D%270.5%27%2F%3E%3Crect%20x%3D%2796%27%20y%3D%27110%27%20width%3D%2734%27%20height%3D%2730%27%20fill%3D%27%252300f0ff%27%20fill-opacity%3D%270.5%27%2F%3E%3Crect%20x%3D%27130%27%20y%3D%2770%27%20width%3D%2724%27%20height%3D%2770%27%20fill%3D%27%2523ff007f%27%20fill-opacity%3D%270.5%27%2F%3E%3Crect%20x%3D%27154%27%20y%3D%2795%27%20width%3D%2730%27%20height%3D%2745%27%20fill%3D%27%252300f0ff%27%20fill-opacity%3D%270.5%27%2F%3E%3Crect%20x%3D%27184%27%20y%3D%2750%27%20width%3D%2728%27%20height%3D%2790%27%20fill%3D%27%2523ff007f%27%20fill-opacity%3D%270.5%27%2F%3E%3Crect%20x%3D%27212%27%20y%3D%2785%27%20width%3D%2736%27%20height%3D%2755%27%20fill%3D%27%252300f0ff%27%20fill-opacity%3D%270.5%27%2F%3E%3C%2Fsvg%3E")',
+      '--tex-size': '32px 32px, 32px 32px, 220px 140px',
+      '--tex-repeat': 'repeat, repeat, repeat-x',
+      '--tex-position': '0 0, 0 0, left 0px bottom 100px',
+      '--tex-op': '.8',
+      '--cursor': 'crosshair',
+    },
   },
 
   // 8. SPOTIFY ACOUSTIC EMERALD - Deep Forest Pine & Acoustic Sage
@@ -721,19 +815,22 @@ const THEME_PRESETS_ALL: ThemeConfig[] = [
     isDark: true,
     primary: '#1db954',
     primaryHover: '#1ed760',
-    secondary: '#86efac',
+    secondary: '#1ed760',
     accentGlow: 'rgba(29, 185, 84, 0.45)',
-    bgCanvas: '#081c10',
-    bgCanvasGradient: 'radial-gradient(ellipse at 30% 0%, #113821 0%, #081c10 55%, #041009 100%)',
-    bgCard: '#102e1c',
-    bgSurface: '#174027',
-    borderColor: '#245a38',
+    // Real Spotify is a neutral near-black, not a green-tinted wash — the
+    // green is a sharp, isolated accent (buttons, highlights) against it,
+    // not a diffuse background tone.
+    bgCanvas: '#0a0a0a',
+    bgCanvasGradient: 'radial-gradient(ellipse at 30% 0%, #0f1f14 0%, #0a0a0a 55%, #050505 100%)',
+    bgCard: '#181818',
+    bgSurface: '#202020',
+    borderColor: '#2a2a2a',
     textPrimary: '#ffffff',
-    textSecondary: '#d1fae5',
-    textMuted: '#6ee7b7',
+    textSecondary: '#b3b3b3',
+    textMuted: '#727272',
     fontVibe: 'modern-clean',
     cardGradient:
-      'linear-gradient(145deg, rgba(29, 185, 84, 0.14) 0%, rgba(16, 46, 28, 0.95) 100%)',
+      'linear-gradient(145deg, rgba(29, 185, 84, 0.16) 0%, rgba(24, 24, 24, 0.97) 100%)',
     ambientOrbs: [
       {
         color: 'rgba(29, 185, 84, 0.22)',
@@ -742,7 +839,7 @@ const THEME_PRESETS_ALL: ThemeConfig[] = [
         opacity: 0.8,
       },
       {
-        color: 'rgba(134, 239, 172, 0.15)',
+        color: 'rgba(30, 215, 96, 0.14)',
         position: 'top 35% right -5%',
         size: '550px',
         opacity: 0.7,
@@ -786,12 +883,41 @@ const THEME_PRESETS_ALL: ThemeConfig[] = [
       },
     },
     visualizerPrimary: '#1db954',
-    visualizerSecondary: '#86efac',
+    visualizerSecondary: '#1ed760',
     waveformPlayedTop: '#1db954',
     waveformPlayedBot: '#15803d',
-    waveformUnplayedTop: '#255e3b',
-    waveformUnplayedBot: '#143c24',
+    waveformUnplayedTop: '#2a2a2a',
+    waveformUnplayedBot: '#181818',
     waveformGlow: true,
+    vars: {
+      '--f-d': "'Jost', sans-serif",
+      '--f-b': "'Jost', sans-serif",
+      '--f-m': "'Space Mono', monospace",
+      '--w-d': '700',
+      '--ls-h': '-.01em',
+      '--tt-l': 'none',
+      '--r': '8px',
+      '--r-sm': '6px',
+      '--btn-r': '9999px',
+      '--clip': 'none',
+      '--clip-btn': 'none',
+      '--sw': '1',
+      '--bar-r': '9999px',
+      '--bar-bg': 'linear-gradient(180deg, #1ed760 0%, #0f8a3c 100%)',
+      '--bar-cap': '#ffffff',
+      '--bar-cap-h': '2px',
+      '--bar-w': '4px',
+      '--bar-gap': '3px',
+      // Radiating soundwave arcs from a corner — evokes broadcast/sound
+      // energy without tracing Spotify's actual glyph.
+      '--tex':
+        'url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27320%27%20height%3D%27320%27%3E%3Cpath%20d%3D%27M0%20260%20A60%2060%200%200%201%2060%20320%27%20fill%3D%27none%27%20stroke%3D%27%25231db954%27%20stroke-width%3D%276%27%20stroke-opacity%3D%270.55%27%2F%3E%3Cpath%20d%3D%27M0%20210%20A110%20110%200%200%201%20110%20320%27%20fill%3D%27none%27%20stroke%3D%27%25231db954%27%20stroke-width%3D%276%27%20stroke-opacity%3D%270.47%27%2F%3E%3Cpath%20d%3D%27M0%20160%20A160%20160%200%200%201%20160%20320%27%20fill%3D%27none%27%20stroke%3D%27%25231db954%27%20stroke-width%3D%276%27%20stroke-opacity%3D%270.39%27%2F%3E%3Cpath%20d%3D%27M0%20110%20A210%20210%200%200%201%20210%20320%27%20fill%3D%27none%27%20stroke%3D%27%25231db954%27%20stroke-width%3D%276%27%20stroke-opacity%3D%270.31%27%2F%3E%3Cpath%20d%3D%27M0%2060%20A260%20260%200%200%201%20260%20320%27%20fill%3D%27none%27%20stroke%3D%27%25231db954%27%20stroke-width%3D%276%27%20stroke-opacity%3D%270.23%27%2F%3E%3C%2Fsvg%3E")',
+      '--tex-size': '320px 320px',
+      '--tex-repeat': 'no-repeat',
+      '--tex-position': 'left -40px bottom 60px',
+      '--tex-op': '.9',
+      '--cursor': 'auto',
+    },
   },
 
   // 9. AUDIOPHILE SAPPHIRE DAC - High-End Hi-Fi Cobalt Studio
@@ -875,6 +1001,35 @@ const THEME_PRESETS_ALL: ThemeConfig[] = [
     waveformUnplayedTop: '#284b7a',
     waveformUnplayedBot: '#152c4c',
     waveformGlow: true,
+    vars: {
+      '--f-d': "'IBM Plex Sans', sans-serif",
+      '--f-b': "'IBM Plex Sans', sans-serif",
+      '--f-m': "'IBM Plex Mono', monospace",
+      '--w-d': '600',
+      '--ls-h': '.02em',
+      '--tt-l': 'uppercase',
+      '--r': '4px',
+      '--r-sm': '3px',
+      '--btn-r': '4px',
+      '--clip': 'none',
+      '--clip-btn': 'none',
+      '--sw': '1.5',
+      '--bar-r': '1px',
+      '--bar-bg': 'linear-gradient(180deg, #38bdf8 0%, #818cf8 100%)',
+      '--bar-cap': '#ffffff',
+      '--bar-cap-h': '2px',
+      '--bar-w': '3px',
+      '--bar-gap': '2px',
+      // Graph-paper grid plus a running oscilloscope trace — technical,
+      // measurement-console imagery.
+      '--tex':
+        'linear-gradient(rgba(56,189,248,.04) 1px, transparent 1px), linear-gradient(90deg, rgba(56,189,248,.04) 1px, transparent 1px), url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27240%27%20height%3D%27120%27%3E%3Cpath%20d%3D%27M0%2C60.0%20L4%2C68.7%20L8%2C77.1%20L12%2C84.7%20L16%2C91.2%20L20%2C96.4%20L24%2C99.9%20L28%2C101.8%20L32%2C101.8%20L36%2C99.9%20L40%2C96.4%20L44%2C91.2%20L48%2C84.7%20L52%2C77.1%20L56%2C68.7%20L60%2C60.0%20L64%2C51.3%20L68%2C42.9%20L72%2C35.3%20L76%2C28.8%20L80%2C23.6%20L84%2C20.1%20L88%2C18.2%20L92%2C18.2%20L96%2C20.1%20L100%2C23.6%20L104%2C28.8%20L108%2C35.3%20L112%2C42.9%20L116%2C51.3%20L120%2C60.0%20L124%2C68.7%20L128%2C77.1%20L132%2C84.7%20L136%2C91.2%20L140%2C96.4%20L144%2C99.9%20L148%2C101.8%20L152%2C101.8%20L156%2C99.9%20L160%2C96.4%20L164%2C91.2%20L168%2C84.7%20L172%2C77.1%20L176%2C68.7%20L180%2C60.0%20L184%2C51.3%20L188%2C42.9%20L192%2C35.3%20L196%2C28.8%20L200%2C23.6%20L204%2C20.1%20L208%2C18.2%20L212%2C18.2%20L216%2C20.1%20L220%2C23.6%20L224%2C28.8%20L228%2C35.3%20L232%2C42.9%20L236%2C51.3%20L240%2C60.0%27%20fill%3D%27none%27%20stroke%3D%27%252338bdf8%27%20stroke-width%3D%273%27%2F%3E%3C%2Fsvg%3E")',
+      '--tex-size': '24px 24px, 24px 24px, 240px 120px',
+      '--tex-repeat': 'repeat, repeat, repeat-x',
+      '--tex-position': '0 0, 0 0, left 30%',
+      '--tex-op': '.6',
+      '--cursor': 'auto',
+    },
   },
 
   // 10. STUDIO REFERENCE SLATE - Studio Mastering Slate & Surgical White
@@ -957,6 +1112,34 @@ const THEME_PRESETS_ALL: ThemeConfig[] = [
     waveformUnplayedTop: '#4a5770',
     waveformUnplayedBot: '#2b3342',
     waveformGlow: true,
+    vars: {
+      '--f-d': "'Oswald', sans-serif",
+      '--f-b': "'IBM Plex Sans', sans-serif",
+      '--f-m': "'IBM Plex Mono', monospace",
+      '--w-d': '600',
+      '--ls-h': '.06em',
+      '--tt-l': 'uppercase',
+      '--r': '3px',
+      '--r-sm': '2px',
+      '--btn-r': '3px',
+      '--clip': 'none',
+      '--clip-btn': 'none',
+      '--sw': '1.5',
+      '--bar-r': '0px',
+      '--bar-bg': 'linear-gradient(180deg, #e4e4e7 0%, #71717a 100%)',
+      '--bar-cap': '#38bdf8',
+      '--bar-cap-h': '2px',
+      '--bar-w': '3px',
+      '--bar-gap': '2px',
+      // Concentric vinyl grooves in the corner, over the fine grain.
+      '--tex':
+        'radial-gradient(rgba(255,255,255,.03) 1px, transparent 1px), url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27400%27%20height%3D%27400%27%3E%3Ccircle%20cx%3D%27200%27%20cy%3D%27200%27%20r%3D%2740%27%20fill%3D%27none%27%20stroke%3D%27%252394a3b8%27%20stroke-width%3D%272%27%20stroke-opacity%3D%270.50%27%2F%3E%3Ccircle%20cx%3D%27200%27%20cy%3D%27200%27%20r%3D%2770%27%20fill%3D%27none%27%20stroke%3D%27%252394a3b8%27%20stroke-width%3D%272%27%20stroke-opacity%3D%270.43%27%2F%3E%3Ccircle%20cx%3D%27200%27%20cy%3D%27200%27%20r%3D%27100%27%20fill%3D%27none%27%20stroke%3D%27%252394a3b8%27%20stroke-width%3D%272%27%20stroke-opacity%3D%270.36%27%2F%3E%3Ccircle%20cx%3D%27200%27%20cy%3D%27200%27%20r%3D%27130%27%20fill%3D%27none%27%20stroke%3D%27%252394a3b8%27%20stroke-width%3D%272%27%20stroke-opacity%3D%270.29%27%2F%3E%3Ccircle%20cx%3D%27200%27%20cy%3D%27200%27%20r%3D%27160%27%20fill%3D%27none%27%20stroke%3D%27%252394a3b8%27%20stroke-width%3D%272%27%20stroke-opacity%3D%270.22%27%2F%3E%3Ccircle%20cx%3D%27200%27%20cy%3D%27200%27%20r%3D%2714%27%20fill%3D%27%252338bdf8%27%20fill-opacity%3D%270.5%27%2F%3E%3C%2Fsvg%3E")',
+      '--tex-size': '4px 4px, 400px 400px',
+      '--tex-repeat': 'repeat, no-repeat',
+      '--tex-position': '0 0, right -80px top 60px',
+      '--tex-op': '.8',
+      '--cursor': 'auto',
+    },
   },
 ];
 
@@ -970,19 +1153,50 @@ const RETIRED_THEME_IDS = new Set([
   'space-cowboy-poster',
 ]);
 
+const RETIRED_THEME_MIGRATIONS: Record<string, string> = {
+  'space-cowboy': 'space-cowboy-v2',
+  'space-cowboy-poster': 'space-cowboy-v2',
+  'queen-of-hearts': 'queen-of-hearts-v2',
+  'black-dog': 'black-dog-v2',
+  'radical-prodigy': 'radical-prodigy-v2',
+};
+
+export function migrateThemeId(id: string | null | undefined): string {
+  if (!id) return THEME_FALLBACK_ID;
+  return RETIRED_THEME_MIGRATIONS[id] ?? id;
+}
+
 export const THEME_PRESETS = THEME_PRESETS_ALL.filter((theme) => !RETIRED_THEME_IDS.has(theme.id));
 
 const THEME_STORAGE_KEY = 'audiophile_active_theme_id_v3';
 const CUSTOM_THEMES_STORAGE_KEY = 'audiophile_custom_themes_v3';
+const UI_SCALE_STORAGE_KEY = 'audiophile_ui_scale_v1';
+export const UI_SCALE_MIN = 0.85;
+export const UI_SCALE_MAX = 1.3;
 
-interface ThemeContextType {
+function clampUiScale(value: number): number {
+  if (!Number.isFinite(value)) return 1;
+  return Math.min(UI_SCALE_MAX, Math.max(UI_SCALE_MIN, value));
+}
+
+export interface ThemeContextType {
   currentTheme: ThemeConfig;
+  activeTheme: ThemeConfig;
+  previewTheme: ThemeDocumentV1 | null;
   allThemes: ThemeConfig[];
   setThemeById: (id: string) => void;
   saveCustomTheme: (theme: ThemeConfig) => void;
   deleteCustomTheme: (id: string) => void;
+  isBuiltInTheme: (id: string) => boolean;
+  beginThemePreview: (theme: ThemeConfig) => ThemeDocumentV1;
+  updateThemePreview: (theme: ThemeDocumentV1) => void;
+  cancelThemePreview: () => void;
+  saveThemePreview: () => { ok: true; theme: ThemeDocumentV1 } | { ok: false; errors: string[] };
   isThemeModalOpen: boolean;
   setIsThemeModalOpen: (open: boolean) => void;
+  /** Multiplier on the app's rem baseline (index.css `html`). 1 = default. */
+  uiScale: number;
+  setUiScale: (scale: number) => void;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -1006,7 +1220,10 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (!isDemoMode) return [];
     try {
       const saved = localStorage.getItem(CUSTOM_THEMES_STORAGE_KEY);
-      return saved ? JSON.parse(saved) : [];
+      const parsed: unknown = saved ? JSON.parse(saved) : [];
+      return Array.isArray(parsed)
+        ? parsed.map((theme) => toThemeDocument(theme as ThemeConfig, (theme as ThemeConfig).id))
+        : [];
     } catch {
       return [];
     }
@@ -1018,28 +1235,47 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const appliedVarsRef = useRef<string[]>([]);
 
   const [activeThemeId, setActiveThemeId] = useState<string>(() => {
-    if (!isDemoMode) return 'space-cowboy';
+    if (!isDemoMode) return THEME_FALLBACK_ID;
     try {
-      return localStorage.getItem(THEME_STORAGE_KEY) || 'space-cowboy';
+      return migrateThemeId(localStorage.getItem(THEME_STORAGE_KEY));
     } catch {
-      return 'space-cowboy';
+      return THEME_FALLBACK_ID;
     }
   });
+  const [previewTheme, setPreviewTheme] = useState<ThemeDocumentV1 | null>(null);
 
   const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
   const [preferencesLoaded, setPreferencesLoaded] = useState(isDemoMode);
 
-  const currentTheme = allThemes.find((t) => t.id === activeThemeId) || ALL_THEMES[0];
+  const [uiScale, setUiScaleState] = useState<number>(() => {
+    if (!isDemoMode) return 1;
+    try {
+      const saved = localStorage.getItem(UI_SCALE_STORAGE_KEY);
+      return saved ? clampUiScale(Number(saved)) : 1;
+    } catch {
+      return 1;
+    }
+  });
+
+  const activeTheme = allThemes.find((t) => t.id === activeThemeId) || ALL_THEMES[0];
+  const currentTheme: ThemeConfig = previewTheme ?? activeTheme;
 
   useEffect(() => {
     if (isDemoMode) return;
-    void Promise.all([loadPersistentPlayerState(), loadUiPreference(CUSTOM_THEMES_STORAGE_KEY)])
-      .then(([state, savedCustomThemes]) => {
-        setActiveThemeId(state.preferences.themeId);
+    void Promise.all([
+      loadPersistentPlayerState(),
+      loadUiPreference(CUSTOM_THEMES_STORAGE_KEY),
+      loadUiPreference(UI_SCALE_STORAGE_KEY),
+    ])
+      .then(([state, savedCustomThemes, savedUiScale]) => {
+        setActiveThemeId(migrateThemeId(state.preferences.themeId));
+        if (savedUiScale) setUiScaleState(clampUiScale(Number(savedUiScale)));
         if (!savedCustomThemes) return;
         try {
           const parsed: unknown = JSON.parse(savedCustomThemes);
-          if (Array.isArray(parsed)) setCustomThemes(parsed as ThemeConfig[]);
+          if (Array.isArray(parsed)) {
+            setCustomThemes(parsed.map((theme) => toThemeDocument(theme as ThemeConfig, (theme as ThemeConfig).id)));
+          }
         } catch {
           // Ignore malformed persisted customization and retain the built-in themes.
         }
@@ -1078,6 +1314,8 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
     appliedVarsRef.current = applied;
 
+    // Preview documents deliberately affect the app but never persistence.
+    if (previewTheme) return;
     if (isDemoMode) {
       try {
         localStorage.setItem(THEME_STORAGE_KEY, currentTheme.id);
@@ -1087,59 +1325,115 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } else if (preferencesLoaded) {
       void saveThemePreference(currentTheme.id).catch(() => undefined);
     }
-  }, [currentTheme, preferencesLoaded]);
+  }, [currentTheme, preferencesLoaded, previewTheme]);
+
+  // Applied separately from the theme-color effect above: it doesn't depend on
+  // the active theme, and shouldn't be cleared/reapplied when that switches.
+  useEffect(() => {
+    document.documentElement.style.setProperty('--ui-scale', String(uiScale));
+  }, [uiScale]);
 
   const setThemeById = (id: string) => {
-    setActiveThemeId(id);
+    setPreviewTheme(null);
+    setActiveThemeId(migrateThemeId(id));
+  };
+
+  const setUiScale = (scale: number) => {
+    const clamped = clampUiScale(scale);
+    setUiScaleState(clamped);
+    if (isDemoMode) {
+      try {
+        localStorage.setItem(UI_SCALE_STORAGE_KEY, String(clamped));
+      } catch {
+        // ignore storage quota errors
+      }
+    } else {
+      void saveUiPreference(UI_SCALE_STORAGE_KEY, String(clamped));
+    }
+  };
+
+  const persistCustomThemes = (themes: ThemeConfig[]) => {
+    if (isDemoMode) {
+      try {
+        localStorage.setItem(CUSTOM_THEMES_STORAGE_KEY, JSON.stringify(themes));
+      } catch {
+        // ignore storage quota errors
+      }
+    } else {
+      void saveUiPreference(CUSTOM_THEMES_STORAGE_KEY, JSON.stringify(themes));
+    }
   };
 
   const saveCustomTheme = (newTheme: ThemeConfig) => {
+    const document = toThemeDocument(newTheme, (newTheme as Partial<ThemeDocumentV1>).baseThemeId ?? newTheme.id);
     setCustomThemes((prev) => {
-      const filtered = prev.filter((t) => t.id !== newTheme.id);
-      const next = [...filtered, newTheme];
-      if (isDemoMode) {
-        try {
-          localStorage.setItem(CUSTOM_THEMES_STORAGE_KEY, JSON.stringify(next));
-        } catch {
-          // ignore
-        }
-      } else {
-        void saveUiPreference(CUSTOM_THEMES_STORAGE_KEY, JSON.stringify(next));
-      }
+      const filtered = prev.filter((t) => t.id !== document.id);
+      const next = [...filtered, document];
+      persistCustomThemes(next);
       return next;
     });
-    setActiveThemeId(newTheme.id);
+    setPreviewTheme(null);
+    setActiveThemeId(document.id);
   };
 
   const deleteCustomTheme = (id: string) => {
     setCustomThemes((prev) => {
       const next = prev.filter((t) => t.id !== id);
-      if (isDemoMode) {
-        try {
-          localStorage.setItem(CUSTOM_THEMES_STORAGE_KEY, JSON.stringify(next));
-        } catch {
-          // ignore
-        }
-      } else {
-        void saveUiPreference(CUSTOM_THEMES_STORAGE_KEY, JSON.stringify(next));
-      }
+      persistCustomThemes(next);
       return next;
     });
     if (activeThemeId === id) {
-      setActiveThemeId('space-cowboy');
+      setActiveThemeId(THEME_FALLBACK_ID);
     }
+    if (!isDemoMode) void commands.deleteThemeAssets(id);
+  };
+
+  const isBuiltInTheme = (id: string) => ALL_THEMES.some((theme) => theme.id === id);
+
+  const beginThemePreview = (theme: ThemeConfig) => {
+    const builtIn = isBuiltInTheme(theme.id);
+    const document = toThemeDocument(theme, theme.id);
+    const next = builtIn
+      ? {
+          ...document,
+          id: `custom-${theme.id}-${Date.now().toString(36)}`,
+          name: `${theme.name} Remix`,
+        }
+      : document;
+    setPreviewTheme(next);
+    return next;
+  };
+
+  const updateThemePreview = (theme: ThemeDocumentV1) => setPreviewTheme(theme);
+  const cancelThemePreview = () => setPreviewTheme(null);
+  const saveThemePreview = () => {
+    if (!previewTheme) return { ok: false as const, errors: ['No theme draft is open'] };
+    const saved = { ...previewTheme, updatedAt: new Date().toISOString() };
+    const errors = validateThemeDocument(saved);
+    if (errors.length) return { ok: false as const, errors };
+    saveCustomTheme(saved);
+    return { ok: true as const, theme: saved };
   };
 
   return (
     <ThemeContext.Provider
       value={{
         currentTheme,
+        activeTheme,
+        previewTheme,
         allThemes,
         setThemeById,
         saveCustomTheme,
         deleteCustomTheme,
+        isBuiltInTheme,
+        beginThemePreview,
+        updateThemePreview,
+        cancelThemePreview,
+        saveThemePreview,
         isThemeModalOpen,
         setIsThemeModalOpen,
+        uiScale,
+        setUiScale,
       }}
     >
       {children}

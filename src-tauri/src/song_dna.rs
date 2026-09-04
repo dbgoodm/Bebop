@@ -40,6 +40,35 @@ pub enum PlaylistMood {
     Intense,
 }
 
+/// A descriptive tag category. Kept as plain string constants (rather than a
+/// Rust enum mirrored by a DB CHECK) since this is read/written in one place
+/// on each side — `tags.category` in `persistence.rs` and here.
+pub const TAG_CATEGORY_GENRE: &str = "genre";
+pub const TAG_CATEGORY_MOOD: &str = "mood";
+// Valid `tags.category` values today's auto-population never emits — no
+// pipeline currently classifies instruments or scenes specifically, but the
+// schema supports them for future refinement or manual curation.
+#[allow(dead_code)]
+pub const TAG_CATEGORY_INSTRUMENT: &str = "instrument";
+#[allow(dead_code)]
+pub const TAG_CATEGORY_SCENE: &str = "scene";
+
+/// Provenance for a `track_tags` row: which pipeline supplied it.
+pub const TAG_SOURCE_MUSICBRAINZ: &str = "musicbrainz";
+pub const TAG_SOURCE_LASTFM: &str = "lastfm";
+pub const TAG_SOURCE_SONG_DNA: &str = "song-dna";
+
+/// A tag as offered to the playlist tag picker: name plus how many tracks in
+/// *this* library carry it, so the picker only ever shows options that will
+/// actually return something.
+#[derive(Clone, Debug, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct AvailableTag {
+    pub name: String,
+    pub category: String,
+    pub track_count: u32,
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize, Type)]
 #[serde(default, rename_all = "camelCase")]
 pub struct PlaylistGenerationRequest {
@@ -49,10 +78,25 @@ pub struct PlaylistGenerationRequest {
     pub mood: Option<PlaylistMood>,
     pub minimum_energy: Option<f32>,
     pub maximum_energy: Option<f32>,
+    pub minimum_bpm: Option<f32>,
+    pub maximum_bpm: Option<f32>,
+    /// Caps how far a track's loudness swings (`AudioFeatures.dynamic_range_db`)
+    /// — a rough, static proxy for "no big crescendo," since the analyzer
+    /// doesn't currently track loudness *over time* within a track, only its
+    /// overall peak-to-average spread.
+    pub maximum_dynamic_range_db: Option<f32>,
     pub familiarity: f32,
     pub start_year: Option<u32>,
     pub end_year: Option<u32>,
     pub genres: Vec<String>,
+    /// Descriptive tags (mood/instrument/scene, plus any genre tags picked
+    /// alongside them) — soft-scored via `tag_match_score`, unlike `genres`
+    /// above which is a hard filter. Lets "piano, classical, somber" style
+    /// requests narrow results without zeroing out the pool entirely.
+    pub tags: Vec<String>,
+    /// Tags that hard-exclude a candidate outright (e.g. "lo-fi") — unlike
+    /// `tags` above, there's no soft-scoring case for an exclusion.
+    pub excluded_tags: Vec<String>,
     pub excluded_track_ids: Vec<String>,
     pub exclude_explicit: bool,
     pub max_tracks_per_artist: u32,
@@ -68,10 +112,15 @@ impl Default for PlaylistGenerationRequest {
             mood: None,
             minimum_energy: None,
             maximum_energy: None,
+            minimum_bpm: None,
+            maximum_bpm: None,
+            maximum_dynamic_range_db: None,
             familiarity: 0.5,
             start_year: None,
             end_year: None,
             genres: Vec::new(),
+            tags: Vec::new(),
+            excluded_tags: Vec::new(),
             excluded_track_ids: Vec::new(),
             exclude_explicit: false,
             max_tracks_per_artist: 2,
@@ -110,6 +159,18 @@ pub struct GeneratedPlaylist {
     pub analyzed_track_count: u32,
 }
 
+/// One starter "vibe" playlist as returned to the frontend: the fixed spec
+/// plus a live-generated preview over the current library.
+#[derive(Clone, Debug, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct StarterPlaylistPreview {
+    pub key: String,
+    pub name: String,
+    pub description: String,
+    pub playlist: GeneratedPlaylist,
+    pub request: PlaylistGenerationRequest,
+}
+
 #[derive(Clone, Debug, Serialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct AudioAnalysisProgress {
@@ -128,6 +189,7 @@ pub(crate) struct GenerationCandidate {
     pub album_id: Option<String>,
     pub album: String,
     pub genres: Vec<String>,
+    pub tags: Vec<String>,
     pub year: Option<u32>,
     pub duration_ms: u64,
     pub play_count: u64,
@@ -149,6 +211,11 @@ fn clamp_request(request: &PlaylistGenerationRequest) -> PlaylistGenerationReque
     request.familiarity = request.familiarity.clamp(0.0, 1.0);
     request.minimum_energy = request.minimum_energy.map(|value| value.clamp(0.0, 1.0));
     request.maximum_energy = request.maximum_energy.map(|value| value.clamp(0.0, 1.0));
+    request.minimum_bpm = request.minimum_bpm.map(|value| value.clamp(0.0, 300.0));
+    request.maximum_bpm = request.maximum_bpm.map(|value| value.clamp(0.0, 300.0));
+    request.maximum_dynamic_range_db = request
+        .maximum_dynamic_range_db
+        .map(|value| value.clamp(0.0, 60.0));
     request.target_track_count = Some(request.target_track_count.unwrap_or(25).clamp(1, 500));
     request.max_tracks_per_artist = request.max_tracks_per_artist.clamp(1, 20);
     request.max_tracks_per_album = request.max_tracks_per_album.clamp(1, 20);
@@ -179,11 +246,41 @@ fn genre_overlap(left: &[String], right: &[String]) -> f32 {
     }
 }
 
+/// Soft match against requested descriptive tags — unlike `genres` (a hard
+/// filter), an unmatched tag just lowers the score rather than excluding the
+/// track, so a handful of tag picks narrow a playlist without starving it.
+fn tag_match_score(candidate: &GenerationCandidate, requested: &HashSet<String>) -> f32 {
+    if requested.is_empty() {
+        return 0.5;
+    }
+    let candidate_tags = candidate
+        .tags
+        .iter()
+        .map(|tag| normalized(tag))
+        .collect::<HashSet<_>>();
+    let matched = requested.intersection(&candidate_tags).count();
+    matched as f32 / requested.len() as f32
+}
+
 fn energy(candidate: &GenerationCandidate) -> f32 {
     candidate
         .features
         .as_ref()
         .map_or(0.5, |features| features.energy)
+}
+
+fn bpm(candidate: &GenerationCandidate) -> Option<f32> {
+    candidate
+        .features
+        .as_ref()
+        .and_then(|features| features.bpm)
+}
+
+fn dynamic_range_db(candidate: &GenerationCandidate) -> Option<f32> {
+    candidate
+        .features
+        .as_ref()
+        .map(|features| features.dynamic_range_db)
 }
 
 fn mood_score(candidate: &GenerationCandidate, mood: &Option<PlaylistMood>) -> f32 {
@@ -332,11 +429,15 @@ fn push_selection(
     true
 }
 
-pub(crate) fn rank_candidates(
-    candidates: &[GenerationCandidate],
+/// Hard-filters and scores every candidate, sorted best-first. Shared by
+/// `rank_candidates` (which then applies diversity/count/duration capping on
+/// top, for an *auto*-curated playlist) and `matching_candidates` (which
+/// doesn't — a human picking tracks by hand doesn't want the pool
+/// pre-trimmed for them). `request` is assumed already clamped.
+fn score_candidates<'a>(
+    candidates: &'a [GenerationCandidate],
     request: &PlaylistGenerationRequest,
-) -> Vec<RankedSelection> {
-    let request = clamp_request(request);
+) -> Vec<(&'a GenerationCandidate, f32)> {
     let excluded = request
         .excluded_track_ids
         .iter()
@@ -346,6 +447,16 @@ pub(crate) fn rank_candidates(
         .genres
         .iter()
         .map(|genre| normalized(genre))
+        .collect::<HashSet<_>>();
+    let requested_tags = request
+        .tags
+        .iter()
+        .map(|tag| normalized(tag))
+        .collect::<HashSet<_>>();
+    let excluded_tags = request
+        .excluded_tags
+        .iter()
+        .map(|tag| normalized(tag))
         .collect::<HashSet<_>>();
     let seeds = request
         .seed_track_ids
@@ -386,6 +497,25 @@ pub(crate) fn rank_candidates(
                 .maximum_energy
                 .is_none_or(|maximum| energy(candidate) <= maximum)
         })
+        // Unlike energy (which falls back to a synthetic 0.5 for unanalyzed
+        // tracks), an unknown bpm/dynamic-range never excludes — otherwise
+        // turning on either filter before running "Analyze library" would
+        // silently zero out an unanalyzed collection.
+        .filter(|candidate| {
+            request
+                .minimum_bpm
+                .is_none_or(|minimum| bpm(candidate).is_none_or(|value| value >= minimum))
+        })
+        .filter(|candidate| {
+            request
+                .maximum_bpm
+                .is_none_or(|maximum| bpm(candidate).is_none_or(|value| value <= maximum))
+        })
+        .filter(|candidate| {
+            request.maximum_dynamic_range_db.is_none_or(|maximum| {
+                dynamic_range_db(candidate).is_none_or(|value| value <= maximum)
+            })
+        })
         .filter(|candidate| {
             requested_genres.is_empty()
                 || candidate
@@ -393,10 +523,18 @@ pub(crate) fn rank_candidates(
                     .iter()
                     .any(|genre| requested_genres.contains(&normalized(genre)))
         })
+        .filter(|candidate| {
+            excluded_tags.is_empty()
+                || !candidate
+                    .tags
+                    .iter()
+                    .any(|tag| excluded_tags.contains(&normalized(tag)))
+        })
         .map(|candidate| {
             let similarity = seed_similarity(candidate, &seeds);
             let familiar = familiarity_score(candidate, request.familiarity, max_plays);
             let mood = mood_score(candidate, &request.mood);
+            let tags = tag_match_score(candidate, &requested_tags);
             let skip_quality = 1.0
                 - candidate.skip_count as f32
                     / (candidate.play_count + candidate.skip_count + 1) as f32;
@@ -404,11 +542,12 @@ pub(crate) fn rank_candidates(
                 ((recency_reference - last_played).max(0) as f32 / (90.0 * 86_400.0))
                     .clamp(0.0, 1.0)
             });
-            let score = similarity * 0.4
-                + familiar * 0.22
-                + mood * 0.18
-                + skip_quality * 0.12
-                + recency * 0.08;
+            let score = similarity * 0.35
+                + tags * 0.15
+                + familiar * 0.20
+                + mood * 0.15
+                + skip_quality * 0.10
+                + recency * 0.05;
             (candidate, score)
         })
         .collect::<Vec<_>>();
@@ -417,6 +556,51 @@ pub(crate) fn rank_candidates(
             .total_cmp(left_score)
             .then_with(|| left.id.cmp(&right.id))
     });
+    ranked
+}
+
+/// Caps how many scored candidates `matching_candidates` hands back — purely
+/// a payload/UI sanity limit (a wide-open filter set on a large library
+/// could otherwise mean shipping the whole thing), well above what an
+/// auto-generated playlist would ever target.
+const MAX_BROWSE_RESULTS: usize = 500;
+
+/// Every candidate that passes the request's hard filters, scored and sorted
+/// best-first — for a "browse and hand-pick" flow rather than an
+/// auto-generated one. No diversity/count/duration capping is applied since
+/// the human picking tracks *is* the curation step.
+pub(crate) fn matching_candidates(
+    candidates: &[GenerationCandidate],
+    request: &PlaylistGenerationRequest,
+) -> Vec<RankedSelection> {
+    let request = clamp_request(request);
+    let seeds = request
+        .seed_track_ids
+        .iter()
+        .filter_map(|id| candidates.iter().find(|candidate| candidate.id == *id))
+        .collect::<Vec<_>>();
+    score_candidates(candidates, &request)
+        .into_iter()
+        .take(MAX_BROWSE_RESULTS)
+        .map(|(candidate, score)| RankedSelection {
+            track_id: candidate.id.clone(),
+            score,
+            explanation: explanation(candidate, &seeds, score),
+        })
+        .collect()
+}
+
+pub(crate) fn rank_candidates(
+    candidates: &[GenerationCandidate],
+    request: &PlaylistGenerationRequest,
+) -> Vec<RankedSelection> {
+    let request = clamp_request(request);
+    let seeds = request
+        .seed_track_ids
+        .iter()
+        .filter_map(|id| candidates.iter().find(|candidate| candidate.id == *id))
+        .collect::<Vec<_>>();
+    let ranked = score_candidates(candidates, &request);
 
     let target_count = request.target_track_count.unwrap_or(25) as usize;
     let target_duration = request.target_duration_ms.unwrap_or(u64::MAX);
@@ -725,6 +909,103 @@ fn estimate_key(chroma: &[f64; 12]) -> Option<String> {
     ))
 }
 
+/// Deterministic, network-free descriptive tags derived from a track's Song
+/// DNA. Every analyzed track gets these regardless of MusicBrainz match
+/// quality or Last.fm coverage, so the tag picker and starter playlists
+/// always have *something* to work with.
+pub(crate) fn song_dna_descriptor_tags(features: &AudioFeatures) -> Vec<&'static str> {
+    let mut tags = Vec::with_capacity(3);
+    if let Some(bpm) = features.bpm {
+        tags.push(if bpm < 90.0 {
+            "slow tempo"
+        } else if bpm < 130.0 {
+            "mid tempo"
+        } else {
+            "uptempo"
+        });
+    }
+    tags.push(if features.spectral_centroid_hz < 2_500.0 {
+        "warm"
+    } else {
+        "bright"
+    });
+    tags.push(if features.dynamic_range_db < 8.0 {
+        "compressed"
+    } else {
+        "wide dynamic range"
+    });
+    tags
+}
+
+/// One of the fixed, always-present "vibe" playlists — computed live over
+/// the current library rather than persisted, so they stay current as the
+/// library grows and need no background job of their own.
+pub struct StarterVibe {
+    pub key: &'static str,
+    pub name: &'static str,
+    pub description: &'static str,
+}
+
+pub fn starter_vibes() -> Vec<(StarterVibe, PlaylistGenerationRequest)> {
+    vec![
+        (
+            StarterVibe {
+                key: "nighttime",
+                name: "Nighttime",
+                description: "Low-energy, slow-tempo tracks for winding down.",
+            },
+            PlaylistGenerationRequest {
+                mood: Some(PlaylistMood::Calm),
+                maximum_energy: Some(0.35),
+                tags: vec!["slow tempo".into()],
+                target_track_count: Some(30),
+                ..Default::default()
+            },
+        ),
+        (
+            StarterVibe {
+                key: "workout",
+                name: "Workout",
+                description: "High-energy, uptempo tracks to push the pace.",
+            },
+            PlaylistGenerationRequest {
+                mood: Some(PlaylistMood::Intense),
+                minimum_energy: Some(0.65),
+                tags: vec!["uptempo".into()],
+                target_track_count: Some(30),
+                ..Default::default()
+            },
+        ),
+        (
+            StarterVibe {
+                key: "driving",
+                name: "Driving",
+                description: "Upbeat, mid-to-high energy tracks for the road.",
+            },
+            PlaylistGenerationRequest {
+                mood: Some(PlaylistMood::Bright),
+                minimum_energy: Some(0.45),
+                maximum_energy: Some(0.8),
+                target_track_count: Some(30),
+                ..Default::default()
+            },
+        ),
+        (
+            StarterVibe {
+                key: "mellow",
+                name: "Mellow",
+                description: "Calm, low-to-mid energy tracks to settle into.",
+            },
+            PlaylistGenerationRequest {
+                mood: Some(PlaylistMood::Calm),
+                maximum_energy: Some(0.5),
+                target_track_count: Some(30),
+                ..Default::default()
+            },
+        ),
+    ]
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -739,6 +1020,7 @@ mod tests {
             album_id: Some(album.into()),
             album: album.into(),
             genres: vec!["Jazz".into()],
+            tags: Vec::new(),
             year: Some(1961),
             duration_ms: 180_000,
             play_count: 1,
@@ -783,6 +1065,76 @@ mod tests {
     }
 
     #[test]
+    fn requested_tags_favor_matching_candidates_without_excluding_others() {
+        let mut low_match = candidate("low-match", "artist-1", "album-1", 0.5);
+        low_match.tags = vec!["mid tempo".into()];
+        let mut high_match = candidate("high-match", "artist-2", "album-2", 0.5);
+        high_match.tags = vec!["piano".into(), "somber".into()];
+        let candidates = vec![low_match, high_match];
+        let request = PlaylistGenerationRequest {
+            tags: vec!["piano".into(), "somber".into()],
+            target_track_count: Some(2),
+            ..Default::default()
+        };
+        let ranked = rank_candidates(&candidates, &request);
+        // Both are still present — tags narrow via score, not a hard filter.
+        assert_eq!(ranked.len(), 2);
+        assert_eq!(ranked[0].track_id, "high-match");
+    }
+
+    #[test]
+    fn descriptor_tags_bucket_tempo_brightness_and_dynamics() {
+        let calm = AudioFeatures {
+            track_id: "t".into(),
+            analysis_version: 1,
+            bpm: Some(70.0),
+            musical_key: None,
+            loudness_db: -20.0,
+            energy: 0.2,
+            spectral_centroid_hz: 1_500.0,
+            spectral_rolloff_hz: 3_000.0,
+            dynamic_range_db: 4.0,
+            analyzed_at: "now".into(),
+        };
+        let tags = song_dna_descriptor_tags(&calm);
+        assert!(tags.contains(&"slow tempo"));
+        assert!(tags.contains(&"warm"));
+        assert!(tags.contains(&"compressed"));
+
+        let energetic = AudioFeatures {
+            bpm: Some(150.0),
+            spectral_centroid_hz: 4_000.0,
+            dynamic_range_db: 14.0,
+            ..calm
+        };
+        let tags = song_dna_descriptor_tags(&energetic);
+        assert!(tags.contains(&"uptempo"));
+        assert!(tags.contains(&"bright"));
+        assert!(tags.contains(&"wide dynamic range"));
+    }
+
+    #[test]
+    fn starter_vibes_are_distinct_and_generate_deterministically() {
+        let vibes = starter_vibes();
+        assert_eq!(vibes.len(), 4);
+        let keys = vibes
+            .iter()
+            .map(|(vibe, _)| vibe.key)
+            .collect::<std::collections::HashSet<_>>();
+        assert_eq!(keys.len(), 4, "starter vibe keys must be unique");
+
+        let candidates = vec![
+            candidate("a", "artist-1", "album-1", 0.2),
+            candidate("b", "artist-2", "album-2", 0.8),
+        ];
+        for (_, request) in &vibes {
+            let first = rank_candidates(&candidates, request);
+            let second = rank_candidates(&candidates, request);
+            assert_eq!(first, second);
+        }
+    }
+
+    #[test]
     fn duration_and_energy_constraints_are_enforced() {
         let candidates = vec![
             candidate("low", "a", "x", 0.2),
@@ -798,6 +1150,93 @@ mod tests {
         let generated = rank_candidates(&candidates, &request);
         assert_eq!(generated.len(), 1);
         assert_ne!(generated[0].track_id, "low");
+    }
+
+    #[test]
+    fn bpm_and_dynamic_range_filters_pass_unanalyzed_tracks_but_exclude_out_of_range_ones() {
+        let mut slow = candidate("slow", "a", "x", 0.5);
+        slow.features.as_mut().unwrap().bpm = Some(70.0);
+        let mut fast = candidate("fast", "b", "y", 0.5);
+        fast.features.as_mut().unwrap().bpm = Some(160.0);
+        let mut unanalyzed = candidate("unanalyzed", "c", "z", 0.5);
+        unanalyzed.features = None;
+        let candidates = vec![slow, fast, unanalyzed];
+
+        let request = PlaylistGenerationRequest {
+            minimum_bpm: Some(60.0),
+            maximum_bpm: Some(100.0),
+            target_track_count: Some(10),
+            ..Default::default()
+        };
+        let matched = matching_candidates(&candidates, &request);
+        let ids: HashSet<_> = matched.iter().map(|m| m.track_id.as_str()).collect();
+        assert!(ids.contains("slow"));
+        assert!(!ids.contains("fast"), "out-of-range bpm must be excluded");
+        assert!(
+            ids.contains("unanalyzed"),
+            "an unanalyzed track must never be excluded just because it lacks a bpm"
+        );
+    }
+
+    #[test]
+    fn maximum_dynamic_range_excludes_wide_swinging_tracks() {
+        let mut steady = candidate("steady", "a", "x", 0.5);
+        steady.features.as_mut().unwrap().dynamic_range_db = 5.0;
+        let mut wide = candidate("wide", "b", "y", 0.5);
+        wide.features.as_mut().unwrap().dynamic_range_db = 25.0;
+        let candidates = vec![steady, wide];
+
+        let request = PlaylistGenerationRequest {
+            maximum_dynamic_range_db: Some(10.0),
+            target_track_count: Some(10),
+            ..Default::default()
+        };
+        let matched = matching_candidates(&candidates, &request);
+        assert_eq!(matched.len(), 1);
+        assert_eq!(matched[0].track_id, "steady");
+    }
+
+    #[test]
+    fn excluded_tags_are_a_hard_filter_unlike_included_tags() {
+        let mut lofi = candidate("lofi", "a", "x", 0.5);
+        lofi.tags = vec!["lo-fi".into(), "piano".into()];
+        let mut clean = candidate("clean", "b", "y", 0.5);
+        clean.tags = vec!["piano".into()];
+        let candidates = vec![lofi, clean];
+
+        let request = PlaylistGenerationRequest {
+            tags: vec!["piano".into()],
+            excluded_tags: vec!["lo-fi".into()],
+            target_track_count: Some(10),
+            ..Default::default()
+        };
+        let matched = matching_candidates(&candidates, &request);
+        assert_eq!(
+            matched.len(),
+            1,
+            "the lo-fi track must be excluded outright"
+        );
+        assert_eq!(matched[0].track_id, "clean");
+    }
+
+    #[test]
+    fn matching_candidates_returns_the_full_pool_uncapped_by_diversity_or_count() {
+        // Same artist and album, and a target_track_count of 1 — rank_candidates
+        // (auto-curation) would cap this to one track; matching_candidates
+        // (browse-and-hand-pick) must not, since the diversity/count caps only
+        // make sense once something is auto-selecting *for* the user.
+        let candidates = vec![
+            candidate("a", "artist-1", "album-1", 0.6),
+            candidate("b", "artist-1", "album-1", 0.6),
+        ];
+        let request = PlaylistGenerationRequest {
+            target_track_count: Some(1),
+            max_tracks_per_artist: 1,
+            max_tracks_per_album: 1,
+            ..Default::default()
+        };
+        assert_eq!(matching_candidates(&candidates, &request).len(), 2);
+        assert_eq!(rank_candidates(&candidates, &request).len(), 1);
     }
 
     #[test]
