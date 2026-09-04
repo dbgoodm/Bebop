@@ -239,9 +239,7 @@ export const FullscreenNowPlaying: React.FC<FullscreenNowPlayingProps> = ({
 
   const displayQueue = useMemo(() => {
     if (queue.length <= 60) return queue;
-    const currentIndex = currentTrack
-      ? queue.findIndex((t) => t.id === currentTrack.id)
-      : -1;
+    const currentIndex = currentTrack ? queue.findIndex((t) => t.id === currentTrack.id) : -1;
     const safeCurrentIndex = currentIndex >= 0 ? currentIndex : 0;
     const start = Math.max(0, safeCurrentIndex - 10);
     const end = Math.min(queue.length, safeCurrentIndex + 50);
@@ -489,7 +487,8 @@ export const FullscreenNowPlaying: React.FC<FullscreenNowPlayingProps> = ({
           <div
             className="absolute inset-0"
             style={{
-              background: 'radial-gradient(ellipse at 50% 45%, transparent 20%, rgba(0,0,0,0.6) 100%)',
+              background:
+                'radial-gradient(ellipse at 50% 45%, transparent 20%, rgba(0,0,0,0.6) 100%)',
             }}
           />
         </div>
@@ -545,7 +544,7 @@ export const FullscreenNowPlaying: React.FC<FullscreenNowPlayingProps> = ({
         }}
       >
         <pre className="opacity-40 leading-tight font-mono">
-{`  /\\_/\\   ED-NET
+          {`  /\\_/\\   ED-NET
  ( o.o )  ONLINE
   > ^ <   [ACTIVE]`}
         </pre>
@@ -912,10 +911,16 @@ export const FullscreenNowPlaying: React.FC<FullscreenNowPlayingProps> = ({
                     type="button"
                     onClick={() => onToggleFavorite?.(currentTrack.id, !isFavorite)}
                     className={`p-1.5 t-control transition-all cursor-pointer rounded hover:bg-neutral-800/80 ${
-                      isFavorite ? 'text-red-500 hover:text-red-400 scale-105' : 'text-neutral-400 hover:text-white'
+                      isFavorite
+                        ? 'text-red-500 hover:text-red-400 scale-105'
+                        : 'text-neutral-400 hover:text-white'
                     }`}
-                    title={isFavorite ? 'Remove from Liked Songs' : 'Save to Liked Songs (Favorites)'}
-                    aria-label={isFavorite ? 'Remove from Liked Songs' : 'Save to Liked Songs (Favorites)'}
+                    title={
+                      isFavorite ? 'Remove from Liked Songs' : 'Save to Liked Songs (Favorites)'
+                    }
+                    aria-label={
+                      isFavorite ? 'Remove from Liked Songs' : 'Save to Liked Songs (Favorites)'
+                    }
                   >
                     <Heart className={`w-4 h-4 ${isFavorite ? 'fill-red-500 text-red-500' : ''}`} />
                   </button>
@@ -926,7 +931,9 @@ export const FullscreenNowPlaying: React.FC<FullscreenNowPlayingProps> = ({
                       type="button"
                       onClick={() => setIsPlaylistMenuOpen((prev) => !prev)}
                       className={`p-1.5 t-control transition-all cursor-pointer rounded hover:bg-neutral-800/80 ${
-                        isPlaylistMenuOpen ? 'text-amber-400 bg-neutral-800 ring-1 ring-amber-400/40' : 'text-neutral-400 hover:text-white'
+                        isPlaylistMenuOpen
+                          ? 'text-amber-400 bg-neutral-800 ring-1 ring-amber-400/40'
+                          : 'text-neutral-400 hover:text-white'
                       }`}
                       title="Add to playlist or create playlist"
                       aria-label="Add to playlist or create playlist"
@@ -968,7 +975,9 @@ export const FullscreenNowPlaying: React.FC<FullscreenNowPlayingProps> = ({
                                   : 'bg-red-950/80 border border-red-500/50 text-red-300'
                             }`}
                           >
-                            {statusMessage.type === 'success' && <Check className="w-3 h-3 text-emerald-400 shrink-0" />}
+                            {statusMessage.type === 'success' && (
+                              <Check className="w-3 h-3 text-emerald-400 shrink-0" />
+                            )}
                             <span>{statusMessage.text}</span>
                           </div>
                         )}
@@ -1004,7 +1013,11 @@ export const FullscreenNowPlaying: React.FC<FullscreenNowPlayingProps> = ({
                               disabled={!newPlaylistName.trim() || isCreatingPlaylist}
                               className="px-2.5 py-1 text-xs font-semibold bg-amber-400 text-black t-control hover:brightness-110 disabled:opacity-40 cursor-pointer"
                             >
-                              {isCreatingPlaylist ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Create'}
+                              {isCreatingPlaylist ? (
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                              ) : (
+                                'Create'
+                              )}
                             </button>
                           </div>
                         </form>
@@ -1148,10 +1161,9 @@ export const FullscreenNowPlaying: React.FC<FullscreenNowPlayingProps> = ({
                 style={{
                   backgroundColor: `color-mix(in oklab, ${currentTheme.bgSurface} 70%, transparent)`,
                   borderColor: currentTheme.borderColor,
-                  color:
-                    lyricsDocument?.synchronized
-                      ? currentTheme.primary
-                      : currentTheme.textMuted,
+                  color: lyricsDocument?.synchronized
+                    ? currentTheme.primary
+                    : currentTheme.textMuted,
                 }}
               >
                 {lyricsDocument
@@ -1198,9 +1210,7 @@ export const FullscreenNowPlaying: React.FC<FullscreenNowPlayingProps> = ({
                           : isPast
                             ? currentTheme.textMuted
                             : currentTheme.textSecondary,
-                        textShadow: isActive
-                          ? `0 0 16px ${currentTheme.accentGlow}`
-                          : 'none',
+                        textShadow: isActive ? `0 0 16px ${currentTheme.accentGlow}` : 'none',
                       }}
                     >
                       {line.text}
@@ -1401,7 +1411,10 @@ export const FullscreenNowPlaying: React.FC<FullscreenNowPlayingProps> = ({
       <footer className="relative z-10 w-full px-6 sm:px-10 lg:px-14 xl:px-18 2xl:px-24 pb-4 sm:pb-5 flex flex-col gap-1.5 shrink-0">
         {/* Scrubber Progress Bar */}
         <div className="flex w-full items-center gap-3 font-mono text-xs">
-          <span className="w-11 text-right font-bold text-[11px]" style={{ color: currentTheme.primary }}>
+          <span
+            className="w-11 text-right font-bold text-[11px]"
+            style={{ color: currentTheme.primary }}
+          >
             {formatTime(currentTimeSeconds)}
           </span>
           <div

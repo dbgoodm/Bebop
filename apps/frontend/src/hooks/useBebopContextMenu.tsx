@@ -84,9 +84,7 @@ export function useBebopContextMenu(options: UseBebopContextMenuOptions) {
             void options.onAddTrackToPlaylist?.(pl.id, track.id);
           },
         })),
-        ...(currentPlaylists.length > 0
-          ? [{ id: 'pl-div', label: '', divider: true }]
-          : []),
+        ...(currentPlaylists.length > 0 ? [{ id: 'pl-div', label: '', divider: true }] : []),
         {
           id: 'create-new-pl-with-track',
           label: 'New Playlist with Track...',

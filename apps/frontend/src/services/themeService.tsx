@@ -1274,7 +1274,11 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         try {
           const parsed: unknown = JSON.parse(savedCustomThemes);
           if (Array.isArray(parsed)) {
-            setCustomThemes(parsed.map((theme) => toThemeDocument(theme as ThemeConfig, (theme as ThemeConfig).id)));
+            setCustomThemes(
+              parsed.map((theme) =>
+                toThemeDocument(theme as ThemeConfig, (theme as ThemeConfig).id),
+              ),
+            );
           }
         } catch {
           // Ignore malformed persisted customization and retain the built-in themes.
@@ -1365,7 +1369,10 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const saveCustomTheme = (newTheme: ThemeConfig) => {
-    const document = toThemeDocument(newTheme, (newTheme as Partial<ThemeDocumentV1>).baseThemeId ?? newTheme.id);
+    const document = toThemeDocument(
+      newTheme,
+      (newTheme as Partial<ThemeDocumentV1>).baseThemeId ?? newTheme.id,
+    );
     setCustomThemes((prev) => {
       const filtered = prev.filter((t) => t.id !== document.id);
       const next = [...filtered, document];

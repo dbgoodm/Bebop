@@ -22,9 +22,7 @@ export function MetadataJobsPanel() {
   const [clientKey, setClientKey] = useState('');
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [integrationSettings, setIntegrationSettings] = useState<IntegrationSettings | null>(
-    null,
-  );
+  const [integrationSettings, setIntegrationSettings] = useState<IntegrationSettings | null>(null);
 
   const refresh = useCallback(async () => {
     const [musicBrainz, acoustId, currentJobs, integrations] = await Promise.all([

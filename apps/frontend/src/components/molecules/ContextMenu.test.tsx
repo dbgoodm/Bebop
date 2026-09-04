@@ -98,15 +98,7 @@ describe('ContextMenu', () => {
       },
     ];
 
-    render(
-      <ContextMenu
-        isOpen={true}
-        x={100}
-        y={150}
-        onClose={onClose}
-        items={items}
-      />,
-    );
+    render(<ContextMenu isOpen={true} x={100} y={150} onClose={onClose} items={items} />);
 
     const parentItem = screen.getByText('Add to Playlist');
     fireEvent.mouseEnter(parentItem);

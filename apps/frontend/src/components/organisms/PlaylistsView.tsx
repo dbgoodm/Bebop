@@ -600,8 +600,8 @@ const PlaylistsViewImpl: React.FC<PlaylistsViewProps> = ({
             <Heart className="w-8 h-8 text-neutral-600 mx-auto mb-2" />
             <h3 className="text-sm font-semibold text-neutral-300">No liked songs yet</h3>
             <p className="text-xs text-neutral-500 max-w-sm mx-auto mt-1">
-              Click the heart icon on any song row in your library or in the now playing bar to
-              save your top tracks here.
+              Click the heart icon on any song row in your library or in the now playing bar to save
+              your top tracks here.
             </p>
           </div>
         ) : (
@@ -678,52 +678,52 @@ const PlaylistsViewImpl: React.FC<PlaylistsViewProps> = ({
           {busy ? <LoaderCircle className="h-4 w-4 animate-spin text-amber-300" /> : null}
         </div>
         <div className="grid grid-cols-4 gap-2 sm:grid-cols-6 lg:grid-cols-9">
-            {/* Pinned Liked Songs Card */}
+          {/* Pinned Liked Songs Card */}
+          <button
+            type="button"
+            id="btn-open-liked-songs-card"
+            onClick={() => setShowLiked(true)}
+            className="t-control border border-red-500/30 bg-gradient-to-br from-red-950/40 via-neutral-950 to-neutral-950 p-2 text-left transition hover:border-red-500/70 hover:from-red-950/60 group cursor-pointer"
+          >
+            <div className="grid aspect-square w-full place-items-center t-sm border border-red-500/40 bg-gradient-to-br from-red-600/30 to-neutral-900 text-red-400 group-hover:scale-102 transition-transform">
+              <Heart className="h-6 w-6 fill-red-500/60 text-red-400 drop-shadow-[0_0_12px_rgba(239,68,68,0.5)]" />
+            </div>
+            <span className="mt-2 flex items-center gap-1 truncate text-xs font-semibold text-white group-hover:text-red-300">
+              <Heart className="h-3 w-3 fill-red-500 text-red-500 shrink-0" />
+              <span className="truncate">Liked Songs</span>
+            </span>
+            <span className="text-[10px] text-neutral-500">
+              {favoriteTrackIds?.size ?? 0} favorited track
+              {(favoriteTrackIds?.size ?? 0) === 1 ? '' : 's'}
+            </span>
+          </button>
+
+          {playlists.length === 0 ? (
+            <p className="col-span-full t-sm border border-dashed border-neutral-800 p-6 text-sm text-neutral-500">
+              No playlists yet. Save the queue or build one with Song DNA.
+            </p>
+          ) : null}
+
+          {playlists.map((playlist) => (
             <button
+              key={playlist.id}
               type="button"
-              id="btn-open-liked-songs-card"
-              onClick={() => setShowLiked(true)}
-              className="t-control border border-red-500/30 bg-gradient-to-br from-red-950/40 via-neutral-950 to-neutral-950 p-2 text-left transition hover:border-red-500/70 hover:from-red-950/60 group cursor-pointer"
+              onClick={() => void openPlaylist(playlist.id)}
+              onContextMenu={(e) => {
+                if (onPlaylistContextMenu) {
+                  e.preventDefault();
+                  onPlaylistContextMenu(playlist, e);
+                }
+              }}
+              className="t-control border border-neutral-800 bg-neutral-950 p-2 text-left transition hover:border-amber-500/40"
             >
-              <div className="grid aspect-square w-full place-items-center t-sm border border-red-500/40 bg-gradient-to-br from-red-600/30 to-neutral-900 text-red-400 group-hover:scale-102 transition-transform">
-                <Heart className="h-6 w-6 fill-red-500/60 text-red-400 drop-shadow-[0_0_12px_rgba(239,68,68,0.5)]" />
-              </div>
-              <span className="mt-2 flex items-center gap-1 truncate text-xs font-semibold text-white group-hover:text-red-300">
-                <Heart className="h-3 w-3 fill-red-500 text-red-500 shrink-0" />
-                <span className="truncate">Liked Songs</span>
+              <CoverMosaic coverUrls={playlist.coverUrls} />
+              <span className="mt-2 block truncate text-xs font-semibold text-white">
+                {playlist.name}
               </span>
-              <span className="text-[10px] text-neutral-500">
-                {favoriteTrackIds?.size ?? 0} favorited track
-                {(favoriteTrackIds?.size ?? 0) === 1 ? '' : 's'}
-              </span>
+              <span className="text-[10px] text-neutral-500">{playlist.trackCount} tracks</span>
             </button>
-
-            {playlists.length === 0 ? (
-              <p className="col-span-full t-sm border border-dashed border-neutral-800 p-6 text-sm text-neutral-500">
-                No playlists yet. Save the queue or build one with Song DNA.
-              </p>
-            ) : null}
-
-            {playlists.map((playlist) => (
-              <button
-                key={playlist.id}
-                type="button"
-                onClick={() => void openPlaylist(playlist.id)}
-                onContextMenu={(e) => {
-                  if (onPlaylistContextMenu) {
-                    e.preventDefault();
-                    onPlaylistContextMenu(playlist, e);
-                  }
-                }}
-                className="t-control border border-neutral-800 bg-neutral-950 p-2 text-left transition hover:border-amber-500/40"
-              >
-                <CoverMosaic coverUrls={playlist.coverUrls} />
-                <span className="mt-2 block truncate text-xs font-semibold text-white">
-                  {playlist.name}
-                </span>
-                <span className="text-[10px] text-neutral-500">{playlist.trackCount} tracks</span>
-              </button>
-            ))}
+          ))}
         </div>
       </section>
 
@@ -795,7 +795,10 @@ const PlaylistsViewImpl: React.FC<PlaylistsViewProps> = ({
                       onClick={(event) => {
                         event.stopPropagation();
                         void run(async () => {
-                          const saved = await createGeneratedPlaylist(starter.name, starter.request);
+                          const saved = await createGeneratedPlaylist(
+                            starter.name,
+                            starter.request,
+                          );
                           await refresh();
                           await openPlaylist(saved.id);
                         });
@@ -1051,9 +1054,9 @@ const PlaylistsViewImpl: React.FC<PlaylistsViewProps> = ({
                 <div className="mt-4">
                   <p className="text-xs text-neutral-300">Tags</p>
                   <p className="mt-1.5 t-sm border border-dashed border-neutral-800 p-2.5 text-[11px] leading-relaxed text-neutral-500">
-                    No descriptive tags yet. Analyze library above adds tempo/brightness tags
-                    from every track's Song DNA; enabling MusicBrainz or Last.fm tag lookup in
-                    Settings → Metadata &amp; Tags adds genre and mood tags too.
+                    No descriptive tags yet. Analyze library above adds tempo/brightness tags from
+                    every track's Song DNA; enabling MusicBrainz or Last.fm tag lookup in Settings →
+                    Metadata &amp; Tags adds genre and mood tags too.
                   </p>
                 </div>
               )}
@@ -1194,9 +1197,7 @@ const PlaylistsViewImpl: React.FC<PlaylistsViewProps> = ({
                 <button
                   type="button"
                   disabled={
-                    busy ||
-                    !name.trim() ||
-                    (matches ? checkedMatchIds.size === 0 : !preview)
+                    busy || !name.trim() || (matches ? checkedMatchIds.size === 0 : !preview)
                   }
                   onClick={() =>
                     void run(async () => {

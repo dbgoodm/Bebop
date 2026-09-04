@@ -658,7 +658,9 @@ export const NowPlayingBar: React.FC<NowPlayingBarProps> = ({
                           : 'bg-red-950/80 border border-red-500/50 text-red-300'
                     }`}
                   >
-                    {statusMessage.type === 'success' && <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />}
+                    {statusMessage.type === 'success' && (
+                      <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                    )}
                     <span>{statusMessage.text}</span>
                   </div>
                 )}
@@ -722,7 +724,9 @@ export const NowPlayingBar: React.FC<NowPlayingBarProps> = ({
                 <div>
                   <div className="flex items-center justify-between text-[10px] font-mono uppercase tracking-wider text-neutral-400 mb-1.5">
                     <span>Your Playlists</span>
-                    {isLoadingPlaylists && <Loader2 className="w-3 h-3 animate-spin text-amber-400" />}
+                    {isLoadingPlaylists && (
+                      <Loader2 className="w-3 h-3 animate-spin text-amber-400" />
+                    )}
                   </div>
 
                   <div className="max-h-36 overflow-y-auto space-y-1 pr-1 select-none">

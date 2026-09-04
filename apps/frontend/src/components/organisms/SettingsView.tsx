@@ -493,47 +493,49 @@ export function SettingsView({
                       onClick={selectTheme}
                       actions={
                         <>
-                        <button
-                          type="button"
-                          onClick={copyThemeJson}
-                          className="rounded p-1 text-neutral-400 hover:bg-black/30 hover:text-white"
-                          aria-label={`Copy ${theme.name} theme JSON`}
-                          title="Copy theme JSON to clipboard"
-                        >
-                          {copiedThemeId === theme.id ? (
-                            <Check className="h-3.5 w-3.5 text-emerald-400" />
-                          ) : (
-                            <Copy className="h-3.5 w-3.5" />
-                          )}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            setThemeById(theme.id);
-                            setIsThemeModalOpen(true);
-                          }}
-                          aria-label={`Edit ${theme.name} theme`}
-                          title={isCustom ? 'Edit custom theme' : 'Create an editable fork'}
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                        </button>
-                        {isCustom && (
+                          <button
+                            type="button"
+                            onClick={copyThemeJson}
+                            className="rounded p-1 text-neutral-400 hover:bg-black/30 hover:text-white"
+                            aria-label={`Copy ${theme.name} theme JSON`}
+                            title="Copy theme JSON to clipboard"
+                          >
+                            {copiedThemeId === theme.id ? (
+                              <Check className="h-3.5 w-3.5 text-emerald-400" />
+                            ) : (
+                              <Copy className="h-3.5 w-3.5" />
+                            )}
+                          </button>
                           <button
                             type="button"
                             onClick={(event) => {
                               event.stopPropagation();
-                              if (window.confirm(`Delete ${theme.name}? This cannot be undone.`)) {
-                                deleteCustomTheme(theme.id);
-                              }
+                              setThemeById(theme.id);
+                              setIsThemeModalOpen(true);
                             }}
-                            className="rounded p-1 text-red-300/80 hover:bg-black/30 hover:text-red-300"
-                            aria-label={`Delete ${theme.name} theme`}
-                            title="Delete custom theme"
+                            aria-label={`Edit ${theme.name} theme`}
+                            title={isCustom ? 'Edit custom theme' : 'Create an editable fork'}
                           >
-                            <Trash2 className="h-3.5 w-3.5" />
+                            <Pencil className="h-3.5 w-3.5" />
                           </button>
-                        )}
+                          {isCustom && (
+                            <button
+                              type="button"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                if (
+                                  window.confirm(`Delete ${theme.name}? This cannot be undone.`)
+                                ) {
+                                  deleteCustomTheme(theme.id);
+                                }
+                              }}
+                              className="rounded p-1 text-red-300/80 hover:bg-black/30 hover:text-red-300"
+                              aria-label={`Delete ${theme.name} theme`}
+                              title="Delete custom theme"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          )}
                         </>
                       }
                     />

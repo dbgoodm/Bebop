@@ -12,7 +12,11 @@ import {
 describe('ThemeDocumentV1', () => {
   it('covers every advanced token used by all four canonical V2 templates', () => {
     const registered = new Set(THEME_TOKEN_REGISTRY.map((token) => token.key));
-    const used = new Set(ALL_THEMES.filter((theme) => theme.id.endsWith('-v2')).flatMap((theme) => Object.keys(theme.vars ?? {})));
+    const used = new Set(
+      ALL_THEMES.filter((theme) => theme.id.endsWith('-v2')).flatMap((theme) =>
+        Object.keys(theme.vars ?? {}),
+      ),
+    );
     expect([...used].filter((token) => !registered.has(token))).toEqual([]);
     expect(THEME_TOKEN_REGISTRY).toHaveLength(87);
     for (const token of THEME_TOKEN_REGISTRY) {
@@ -45,8 +49,21 @@ describe('ThemeDocumentV1', () => {
     const document = toThemeDocument({ ...CREW_THEMES[0], id: 'custom-image' });
     document.images = {
       background: {
-        asset: { path: 'background.png', mimeType: 'image/png', width: 1, height: 1, bytes: 68, previewUrl: 'blob:test', stagedPath: '/tmp/test' },
-        fit: 'cover', position: 'center', repeat: 'no-repeat', opacity: 1, blendMode: 'normal', blur: 0,
+        asset: {
+          path: 'background.png',
+          mimeType: 'image/png',
+          width: 1,
+          height: 1,
+          bytes: 68,
+          previewUrl: 'blob:test',
+          stagedPath: '/tmp/test',
+        },
+        fit: 'cover',
+        position: 'center',
+        repeat: 'no-repeat',
+        opacity: 1,
+        blendMode: 'normal',
+        blur: 0,
       },
     };
     expect(JSON.parse(serializeThemeDocument(document, false)).images).toBeUndefined();

@@ -221,9 +221,7 @@ describe('PlaylistsView', () => {
   it('excludes a tag on a second click, then clears it on a third', async () => {
     mocks.listPlaylists.mockResolvedValue([]);
     mocks.listStarterPlaylists.mockResolvedValue([]);
-    mocks.listAvailableTags.mockResolvedValue([
-      { name: 'lo-fi', category: 'mood', trackCount: 5 },
-    ]);
+    mocks.listAvailableTags.mockResolvedValue([{ name: 'lo-fi', category: 'mood', trackCount: 5 }]);
     mocks.generatePlaylist.mockResolvedValue({
       selections: [],
       totalDurationMs: 0,

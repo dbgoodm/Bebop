@@ -22,7 +22,9 @@ export const ThemeSpecimenCard: FC<ThemeSpecimenCardProps> = ({
   onClick,
 }) => {
   const vars = theme.vars ?? {};
-  const backgroundImage = (theme as ThemeConfig & { images?: { background?: { asset?: { previewUrl?: string } } } }).images?.background?.asset?.previewUrl;
+  const backgroundImage = (
+    theme as ThemeConfig & { images?: { background?: { asset?: { previewUrl?: string } } } }
+  ).images?.background?.asset?.previewUrl;
   const style = {
     '--spec-p': theme.primary,
     '--spec-s': theme.secondary,
@@ -42,7 +44,10 @@ export const ThemeSpecimenCard: FC<ThemeSpecimenCardProps> = ({
     '--spec-bar-width': vars['--bar-w'] ?? '4px',
     '--spec-bar-gap': vars['--bar-gap'] ?? '4px',
     '--spec-bar-radius': vars['--bar-r'] ?? '0px',
-    '--spec-cap': vars['--bar-cap'] && vars['--bar-cap'] !== 'transparent' ? vars['--bar-cap'] : theme.secondary,
+    '--spec-cap':
+      vars['--bar-cap'] && vars['--bar-cap'] !== 'transparent'
+        ? vars['--bar-cap']
+        : theme.secondary,
     '--spec-cap-height': vars['--bar-cap-h'] === '0px' ? '2px' : (vars['--bar-cap-h'] ?? '2px'),
     '--spec-cover': backgroundImage ? `url("${backgroundImage}")` : theme.bgCanvas,
     '--spec-glow': vars['--viz-glow'] ?? 'none',
@@ -72,8 +77,12 @@ export const ThemeSpecimenCard: FC<ThemeSpecimenCardProps> = ({
       <div className="theme-specimen__stage">
         <div className="theme-specimen__art" aria-hidden="true" />
         <div className="theme-specimen__transport" aria-hidden="true">
-          <span className="theme-specimen__play"><Play size={12} fill="currentColor" /></span>
-          <span className="theme-specimen__queue"><ListMusic size={13} /></span>
+          <span className="theme-specimen__play">
+            <Play size={12} fill="currentColor" />
+          </span>
+          <span className="theme-specimen__queue">
+            <ListMusic size={13} />
+          </span>
         </div>
         <div className="theme-specimen__visualizer" aria-label="Theme visualizer sample">
           {BAR_HEIGHTS.map((height, index) => (

@@ -8,9 +8,7 @@ if (typeof window !== 'undefined') {
     const target = event.target as HTMLElement | null;
     const isEditable =
       target &&
-      (target.tagName === 'INPUT' ||
-        target.tagName === 'TEXTAREA' ||
-        target.isContentEditable);
+      (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable);
 
     if (!isEditable) {
       event.preventDefault();

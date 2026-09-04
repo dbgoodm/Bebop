@@ -6,12 +6,7 @@ export const THEME_FALLBACK_ID = 'space-cowboy-v2';
 export type ThemeImageFit = 'cover' | 'contain' | 'fill' | 'none';
 export type ThemeImageRepeat = 'no-repeat' | 'repeat' | 'repeat-x' | 'repeat-y';
 export type ThemeBlendMode =
-  | 'normal'
-  | 'multiply'
-  | 'screen'
-  | 'overlay'
-  | 'soft-light'
-  | 'color-dodge';
+  'normal' | 'multiply' | 'screen' | 'overlay' | 'soft-light' | 'color-dodge';
 
 export interface ThemeAssetReference {
   /** Stable filename within a saved theme's asset directory. */
@@ -68,44 +63,200 @@ export interface ThemeTokenDefinition {
 }
 
 const TOKEN_KEYS = [
-  '--ascent-col', '--ascent-dur', '--ascent-x', '--ascent-y',
-  '--bar-bg', '--bar-cap', '--bar-cap-h', '--bar-gap', '--bar-r', '--bar-w', '--btn-r',
-  '--c-border', '--c-border-a', '--c-canvas', '--c-canvas-g', '--c-card', '--c-card-g',
-  '--c-fg', '--c-fg2', '--c-fg3', '--c-glow', '--c-on-p', '--c-p', '--c-ph', '--c-s',
-  '--c-surface', '--c-t', '--c-wave-lo', '--c-wave-un', '--cap', '--clip', '--clip-btn',
-  '--corner', '--corner-op', '--corner-shadow', '--cover-a', '--cursor', '--f-b', '--f-d',
-  '--f-h', '--f-m', '--f-q', '--f-stamp', '--fi-q', '--fs-aff', '--fs-card', '--fs-hero',
-  '--fs-q', '--fs-sec', '--fs-stat', '--hover-t', '--ls-d', '--ls-h', '--ls-q',
-  '--nav-shadow', '--op-ascent', '--op-glitch', '--op-pip', '--op-scan', '--op-scrawl', '--op-ship',
-  '--op-smoke', '--op-stamp', '--op-stars', '--orb-dur', '--orb-g', '--pip-col', '--r',
-  '--r-sm', '--rule', '--rule-r', '--shadow', '--stamp-col', '--stamp-rot', '--sw', '--tex',
-  '--tex-op', '--tex-size', '--trans', '--tt-brand', '--tt-l', '--tt-title', '--viz-glow',
-  '--w-d', '--smoke-stroke', '--trail-col', '--ember-col',
+  '--ascent-col',
+  '--ascent-dur',
+  '--ascent-x',
+  '--ascent-y',
+  '--bar-bg',
+  '--bar-cap',
+  '--bar-cap-h',
+  '--bar-gap',
+  '--bar-r',
+  '--bar-w',
+  '--btn-r',
+  '--c-border',
+  '--c-border-a',
+  '--c-canvas',
+  '--c-canvas-g',
+  '--c-card',
+  '--c-card-g',
+  '--c-fg',
+  '--c-fg2',
+  '--c-fg3',
+  '--c-glow',
+  '--c-on-p',
+  '--c-p',
+  '--c-ph',
+  '--c-s',
+  '--c-surface',
+  '--c-t',
+  '--c-wave-lo',
+  '--c-wave-un',
+  '--cap',
+  '--clip',
+  '--clip-btn',
+  '--corner',
+  '--corner-op',
+  '--corner-shadow',
+  '--cover-a',
+  '--cursor',
+  '--f-b',
+  '--f-d',
+  '--f-h',
+  '--f-m',
+  '--f-q',
+  '--f-stamp',
+  '--fi-q',
+  '--fs-aff',
+  '--fs-card',
+  '--fs-hero',
+  '--fs-q',
+  '--fs-sec',
+  '--fs-stat',
+  '--hover-t',
+  '--ls-d',
+  '--ls-h',
+  '--ls-q',
+  '--nav-shadow',
+  '--op-ascent',
+  '--op-glitch',
+  '--op-pip',
+  '--op-scan',
+  '--op-scrawl',
+  '--op-ship',
+  '--op-smoke',
+  '--op-stamp',
+  '--op-stars',
+  '--orb-dur',
+  '--orb-g',
+  '--pip-col',
+  '--r',
+  '--r-sm',
+  '--rule',
+  '--rule-r',
+  '--shadow',
+  '--stamp-col',
+  '--stamp-rot',
+  '--sw',
+  '--tex',
+  '--tex-op',
+  '--tex-size',
+  '--trans',
+  '--tt-brand',
+  '--tt-l',
+  '--tt-title',
+  '--viz-glow',
+  '--w-d',
+  '--smoke-stroke',
+  '--trail-col',
+  '--ember-col',
 ] as const;
 
 export type ThemeTokenKey = (typeof TOKEN_KEYS)[number];
 
 const COLOR_TOKENS = new Set([
-  '--ascent-col', '--bar-cap', '--c-border', '--c-border-a', '--c-canvas', '--c-card', '--c-fg', '--c-fg2',
-  '--c-fg3', '--c-on-p', '--c-p', '--c-ph', '--c-s', '--c-surface', '--c-t', '--c-wave-lo',
-  '--c-wave-un', '--ember-col', '--pip-col', '--rule', '--smoke-stroke', '--stamp-col', '--trail-col',
+  '--ascent-col',
+  '--bar-cap',
+  '--c-border',
+  '--c-border-a',
+  '--c-canvas',
+  '--c-card',
+  '--c-fg',
+  '--c-fg2',
+  '--c-fg3',
+  '--c-on-p',
+  '--c-p',
+  '--c-ph',
+  '--c-s',
+  '--c-surface',
+  '--c-t',
+  '--c-wave-lo',
+  '--c-wave-un',
+  '--ember-col',
+  '--pip-col',
+  '--rule',
+  '--smoke-stroke',
+  '--stamp-col',
+  '--trail-col',
 ]);
-const GRADIENT_TOKENS = new Set(['--bar-bg', '--c-canvas-g', '--c-card-g', '--cover-a', '--orb-g', '--tex']);
-const SHADOW_TOKENS = new Set(['--c-glow', '--corner-shadow', '--nav-shadow', '--shadow', '--viz-glow']);
+const GRADIENT_TOKENS = new Set([
+  '--bar-bg',
+  '--c-canvas-g',
+  '--c-card-g',
+  '--cover-a',
+  '--orb-g',
+  '--tex',
+]);
+const SHADOW_TOKENS = new Set([
+  '--c-glow',
+  '--corner-shadow',
+  '--nav-shadow',
+  '--shadow',
+  '--viz-glow',
+]);
 const NUMBER_TOKENS = new Set([
-  '--ascent-dur', '--ascent-x', '--ascent-y', '--bar-cap-h', '--bar-gap', '--bar-r', '--bar-w', '--btn-r', '--corner-op', '--fs-aff',
-  '--fs-card', '--fs-hero', '--fs-q', '--fs-sec', '--fs-stat', '--ls-d', '--ls-h', '--ls-q',
-  '--op-ascent', '--op-glitch', '--op-pip', '--op-scan', '--op-scrawl', '--op-ship', '--op-smoke',
-  '--op-stamp', '--op-stars', '--orb-dur', '--r', '--r-sm', '--rule-r', '--stamp-rot',
-  '--sw', '--tex-op', '--w-d',
+  '--ascent-dur',
+  '--ascent-x',
+  '--ascent-y',
+  '--bar-cap-h',
+  '--bar-gap',
+  '--bar-r',
+  '--bar-w',
+  '--btn-r',
+  '--corner-op',
+  '--fs-aff',
+  '--fs-card',
+  '--fs-hero',
+  '--fs-q',
+  '--fs-sec',
+  '--fs-stat',
+  '--ls-d',
+  '--ls-h',
+  '--ls-q',
+  '--op-ascent',
+  '--op-glitch',
+  '--op-pip',
+  '--op-scan',
+  '--op-scrawl',
+  '--op-ship',
+  '--op-smoke',
+  '--op-stamp',
+  '--op-stars',
+  '--orb-dur',
+  '--r',
+  '--r-sm',
+  '--rule-r',
+  '--stamp-rot',
+  '--sw',
+  '--tex-op',
+  '--w-d',
 ]);
 
 function tokenSection(key: ThemeTokenKey): ThemeTokenSection {
-  if (key.startsWith('--f-') || key.startsWith('--fs-') || key.startsWith('--ls-') || key.startsWith('--tt-') || key === '--w-d' || key === '--fi-q') return 'typography';
+  if (
+    key.startsWith('--f-') ||
+    key.startsWith('--fs-') ||
+    key.startsWith('--ls-') ||
+    key.startsWith('--tt-') ||
+    key === '--w-d' ||
+    key === '--fi-q'
+  )
+    return 'typography';
   if (key.startsWith('--bar-') || key === '--viz-glow') return 'visualizer';
   if (key.startsWith('--c-wave')) return 'waveform';
-  if (key.startsWith('--op-') || key.startsWith('--ascent-') || key === '--smoke-stroke' || key === '--ember-col' || key === '--trail-col' || key === '--orb-g' || key === '--pip-col' || key.startsWith('--stamp-')) return 'ambience';
-  if (key === '--tex' || key === '--tex-size' || key === '--tex-op' || key === '--corner') return 'texture';
+  if (
+    key.startsWith('--op-') ||
+    key.startsWith('--ascent-') ||
+    key === '--smoke-stroke' ||
+    key === '--ember-col' ||
+    key === '--trail-col' ||
+    key === '--orb-g' ||
+    key === '--pip-col' ||
+    key.startsWith('--stamp-')
+  )
+    return 'ambience';
+  if (key === '--tex' || key === '--tex-size' || key === '--tex-op' || key === '--corner')
+    return 'texture';
   if (key === '--hover-t' || key === '--trans' || key === '--orb-dur') return 'motion';
   if (key.startsWith('--c-') || key === '--rule') return 'palette';
   return 'geometry';
@@ -127,7 +278,8 @@ function controlFor(key: ThemeTokenKey): ThemeTokenControl {
   if (GRADIENT_TOKENS.has(key)) return 'gradient';
   if (SHADOW_TOKENS.has(key)) return 'shadow';
   if (NUMBER_TOKENS.has(key)) return 'number';
-  if (key === '--cap' || key === '--cursor' || key.startsWith('--tt-') || key === '--fi-q') return 'select';
+  if (key === '--cap' || key === '--cursor' || key.startsWith('--tt-') || key === '--fi-q')
+    return 'select';
   return 'text';
 }
 
@@ -141,7 +293,8 @@ function optionsFor(key: ThemeTokenKey): readonly string[] | undefined {
 
 function validateToken(value: string): string | null {
   if (value.length > 2048) return 'Value is too long';
-  if (/url\s*\(|expression\s*\(|javascript:/i.test(value)) return 'External URLs and executable CSS are not supported';
+  if (/url\s*\(|expression\s*\(|javascript:/i.test(value))
+    return 'External URLs and executable CSS are not supported';
   return value.trim() ? null : 'Value is required';
 }
 
@@ -227,14 +380,20 @@ export function toThemeDocument(theme: ThemeConfig, baseThemeId = theme.id): The
     createdAt: candidate.createdAt ?? now,
     updatedAt: candidate.updatedAt ?? now,
     images: candidate.images,
-    vars: Object.fromEntries(THEME_TOKEN_REGISTRY.map((token) => [token.key, theme.vars?.[token.key] ?? token.defaultValue])),
+    vars: Object.fromEntries(
+      THEME_TOKEN_REGISTRY.map((token) => [
+        token.key,
+        theme.vars?.[token.key] ?? token.defaultValue,
+      ]),
+    ),
   };
 }
 
 export function validateThemeDocument(document: ThemeDocumentV1): string[] {
   const errors: string[] = [];
   if (document.version !== 1) errors.push('Unsupported theme document version');
-  if (!/^[a-z0-9][a-z0-9-]{1,63}$/.test(document.id)) errors.push('Theme ID must be 2–64 lowercase letters, numbers, or hyphens');
+  if (!/^[a-z0-9][a-z0-9-]{1,63}$/.test(document.id))
+    errors.push('Theme ID must be 2–64 lowercase letters, numbers, or hyphens');
   if (!document.name.trim()) errors.push('Theme name is required');
   if (document.name.length > 80) errors.push('Theme name must be 80 characters or fewer');
   if (document.description.length > 500) errors.push('Description must be 500 characters or fewer');
@@ -245,8 +404,10 @@ export function validateThemeDocument(document: ThemeDocumentV1): string[] {
   for (const layer of Object.values(document.images ?? {})) {
     if (!layer) continue;
     if (layer.asset.bytes > 8 * 1024 * 1024) errors.push('Theme images must be 8 MiB or smaller');
-    if (layer.asset.width * layer.asset.height > 40_000_000) errors.push('Theme images may not exceed 40 megapixels');
-    if (!['image/png', 'image/jpeg', 'image/webp'].includes(layer.asset.mimeType)) errors.push('Only PNG, JPEG, and WebP images are supported');
+    if (layer.asset.width * layer.asset.height > 40_000_000)
+      errors.push('Theme images may not exceed 40 megapixels');
+    if (!['image/png', 'image/jpeg', 'image/webp'].includes(layer.asset.mimeType))
+      errors.push('Only PNG, JPEG, and WebP images are supported');
   }
   return errors;
 }

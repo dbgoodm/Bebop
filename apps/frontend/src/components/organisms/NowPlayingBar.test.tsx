@@ -93,12 +93,7 @@ describe('NowPlayingBar', () => {
 
   it('opens playlist popover on plus button click and displays user playlists', async () => {
     render(
-      <NowPlayingBar
-        currentTrack={mockTrack}
-        isPlaying={true}
-        onPrev={vi.fn()}
-        onNext={vi.fn()}
-      />,
+      <NowPlayingBar currentTrack={mockTrack} isPlaying={true} onPrev={vi.fn()} onNext={vi.fn()} />,
     );
 
     const plusBtn = screen.getByRole('button', { name: /^add to playlist or create playlist$/i });
@@ -118,12 +113,7 @@ describe('NowPlayingBar', () => {
     });
 
     render(
-      <NowPlayingBar
-        currentTrack={mockTrack}
-        isPlaying={true}
-        onPrev={vi.fn()}
-        onNext={vi.fn()}
-      />,
+      <NowPlayingBar currentTrack={mockTrack} isPlaying={true} onPrev={vi.fn()} onNext={vi.fn()} />,
     );
 
     fireEvent.click(screen.getByRole('button', { name: /^add to playlist or create playlist$/i }));
@@ -147,12 +137,7 @@ describe('NowPlayingBar', () => {
     });
 
     render(
-      <NowPlayingBar
-        currentTrack={mockTrack}
-        isPlaying={true}
-        onPrev={vi.fn()}
-        onNext={vi.fn()}
-      />,
+      <NowPlayingBar currentTrack={mockTrack} isPlaying={true} onPrev={vi.fn()} onNext={vi.fn()} />,
     );
 
     fireEvent.click(screen.getByRole('button', { name: /^add to playlist or create playlist$/i }));
@@ -164,10 +149,15 @@ describe('NowPlayingBar', () => {
     fireEvent.click(createBtn);
 
     await waitFor(() => {
-      expect(playlistMocks.createPlaylistWithTrack).toHaveBeenCalledWith('Late Night Bebop', 'track-1');
+      expect(playlistMocks.createPlaylistWithTrack).toHaveBeenCalledWith(
+        'Late Night Bebop',
+        'track-1',
+      );
     });
 
-    expect(await screen.findByText(/Created "Late Night Bebop" & added track ✓/i)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/Created "Late Night Bebop" & added track ✓/i),
+    ).toBeInTheDocument();
   });
 
   it('launches Song DNA generator with current track as seed', async () => {

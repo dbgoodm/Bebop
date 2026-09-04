@@ -78,7 +78,9 @@ function DemoMusicPlayer() {
     ...LOCAL_TRACKS.filter((t) => t.id !== defaultTrack.id).slice(0, 12),
   ]);
 
-  const [favoriteTrackIds, setFavoriteTrackIds] = useState<ReadonlySet<string>>(new Set(['t-1', 't-3']));
+  const [favoriteTrackIds, setFavoriteTrackIds] = useState<ReadonlySet<string>>(
+    new Set(['t-1', 't-3']),
+  );
 
   const handleToggleFavorite = useCallback((trackId: string, favorite: boolean) => {
     setFavoriteTrackIds((current) => {
@@ -503,10 +505,14 @@ function DemoMusicPlayer() {
                   }}
                   onContextMenu={(item, e) => {
                     if (item.type === 'artist') {
-                      const artist = LOCAL_ARTISTS.find((a) => a.name.toLowerCase() === item.title.toLowerCase());
+                      const artist = LOCAL_ARTISTS.find(
+                        (a) => a.name.toLowerCase() === item.title.toLowerCase(),
+                      );
                       if (artist) openArtistContextMenu(artist, e);
                     } else if (item.type === 'album') {
-                      const album = LOCAL_ALBUMS.find((a) => a.title.toLowerCase() === item.title.toLowerCase());
+                      const album = LOCAL_ALBUMS.find(
+                        (a) => a.title.toLowerCase() === item.title.toLowerCase(),
+                      );
                       if (album) openAlbumContextMenu(album, e);
                     }
                   }}
@@ -521,7 +527,9 @@ function DemoMusicPlayer() {
                     handleSelectAlbum(item.title);
                   }}
                   onContextMenu={(item, e) => {
-                    const album = LOCAL_ALBUMS.find((a) => a.title.toLowerCase() === item.title.toLowerCase());
+                    const album = LOCAL_ALBUMS.find(
+                      (a) => a.title.toLowerCase() === item.title.toLowerCase(),
+                    );
                     if (album) openAlbumContextMenu(album, e);
                   }}
                 />
@@ -540,10 +548,14 @@ function DemoMusicPlayer() {
                   }}
                   onContextMenu={(item, e) => {
                     if (item.type === 'artist') {
-                      const artist = LOCAL_ARTISTS.find((a) => a.name.toLowerCase() === item.title.toLowerCase());
+                      const artist = LOCAL_ARTISTS.find(
+                        (a) => a.name.toLowerCase() === item.title.toLowerCase(),
+                      );
                       if (artist) openArtistContextMenu(artist, e);
                     } else if (item.type === 'album') {
-                      const album = LOCAL_ALBUMS.find((a) => a.title.toLowerCase() === item.title.toLowerCase());
+                      const album = LOCAL_ALBUMS.find(
+                        (a) => a.title.toLowerCase() === item.title.toLowerCase(),
+                      );
                       if (album) openAlbumContextMenu(album, e);
                     }
                   }}
