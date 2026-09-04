@@ -71,6 +71,8 @@ jobs:
 
       - name: Test Rust
         run: cargo test
+        env:
+          BEBOP_EMBED_TEST_MANIFEST: "1"
 
       - name: Test recoverable Linux data reset
         if: runner.os == 'Linux'
